@@ -2,6 +2,8 @@ package IO.model;
 
 import java.util.List;
 
+import Info.Info.Action;
+
 /**
  * 读命令输出-选手
  */
