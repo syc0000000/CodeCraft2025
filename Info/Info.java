@@ -117,6 +117,7 @@ public class Info {
         public int size; // 空间大小(缓存以避免重复计算)
         public int sizeInMap; // 空间大小(用于Map的key)
         public int diskId; // 所属磁盘ID
+        public Replica replica; // 所属副本
 
         public DiskSpace(boolean isFree, int start, int end, int diskId) {
             this.isFree = isFree;

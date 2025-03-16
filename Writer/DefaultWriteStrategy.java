@@ -28,6 +28,7 @@ public class DefaultWriteStrategy implements WriteStrategy {
                     }
                     // 分配空间
                     Replica replica = new Replica(writeCommandIn.objId, i, disk.diskId, unitIdList);
+                    space.replica = replica;
                     addReplicaToObj(obj, replica);
                     saveReplicaToDisk(disk, replica);
                 }
