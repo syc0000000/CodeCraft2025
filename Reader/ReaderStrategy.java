@@ -3,12 +3,12 @@ package Reader;
 import java.util.ArrayList;
 
 import IO.model.ReadCommandIn;
-import IO.model.ReadCommandOut;
+import IO.model.ReadRetrun;
 import Info.Info;
 import Info.Info.LocalDisk;
 
 public interface ReaderStrategy {
-    public ArrayList<ReadCommandOut> read(ArrayList<ReadCommandIn> readCommandIns);
+    public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns);
 
     // 计算操作消耗的token，提供默认实现
     public default int calculateToken(Info.Action action, LocalDisk disk) {

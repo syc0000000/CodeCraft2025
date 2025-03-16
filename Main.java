@@ -11,6 +11,7 @@ import Logger.Logger;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 import Writer.Writer;
+import Reader.Reader;
 
 /**
  * 主类，负责程序的主要流程控制
@@ -46,7 +47,7 @@ public class Main {
 
         // 初始化策略
         Writer writer = new Writer("default");
-
+        Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
         logger.enableTimeRange(10, 20);
         logger.enableModule("IO");
@@ -78,20 +79,13 @@ public class Main {
             IO.writeWriteCommand(writeOut);
 
             // 处理读取命令
-            List<ReadCommandIn> readIn = IO.readReadCommand();
+            ArrayList<ReadCommandIn> readIn = IO.readReadCommand();
             if (!readIn.isEmpty()) {
                 mainLogger.info("读取到 " + readIn.size() + " 个读取命令");
             }
-            // TODO: 添加新的读取任务
-
-            // TODO: 获取读策略
-            Map<Integer, ReadCommandOut> readOut = null; // 需要实际实现
-            IO.writeReadCommand(readOut);
-
-            // 处理完成命令
-            List<CompleteCommandOut> completeOut = new ArrayList<>();
-            // TODO: 添加完成的命令
-            IO.writeCompleteCommand(completeOut);
+            ReadRetrun readRetrun = reader.read(readIn);
+            IO.writeReadCommand(readRetrun.readCommandOuts);
+            IO.writeCompleteCommand(readRetrun.completeCommandOuts);
 
             mainLogger.debug("完成处理时间片 " + i);
         }

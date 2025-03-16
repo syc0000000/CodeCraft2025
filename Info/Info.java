@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,13 +36,13 @@ public class Info {
     public static int tagNums;
 
     /** 对象id和对象的映射 */
-    public static Map<Integer, UserObject> objMap;
+    public static HashMap<Integer, UserObject> objMap;
     /** 本地磁盘信息 */
-    public static List<LocalDisk> localDiskTbl;
+    public static ArrayList<LocalDisk> localDiskTbl;
     /** 对象id和任务id的映射 */
-    public static Map<Integer, Set<Integer>> objTaskMap;
+    public static HashMap<Integer, HashSet<ReadTask>> objTaskMap;
     /** taskid和实体的映射 */
-    public static Map<Integer, ReadTask> readTaskTbl;
+    public static HashMap<Integer, ReadTask> readTaskTbl;
 
     // 初始化Info模块
     public static void init() {
@@ -85,7 +84,8 @@ public class Info {
         public int objId; // 对象id
         public int replicaId; // 副本id
         public int diskId; // 磁盘id
-        public ArrayList<Integer> unitIdList; // unit id列表
+        /** 对象分片id -> unitId */
+        public ArrayList<Integer> unitIdList;
 
         public Replica(int objId, int replicaId, int diskId, ArrayList<Integer> unitIdList) {
             this.objId = objId;
@@ -218,22 +218,27 @@ public class Info {
         }
 
         // 执行操作
-        public void ptrDoAction(Action action) {
+        public int ptrDoAction(Action action) {
             switch (action) {
                 case READ:
+                    int objId = unitData[ptr];
                     passPtr();
-                    break;
+                    return objId;
                 case PASS:
                     passPtr();
-                    break;
+                    return 0;
+                default:
+                    return -1;
             }
         }
 
-        public void ptrDoAction(Action action, int jump) {
+        public int ptrDoAction(Action action, int jump) {
             switch (action) {
                 case JUMP:
                     ptr = jump;
-                    break;
+                    return 0;
+                default:
+                    return -1;
             }
         }
 
