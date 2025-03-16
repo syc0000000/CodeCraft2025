@@ -3,6 +3,7 @@ package Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
@@ -69,7 +70,9 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                         int blockId = disk.unitData.get(disk.ptr).blockId;
                         HashSet<Integer> taskSet = Info.objTaskMap.get(objId);
                         if (taskSet != null) {
-                            for (Integer task : taskSet) {
+                            Iterator<Integer> iterator = taskSet.iterator();
+                            while (iterator.hasNext()) {
+                                Integer task = iterator.next();
                                 ReadTask readTask = Info.readTaskTbl.get(task);
                                 readTask.blockFinished.add(blockId);
                                 readTask.blockNotFinished.remove(blockId);
@@ -77,6 +80,8 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                                     // 任务完成
                                     readerLogger.debug("任务完成: " + readTask.taskId);
                                     completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
+                                    // 使用迭代器安全地删除元素
+                                    iterator.remove();
                                 }
                             }
                         }
