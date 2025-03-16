@@ -11,7 +11,7 @@ import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
 public class DefaultDeleteStrategy implements DeleteStrategy {
-    ModuleLogger log = LoggerFactory.getLogger("WRITER");
+    ModuleLogger log = LoggerFactory.getLogger("Deleter");
 
     @Override
     public ArrayList<DeleteCommandOut> delete(ArrayList<DeleteCommandIn> deleteCommandIns) {
@@ -44,6 +44,7 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
             ArrayList<Integer> unit_ids = replica.unitIdList;
             LocalDisk localDisk = Info.localDiskTbl.get(disk_id);
             for (int id : unit_ids) { // 最多循环5次
+                log.debug("释放空间: " + localDisk.getSpaceForUnit(id));
                 localDisk.releaseSpace(localDisk.getSpaceForUnit(id));
             }
         }

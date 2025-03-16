@@ -290,6 +290,13 @@ public class Info {
                             spaceToCut.start + obj_size - 1, diskId);
                     DiskSpace spaceToRemain = new DiskSpace(true, spaceToCut.start + obj_size,
                             spaceToCut.end, diskId);
+                    // 更新单元到空间的映射
+                    for (int j = spaceToUse.start; j <= spaceToUse.end; j++) {
+                        unitData.get(j).space = spaceToUse;
+                    }
+                    for (int j = spaceToRemain.start; j <= spaceToRemain.end; j++) {
+                        unitData.get(j).space = spaceToRemain;
+                    }
                     freespaceBySize.get(spaceToRemain.sizeInMap).add(spaceToRemain);
                     log.debug("切分后的两个空间: spaceToUse信息为" + spaceToUse + ", spaceToRemain信息为"
                             + spaceToRemain);
@@ -329,8 +336,8 @@ public class Info {
             // isFree = true
             space.isFree = true;
             // 合并前后空间
-            DiskSpace prevSpace = unitData.get(space.start - 1).space;
-            DiskSpace nextSpace = unitData.get(space.end + 1).space;
+            DiskSpace prevSpace = space.start > 0 ? unitData.get(space.start - 1).space : null;
+            DiskSpace nextSpace = space.end < unitNum - 1 ? unitData.get(space.end + 1).space : null;
             if (prevSpace != null && prevSpace.isFree) {
                 space.setStartAndEnd(prevSpace.start, space.end);
                 freespaceBySize.get(prevSpace.sizeInMap).remove(prevSpace);
