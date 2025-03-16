@@ -6,8 +6,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
-
-import IO.model.*;
+import IO.model.PreprocessOut;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -143,8 +142,8 @@ public class Info {
 
         @Override
         public String toString() {
-            return "DiskSpace[disk=" + diskId + ", start=" + start + ", end=" + end +
-                    ", size=" + size + ", free=" + isFree + "]";
+            return "DiskSpace[disk=" + diskId + ", 区间 [" + start + ", " + end + "], size=" + size
+                    + ", isFree=" + isFree + "]";
         }
 
         public void setStartAndEnd(int start, int end) {
@@ -250,28 +249,63 @@ public class Info {
             return unitToSpace.get(unitId);
         }
 
-        // 获取指定大小的空闲空间
-        public DiskSpace getFreeSpaceBySize(int size) {
-            LinkedList<DiskSpace> spaceList = freespaceBySize.get(size);
-            if (spaceList.size() > 0) {
-                log.debug("获取到指定大小的空闲空间: size=" + size + ", space=" + spaceList.getFirst());
+        /**
+         * 执行写入时，调用该方法获取指定大小的空闲空间 方法内部会维护LocalDisk的freespaceBySize unitId
+         * 
+         * 
+         * @param obj_size 对象大小，范围1-5
+         * @return 空闲空间，用于存放对象
+         */
+        public DiskSpace getFreeSpaceBySize(int obj_size) {
+            LinkedList<DiskSpace> spaceList = freespaceBySize.get(obj_size);
+            if (spaceList.size() > 0 && spaceList.getFirst().size == obj_size) {
+                DiskSpace exactSpace = spaceList.removeFirst(); // space的大小与obj的大小恰好一致，此时不需要拆分
+                exactSpace.isFree = false;
+
+                log.debug("恰好获取到大小相同的空闲空间: space_size = obj_size = " + obj_size + ", space信息为"
+                        + exactSpace);
                 return spaceList.getFirst();
             }
-            for (int i = size + 1; i <= 5; i++) {
+            // space的大小大于obj的大小，此时需要拆分space
+            // 原先的space会变成两个space，一个大小为obj_size，另一个为space_size - obj_size
+            for (int i = obj_size + 1; i <= 5; i++) {
                 spaceList = freespaceBySize.get(i);
                 if (spaceList.size() > 0) {
-                    log.debug("切分空间: size=" + i + ", space=" + spaceList.getFirst());
-                    // 切割空间
-                    getFreeSpaceByCut(spaceList.getFirst(), size);
-                    return spaceList.getFirst();
+                    DiskSpace spaceToCut = spaceList.removeFirst();
+                    log.debug("切分空间: Space的信息为: " + spaceToCut + ", 要写入的对象大小为: " + obj_size);
+                    DiskSpace spaceToUse = new DiskSpace(false, spaceToCut.start,
+                            spaceToCut.start + obj_size - 1, diskId);
+                    DiskSpace spaceToRemain = new DiskSpace(true, spaceToCut.start + obj_size,
+                            spaceToCut.end, diskId);
+                    freespaceBySize.get(spaceToRemain.sizeInMap).add(spaceToRemain);
+                    log.debug("切分后的两个空间: spaceToUse信息为" + spaceToUse + ", spaceToRemain信息为"
+                            + spaceToRemain);
+                    return spaceToUse;
                 }
             }
             return null;
         }
 
+        // public DiskSpace getFreeSpaceBySize(int size) {
+        // LinkedList<DiskSpace> spaceList = freespaceBySize.get(size);
+        // if (spaceList.size() > 0) {
+        // log.debug("获取到指定大小的空闲空间: size=" + size + ", space=" + spaceList.getFirst());
+        // return spaceList.getFirst();
+        // }
+        // for (int i = size + 1; i <= 5; i++) {
+        // spaceList = freespaceBySize.get(i);
+        // if (spaceList.size() > 0) {
+        // log.debug("切分空间: size=" + i + ", space=" + spaceList.getFirst());
+        // // 切割空间
+        // getFreeSpaceByCut(spaceList.getFirst(), size);
+        // return spaceList.getFirst();
+        // }
+        // }
+        // return null;
+        // }
+
         /**
-         * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。 同时更新unitToSpace。
-         * 时间复杂度 O(n)
+         * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。 同时更新unitToSpace。 时间复杂度 O(n)
          *
          * @param space 要释放的DiskSpace对象
          */
@@ -301,28 +335,28 @@ public class Info {
         }
 
         // 切割空间
-        public void getFreeSpaceByCut(DiskSpace space, int size) {
-            int lastSize = space.sizeInMap;
-            int lastEnd = space.end;
-            int lastStart = space.start;
-            // 缩小原有空间
-            space.setStartAndEnd(lastStart, lastStart + size - 1);
-            // 创建新空间
-            DiskSpace newSpace = new DiskSpace(true, space.end + 1, lastEnd, diskId);
-            if (freespaceBySize.get(newSpace.sizeInMap) == null) {
-                freespaceBySize.put(newSpace.sizeInMap, new LinkedList<>());
-            }
-            freespaceBySize.get(newSpace.sizeInMap).add(newSpace);
-            for (int i = newSpace.start; i <= newSpace.end; i++) {
-                unitToSpace.put(i, newSpace);
-            }
-            // 删除原有空间
-            if (freespaceBySize.get(lastSize) != null && freespaceBySize.get(lastSize).size() > 0) {
-                boolean removed = freespaceBySize.get(lastSize).remove(space);
-                log.debug("删除原有空间: size=" + lastSize + ", space=" + space + ", removed=" + removed);
-            }
-            log.debug("链表现状: " + freespaceBySize.toString());
-        }
+        // public void getFreeSpaceByCut(DiskSpace space, int size) {
+        // int lastSize = space.sizeInMap;
+        // int lastEnd = space.end;
+        // int lastStart = space.start;
+        // // 缩小原有空间
+        // space.setStartAndEnd(lastStart, lastStart + size - 1);
+        // // 创建新空间
+        // DiskSpace newSpace = new DiskSpace(true, space.end + 1, lastEnd, diskId);
+        // if (freespaceBySize.get(newSpace.sizeInMap) == null) {
+        // freespaceBySize.put(newSpace.sizeInMap, new LinkedList<>());
+        // }
+        // freespaceBySize.get(newSpace.sizeInMap).add(newSpace);
+        // for (int i = newSpace.start; i <= newSpace.end; i++) {
+        // unitToSpace.put(i, newSpace);
+        // }
+        // // 删除原有空间
+        // if (freespaceBySize.get(lastSize) != null && freespaceBySize.get(lastSize).size() > 0) {
+        // boolean removed = freespaceBySize.get(lastSize).remove(space);
+        // log.debug("删除原有空间: size=" + lastSize + ", space=" + space + ", removed=" + removed);
+        // }
+        // log.debug("链表现状: " + freespaceBySize.toString());
+        // }
     }
 
     // 读任务类 - 存储读任务信息
