@@ -7,12 +7,29 @@ import java.util.Map;
 import IO.IO;
 import IO.model.*;
 import Info.Info;
+import Logger.Logger;
+import Logger.LoggerFactory;
+import Logger.LoggerFactory.ModuleLogger;
+import Writer.Writer;
 
 /**
  * 主类，负责程序的主要流程控制
  */
 public class Main {
+    private static final Logger logger = LoggerFactory.getLogger();
+    private static final ModuleLogger mainLogger = LoggerFactory.getLogger("Main");
+
     public static void main(String[] args) {
+        // 配置日志记录器
+        logger.setLevel(Logger.Level.INFO);
+        logger.enableModule("Main");
+        logger.enableModule("Writer");
+
+        // 启用文件日志
+        logger.enableFileLogging("logs/app.log");
+
+        mainLogger.info("程序启动");
+
         // 读取输入数据
         PreprocessOut preprocessOut = IO.preprocess();
         Info.diskNum = preprocessOut.N;
@@ -21,28 +38,50 @@ public class Main {
         Info.tagNums = preprocessOut.M;
         Info.tickNums = preprocessOut.T;
 
+        mainLogger.info(String.format("系统初始化: 硬盘数=%d, 单元数=%d, 时间片数=%d",
+                Info.diskNum, Info.unitNum, Info.tickNums));
+
         // 初始化系统
         Info.init();
 
+        // 初始化策略
+        Writer writer = new Writer("default");
+
+        // 设置在特定时间片范围内启用详细日志
+        logger.enableTimeRange(10, 20);
+        logger.enableModule("IO");
+
         // 主循环 - 处理每个时间片
         for (int i = 1; i <= preprocessOut.T + 105; i++) {
+            Info.timestamp = i; // 更新当前时间戳
+
+            mainLogger.debug("开始处理时间片 " + i);
+
             // 处理时间戳
             IO.processTimeStamp();
 
             // 处理删除命令
             ArrayList<DeleteCommandIn> deleteIn = IO.readDeleteCommand();
+            if (!deleteIn.isEmpty()) {
+                mainLogger.info("读取到 " + deleteIn.size() + " 个删除命令");
+            }
             // TODO: 调用删除处理逻辑
             ArrayList<DeleteCommandOut> deleteOut = new ArrayList<>();
             IO.writeDeleteCommand(deleteOut);
 
             // 处理写入命令
-            List<WriteCommandIn> writeIn = IO.readWriteCommand();
-            List<WriteCommandOut> writeOut = new ArrayList<>();
-            // TODO: 调用写入处理逻辑
+            ArrayList<WriteCommandIn> writeIn = IO.readWriteCommand();
+            if (!writeIn.isEmpty()) {
+                mainLogger.info("读取到 " + writeIn.size() + " 个写入命令");
+            }
+            ArrayList<WriteCommandOut> writeOut = writer.write(writeIn);
             IO.writeWriteCommand(writeOut);
 
             // 处理读取命令
             List<ReadCommandIn> readIn = IO.readReadCommand();
+            if (!readIn.isEmpty()) {
+                mainLogger.info("读取到 " + readIn.size() + " 个读取命令");
+            }
             // TODO: 添加新的读取任务
 
             // TODO: 获取读策略
@@ -53,6 +92,13 @@ public class Main {
             List<CompleteCommandOut> completeOut = new ArrayList<>();
             // TODO: 添加完成的命令
             IO.writeCompleteCommand(completeOut);
+
+            mainLogger.debug("完成处理时间片 " + i);
         }
+
+        mainLogger.info("程序执行完毕");
+
+        // 程序结束前关闭文件日志
+        logger.disableFileLogging();
     }
 }

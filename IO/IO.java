@@ -85,8 +85,8 @@ public class IO {
      * 
      * @return 写命令输入结构列表
      */
-    public static List<WriteCommandIn> readWriteCommand() {
-        List<WriteCommandIn> in = new ArrayList<>();
+    public static ArrayList<WriteCommandIn> readWriteCommand() {
+        ArrayList<WriteCommandIn> in = new ArrayList<>();
         int size = scanner.nextInt();
 
         for (int i = 0; i < size; i++) {
@@ -156,7 +156,9 @@ public class IO {
      * @param out 删除命令输出结构
      */
     public static void writeDeleteCommand(ArrayList<DeleteCommandOut> out) {
-        for (int i = 0; i < out.size(); i++) {
+        int size = out.size();
+        System.out.println(size);
+        for (int i = 0; i < size; i++) {
             System.out.println(out.get(i).readCommandId);
         }
         flushAll();
