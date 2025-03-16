@@ -10,7 +10,7 @@ public class Writer {
 
     public Writer(String writeStrategy) {
         if (writeStrategy.equals("default")) {
-            this.writeStrategy = new DefaultStrategy();
+            this.writeStrategy = new DefaultWriteStrategy();
         } else {
             throw new IllegalArgumentException("Invalid write strategy: " + writeStrategy);
         }

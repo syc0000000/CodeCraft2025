@@ -2,7 +2,11 @@ package IO;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.ArrayList;
 import IO.model.*;
+import Info.Info;
+import Info.Info.Action;
 
 /**
  * IO模块的主要接口
@@ -10,19 +14,70 @@ import IO.model.*;
  */
 public class IO {
 
+    private static final int FRE_PER_SLICING = 1800;
+    private static Scanner scanner = new Scanner(System.in);
+
     /**
      * 预处理
      * 
      * @return 预处理输出结构
      */
     public static PreprocessOut preprocess() {
-        return null;
+        int T = 0; // 总tick数
+        int M = 0; // 标签总数
+        int N = 0; // 硬盘个数
+        int V = 0; // 每个硬盘存储单元数
+        int G = 0; // 每tick Token数
+
+        T = scanner.nextInt();
+        M = scanner.nextInt();
+        N = scanner.nextInt();
+        V = scanner.nextInt();
+        G = scanner.nextInt();
+
+        // 暂时不存标签数据，跳过
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                scanner.nextInt();
+            }
+        }
+
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                scanner.nextInt();
+            }
+        }
+
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                scanner.nextInt();
+            }
+        }
+
+        System.out.println("OK");
+        flushAll();
+
+        PreprocessOut out = new PreprocessOut();
+        out.T = T;
+        out.M = M;
+        out.N = N;
+        out.V = V;
+        out.G = G;
+        return out;
     }
 
     /**
      * 处理时间戳（特殊情况，直接处理）
      */
     public static void processTimeStamp() {
+        String cmd = scanner.next(); // 读取命令名称 "TIMESTAMP"
+        int timeStamp = scanner.nextInt();
+
+        // 将当前帧写入Info模块
+        Info.timestamp = timeStamp;
+
+        System.out.println("TIMESTAMP " + timeStamp);
+        flushAll();
     }
 
     /**
@@ -31,7 +86,17 @@ public class IO {
      * @return 写命令输入结构列表
      */
     public static List<WriteCommandIn> readWriteCommand() {
-        return null;
+        List<WriteCommandIn> in = new ArrayList<>();
+        int size = scanner.nextInt();
+
+        for (int i = 0; i < size; i++) {
+            int objId = scanner.nextInt();
+            int size_ = scanner.nextInt();
+            int tag = scanner.nextInt();
+            in.add(new WriteCommandIn(objId, size_, tag));
+        }
+
+        return in;
     }
 
     /**
@@ -40,6 +105,34 @@ public class IO {
      * @param out 写命令输出结构列表
      */
     public static void writeWriteCommand(List<WriteCommandOut> out) {
+        int size = out.size();
+
+        for (int i = 0; i < size; i++) {
+            System.out.println(out.get(i).objId);
+
+            // 输出副本1
+            System.out.print(out.get(i).copy1.diskId + 1);
+            for (int j = 0; j < out.get(i).copy1.unitIds.size(); j++) {
+                System.out.print(" " + out.get(i).copy1.unitIds.get(j) + 1);
+            }
+            System.out.println();
+
+            // 输出副本2
+            System.out.print(out.get(i).copy2.diskId + 1);
+            for (int j = 0; j < out.get(i).copy2.unitIds.size(); j++) {
+                System.out.print(" " + out.get(i).copy2.unitIds.get(j) + 1);
+            }
+            System.out.println();
+
+            // 输出副本3
+            System.out.print(out.get(i).copy3.diskId + 1);
+            for (int j = 0; j < out.get(i).copy3.unitIds.size(); j++) {
+                System.out.print(" " + out.get(i).copy3.unitIds.get(j) + 1);
+            }
+            System.out.println();
+        }
+
+        flushAll();
     }
 
     /**
@@ -47,8 +140,14 @@ public class IO {
      * 
      * @return 删除命令输入结构
      */
-    public static DeleteCommandIn readDeleteCommand() {
-        return null;
+    public static ArrayList<DeleteCommandIn> readDeleteCommand() {
+        ArrayList<DeleteCommandIn> in = new ArrayList<>();
+        int size = scanner.nextInt();
+        for (int i = 0; i < size; i++) {
+            int objId = scanner.nextInt();
+            in.add(new DeleteCommandIn(objId));
+        }
+        return in;
     }
 
     /**
@@ -56,7 +155,11 @@ public class IO {
      * 
      * @param out 删除命令输出结构
      */
-    public static void writeDeleteCommand(DeleteCommandOut out) {
+    public static void writeDeleteCommand(ArrayList<DeleteCommandOut> out) {
+        for (int i = 0; i < out.size(); i++) {
+            System.out.println(out.get(i).readCommandId);
+        }
+        flushAll();
     }
 
     /**
@@ -65,7 +168,16 @@ public class IO {
      * @return 读命令输入结构列表
      */
     public static List<ReadCommandIn> readReadCommand() {
-        return null;
+        List<ReadCommandIn> in = new ArrayList<>();
+        int size = scanner.nextInt();
+
+        for (int i = 0; i < size; i++) {
+            int commandId = scanner.nextInt();
+            int objId = scanner.nextInt();
+            in.add(new ReadCommandIn(commandId, objId));
+        }
+
+        return in;
     }
 
     /**
@@ -75,6 +187,28 @@ public class IO {
      * @note 只需要放动了的命令，如果磁头完全不动，则不需要传入
      */
     public static void writeReadCommand(Map<Integer, ReadCommandOut> out) {
+        for (int i = 0; i < Info.diskNum; i++) {
+            if (out.containsKey(i)) {
+                // 判断是否是JUMP操作
+                if (out.get(i).actions != null && !out.get(i).actions.isEmpty() &&
+                        out.get(i).actions.get(0) == Action.JUMP) {
+                    System.out.println("j " + out.get(i).jumpTarget);
+                } else {
+                    // 输出读取或通过操作
+                    for (Action action : out.get(i).actions) {
+                        if (action == Action.READ) {
+                            System.out.print("r");
+                        } else if (action == Action.PASS) {
+                            System.out.print("p");
+                        }
+                    }
+                    System.out.println("#");
+                }
+            } else {
+                System.out.println("#");
+            }
+        }
+        // 注意：此处不刷新输出
     }
 
     /**
@@ -83,11 +217,20 @@ public class IO {
      * @param out 读取完成命令输出结构列表
      */
     public static void writeCompleteCommand(List<CompleteCommandOut> out) {
+        int size = out.size();
+        System.out.println(size);
+
+        for (int i = 0; i < size; i++) {
+            System.out.println(out.get(i).commandId);
+        }
+
+        flushAll();
     }
 
     /**
      * 输出全部命令
      */
     public static void flushAll() {
+        System.out.flush();
     }
 }
