@@ -12,26 +12,38 @@ import IO.model.*;
 
 // Info模块 - 管理全局信息和数据结构
 public class Info {
-    // 计数器
-    public static int diskNum; // 硬盘数量
-    public static int unitNum; // 存储单元数量
-    public static int commandNum; // 命令总数
-    public static int readNum; // 读命令数
-    public static int writeNum; // 写命令数
-    public static int deleteNum; // 删除命令数
+    /** 硬盘数量 */
+    public static int diskNum;
+    /** 存储单元数量 */
+    public static int unitNum;
+    /** 命令总数 */
+    public static int commandNum;
+    /** 读命令数 */
+    public static int readNum;
+    /** 写命令数 */
+    public static int writeNum;
+    /** 删除命令数 */
+    public static int deleteNum;
 
-    // 全局参数 (对应C++全局变量)
-    public static int objNums; // 已经存储的对象数量
-    public static int timestamp; // 当前时间戳
-    public static int tickNums; // 总tick数
-    public static int tokenPerTick; // 每tick令牌数
-    public static int tagNums; // 标签数量
+    /** 已经存储的对象数量 */
+    public static int objNums;
+    /** 当前时间戳 */
+    public static int timestamp;
+    /** 总tick数 */
+    public static int tickNums;
+    /** 每tick令牌数 */
+    public static int tokenPerTick;
+    /** 标签数量 */
+    public static int tagNums;
 
-    // 数据结构映射
-    public static Map<Integer, UserObject> objMap = new HashMap<>(); // 对象id和对象的映射
-    public static List<LocalDisk> localDiskTbl = new ArrayList<>(); // 本地磁盘信息
-    public static Map<Integer, Set<Integer>> objTaskMap = new HashMap<>(); // 对象id和任务id的映射
-    public static Map<Integer, ReadTask> readTaskTbl = new HashMap<>(); // taskid和实体的映射
+    /** 对象id和对象的映射 */
+    public static Map<Integer, UserObject> objMap;
+    /** 本地磁盘信息 */
+    public static List<LocalDisk> localDiskTbl;
+    /** 对象id和任务id的映射 */
+    public static Map<Integer, Set<Integer>> objTaskMap;
+    /** taskid和实体的映射 */
+    public static Map<Integer, ReadTask> readTaskTbl;
 
     // 初始化Info模块
     public static void init() {
