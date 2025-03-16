@@ -25,11 +25,11 @@ public class ReadOnlyStrategy implements ReaderStrategy {
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId);
             Info.readTaskTbl.put(readCommandIn.commandId, readTask);
             if (Info.objTaskMap.get(readCommandIn.objId) == null) {
-                HashSet<ReadTask> readTaskSet = new HashSet<>();
-                readTaskSet.add(readTask);
+                HashSet<Integer> readTaskSet = new HashSet<>();
+                readTaskSet.add(readCommandIn.commandId);
                 Info.objTaskMap.put(readCommandIn.objId, readTaskSet);
             } else {
-                Info.objTaskMap.get(readCommandIn.objId).add(readTask);
+                Info.objTaskMap.get(readCommandIn.objId).add(readCommandIn.commandId);
             }
         }
         // 每TickToken
@@ -67,13 +67,14 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                                 break;
                             }
                         }
-                        HashSet<ReadTask> taskSet = Info.objTaskMap.get(objId);
-                        for (ReadTask task : taskSet) {
-                            task.blockFinished.add(blockId);
-                            task.blockNotFinished.remove(blockId);
-                            if (task.blockNotFinished.isEmpty()) {
+                        HashSet<Integer> taskSet = Info.objTaskMap.get(objId);
+                        for (Integer task : taskSet) {
+                            ReadTask readTask = Info.readTaskTbl.get(task);
+                            readTask.blockFinished.add(blockId);
+                            readTask.blockNotFinished.remove(blockId);
+                            if (readTask.blockNotFinished.isEmpty()) {
                                 // 任务完成
-                                completeCommandOuts.add(new CompleteCommandOut(task.taskId));
+                                completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
                             }
                         }
                     }

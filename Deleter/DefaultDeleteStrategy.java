@@ -49,7 +49,6 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
         }
     }
 
-
     /**
      * 查找要被终止的读任务
      */

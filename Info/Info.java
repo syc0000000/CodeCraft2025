@@ -40,7 +40,7 @@ public class Info {
     /** 本地磁盘信息 */
     public static ArrayList<LocalDisk> localDiskTbl;
     /** 对象id和任务id的映射 */
-    public static HashMap<Integer, HashSet<ReadTask>> objTaskMap;
+    public static HashMap<Integer, HashSet<Integer>> objTaskMap;
     /** taskid和实体的映射 */
     public static HashMap<Integer, ReadTask> readTaskTbl;
 
