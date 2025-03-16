@@ -93,6 +93,12 @@ public class Info {
             this.diskId = diskId;
             this.unitIdList = unitIdList;
         }
+
+        @Override
+        public String toString() {
+            return "Replica [objId=" + objId + ", replicaId=" + replicaId + ", diskId=" + diskId
+                    + ", unitIdList=" + unitIdList + "]";
+        }
     }
 
     // 对象类 - 存储对象信息
