@@ -200,6 +200,31 @@ public class Info {
             }
         }
 
+        public void passPtr() {
+            ptr++;
+            ptr %= unitNum;
+        }
+
+        // 执行操作
+        public void ptrDoAction(Action action) {
+            switch (action) {
+                case READ:
+                    passPtr();
+                    break;
+                case PASS:
+                    passPtr();
+                    break;
+            }
+        }
+
+        public void ptrDoAction(Action action, int jump) {
+            switch (action) {
+                case JUMP:
+                    ptr = jump;
+                    break;
+            }
+        }
+
         // 获取指定单元ID对应的空间
         public DiskSpace getSpaceForUnit(int unitId) {
             if (unitId < 0 || unitId >= unitNum)
@@ -272,7 +297,7 @@ public class Info {
     public static class ReadTask {
         // 任务属性
         public int taskId; // 任务id
-        public int startTime; // 任务已经占用的时间
+        public int startTime; // 任务开始时间
         public int taskValue; // 任务价值
 
         // 任务内容
