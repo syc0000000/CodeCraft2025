@@ -3,9 +3,16 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
+import Deleter.Deleter;
 import IO.IO;
-import IO.model.*;
+import IO.model.CompleteCommandOut;
+import IO.model.DeleteCommandIn;
+import IO.model.DeleteCommandOut;
+import IO.model.PreprocessOut;
+import IO.model.ReadCommandIn;
+import IO.model.ReadCommandOut;
+import IO.model.WriteCommandIn;
+import IO.model.WriteCommandOut;
 import Info.Info;
 import Logger.Logger;
 import Logger.LoggerFactory;
@@ -24,6 +31,7 @@ public class Main {
         logger.setLevel(Logger.Level.INFO);
         logger.enableModule("Main");
         logger.enableModule("Writer");
+        logger.enableModule("Deleter");
 
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
@@ -45,6 +53,7 @@ public class Main {
         Info.init();
 
         // 初始化策略
+        Deleter deleter = new Deleter("default");
         Writer writer = new Writer("default");
 
         // 设置在特定时间片范围内启用详细日志
@@ -65,8 +74,7 @@ public class Main {
             if (!deleteIn.isEmpty()) {
                 mainLogger.info("读取到 " + deleteIn.size() + " 个删除命令");
             }
-            // TODO: 调用删除处理逻辑
-            ArrayList<DeleteCommandOut> deleteOut = new ArrayList<>();
+            ArrayList<DeleteCommandOut> deleteOut = deleter.delete(deleteIn);
             IO.writeDeleteCommand(deleteOut);
 
             // 处理写入命令
