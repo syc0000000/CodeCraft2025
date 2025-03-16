@@ -1,4 +1,4 @@
-javac ./Main.java
+javac -d build ./Main.java
 
 # 检查是否有-release参数
 DEBUG_OPTION="-d"
@@ -12,8 +12,8 @@ done
 # 检测操作系统类型
 if [ "$(uname -s)" = "Darwin" ]; then
     # Mac系统
-    python3 ./test/run.py ./test/interactor_mac ./test/sample.in "java -cp . Main" $DEBUG_OPTION
+    python3 ./test/run.py ./test/interactor_mac ./test/sample.in "java -cp ./build Main" $DEBUG_OPTION
 else
     # 其他系统
-    python3 ./test/run.py ./test/interactor ./test/sample.in "java -cp . Main" $DEBUG_OPTION
+    python3 ./test/run.py ./test/interactor ./test/sample.in "java -cp ./build Main" $DEBUG_OPTION
 fi
