@@ -8,21 +8,16 @@ import java.util.Map;
 import java.util.Set;
 
 import IO.model.*;
+import Logger.LoggerFactory;
+import Logger.LoggerFactory.ModuleLogger;
 
 // Info模块 - 管理全局信息和数据结构
 public class Info {
+    private static final ModuleLogger log = LoggerFactory.getLogger("Info");
     /** 硬盘数量 */
     public static int diskNum;
     /** 存储单元数量 */
     public static int unitNum;
-    /** 命令总数 */
-    public static int commandNum;
-    /** 读命令数 */
-    public static int readNum;
-    /** 写命令数 */
-    public static int writeNum;
-    /** 删除命令数 */
-    public static int deleteNum;
 
     /** 已经存储的对象数量 */
     public static int objNums;
@@ -36,23 +31,19 @@ public class Info {
     public static int tagNums;
 
     /** 对象id和对象的映射 */
-    public static HashMap<Integer, UserObject> objMap;
+    public static HashMap<Integer, UserObject> objMap = new HashMap<>();
     /** 本地磁盘信息 */
-    public static ArrayList<LocalDisk> localDiskTbl;
+    public static ArrayList<LocalDisk> localDiskTbl = new ArrayList<>();
     /** 对象id和任务id的映射 */
-    public static HashMap<Integer, HashSet<Integer>> objTaskMap;
+    public static HashMap<Integer, HashSet<Integer>> objTaskMap = new HashMap<>();
     /** taskid和实体的映射 */
-    public static HashMap<Integer, ReadTask> readTaskTbl;
+    public static HashMap<Integer, ReadTask> readTaskTbl = new HashMap<>();
 
     // 初始化Info模块
     public static void init() {
         // 重置计数器
         diskNum = 0;
         unitNum = 0;
-        commandNum = 0;
-        readNum = 0;
-        writeNum = 0;
-        deleteNum = 0;
 
         // 重置全局参数
         objNums = 0;
@@ -77,6 +68,10 @@ public class Info {
         for (int i = 0; i < diskNum; i++) {
             localDiskTbl.add(new LocalDisk(i, unitNum));
         }
+        // 清空映射
+        objMap.clear();
+        objTaskMap.clear();
+        readTaskTbl.clear();
     }
 
     // 副本类
@@ -257,16 +252,18 @@ public class Info {
 
         // 获取指定大小的空闲空间
         public DiskSpace getFreeSpaceBySize(int size) {
-            DiskSpace space = freespaceBySize.get(size).getFirst();
-            if (space != null) {
-                return space;
+            LinkedList<DiskSpace> spaceList = freespaceBySize.get(size);
+            if (spaceList.size() > 0) {
+                log.debug("获取到指定大小的空闲空间: size=" + size + ", space=" + spaceList.getFirst());
+                return spaceList.getFirst();
             }
             for (int i = size + 1; i <= 5; i++) {
-                space = freespaceBySize.get(i).getFirst();
-                if (space != null) {
+                spaceList = freespaceBySize.get(i);
+                if (spaceList.size() > 0) {
+                    log.debug("切分空间: size=" + i + ", space=" + spaceList.getFirst());
                     // 切割空间
-                    getFreeSpaceByCut(space, size);
-                    return space;
+                    getFreeSpaceByCut(spaceList.getFirst(), size);
+                    return spaceList.getFirst();
                 }
             }
             return null;
@@ -305,19 +302,26 @@ public class Info {
 
         // 切割空间
         public void getFreeSpaceByCut(DiskSpace space, int size) {
-            int lastSize = space.size;
+            int lastSize = space.sizeInMap;
             int lastEnd = space.end;
             int lastStart = space.start;
             // 缩小原有空间
             space.setStartAndEnd(lastStart, lastStart + size - 1);
             // 创建新空间
             DiskSpace newSpace = new DiskSpace(true, space.end + 1, lastEnd, diskId);
+            if (freespaceBySize.get(newSpace.sizeInMap) == null) {
+                freespaceBySize.put(newSpace.sizeInMap, new LinkedList<>());
+            }
             freespaceBySize.get(newSpace.sizeInMap).add(newSpace);
             for (int i = newSpace.start; i <= newSpace.end; i++) {
                 unitToSpace.put(i, newSpace);
             }
             // 删除原有空间
-            freespaceBySize.get(lastSize).remove(space);
+            if (freespaceBySize.get(lastSize) != null && freespaceBySize.get(lastSize).size() > 0) {
+                boolean removed = freespaceBySize.get(lastSize).remove(space);
+                log.debug("删除原有空间: size=" + lastSize + ", space=" + space + ", removed=" + removed);
+            }
+            log.debug("链表现状: " + freespaceBySize.toString());
         }
     }
 

@@ -30,11 +30,11 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.INFO);
+        logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
-
+        logger.enableModule("Info");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
 
@@ -42,24 +42,18 @@ public class Main {
 
         // 读取输入数据
         PreprocessOut preprocessOut = IO.preprocess();
-        Info.diskNum = preprocessOut.N;
-        Info.unitNum = preprocessOut.V;
-        Info.tokenPerTick = preprocessOut.G;
-        Info.tagNums = preprocessOut.M;
-        Info.tickNums = preprocessOut.T;
-
-        mainLogger.info(String.format("系统初始化: 硬盘数=%d, 单元数=%d, 时间片数=%d",
-                Info.diskNum, Info.unitNum, Info.tickNums));
 
         // 初始化系统
-        Info.init();
+        Info.initFromPreprocessOut(preprocessOut);
+        mainLogger.info(String.format("系统初始化: 硬盘数=%d, 单元数=%d, 时间片数=%d",
+                Info.diskNum, Info.unitNum, Info.tickNums));
 
         // 初始化策略
         Deleter deleter = new Deleter("default");
         Writer writer = new Writer("default");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(10, 20);
+        logger.enableTimeRange(0, 1000000);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片

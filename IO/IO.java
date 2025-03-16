@@ -105,29 +105,35 @@ public class IO {
      * @param out 写命令输出结构列表
      */
     public static void writeWriteCommand(List<WriteCommandOut> out) {
-        int size = out.size();
+        if (out == null) {
+            return;
+        }
 
+        int size = out.size();
         for (int i = 0; i < size; i++) {
             System.out.println(out.get(i).objId);
 
             // 输出副本1
             System.out.print(out.get(i).copy1.diskId + 1);
             for (int j = 0; j < out.get(i).copy1.unitIds.size(); j++) {
-                System.out.print(" " + out.get(i).copy1.unitIds.get(j) + 1);
+                int outId = out.get(i).copy1.unitIds.get(j) + 1;
+                System.out.print(" " + outId);
             }
             System.out.println();
 
             // 输出副本2
             System.out.print(out.get(i).copy2.diskId + 1);
             for (int j = 0; j < out.get(i).copy2.unitIds.size(); j++) {
-                System.out.print(" " + out.get(i).copy2.unitIds.get(j) + 1);
+                int outId = out.get(i).copy2.unitIds.get(j) + 1;
+                System.out.print(" " + outId);
             }
             System.out.println();
 
             // 输出副本3
             System.out.print(out.get(i).copy3.diskId + 1);
             for (int j = 0; j < out.get(i).copy3.unitIds.size(); j++) {
-                System.out.print(" " + out.get(i).copy3.unitIds.get(j) + 1);
+                int outId = out.get(i).copy3.unitIds.get(j) + 1;
+                System.out.print(" " + outId);
             }
             System.out.println();
         }
