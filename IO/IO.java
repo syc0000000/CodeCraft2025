@@ -169,8 +169,8 @@ public class IO {
      * 
      * @return 读命令输入结构列表
      */
-    public static List<ReadCommandIn> readReadCommand() {
-        List<ReadCommandIn> in = new ArrayList<>();
+    public static ArrayList<ReadCommandIn> readReadCommand() {
+        ArrayList<ReadCommandIn> in = new ArrayList<>();
         int size = scanner.nextInt();
 
         for (int i = 0; i < size; i++) {
