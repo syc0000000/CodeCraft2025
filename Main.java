@@ -35,6 +35,7 @@ public class Main {
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
         logger.enableModule("Info");
+        logger.enableModule("Reader");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
 

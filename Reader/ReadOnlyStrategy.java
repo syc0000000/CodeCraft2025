@@ -56,17 +56,13 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                     int objId = disk.ptrDoAction(Info.Action.READ);
                     UserObject obj = Info.objMap.get(objId);
                     DiskSpace space = disk.getSpaceForUnit(disk.ptr);
+                    readerLogger.debug("space: " + space);
 
                     if (objId != -1) {
                         // 检测完成
+                        readerLogger.debug("objId: " + objId);
                         // 遍历unit list 获取这一格是obj的第几个分片
-                        int blockId = 0;
-                        for (int blockNow = 0; blockNow < obj.objSize; blockNow++) {
-                            if (space.replica.unitIdList.get(blockNow) == disk.ptr) {
-                                blockId = blockNow;
-                                break;
-                            }
-                        }
+                        int blockId = disk.unitData.get(disk.ptr).blockId;
                         HashSet<Integer> taskSet = Info.objTaskMap.get(objId);
                         for (Integer task : taskSet) {
                             ReadTask readTask = Info.readTaskTbl.get(task);

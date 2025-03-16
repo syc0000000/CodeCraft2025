@@ -6,8 +6,13 @@ import IO.model.ReadCommandIn;
 import IO.model.ReadRetrun;
 import Info.Info;
 import Info.Info.LocalDisk;
+import Logger.LoggerFactory;
+import Logger.LoggerFactory.ModuleLogger;
 
 public interface ReaderStrategy {
+    // public static final Logger logger = LoggerFactory.getLogger("Reader");
+    public static final ModuleLogger readerLogger = LoggerFactory.getLogger("Reader");
+
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns);
 
     // 计算操作消耗的token，提供默认实现

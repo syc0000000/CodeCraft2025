@@ -158,6 +158,19 @@ public class Info {
         READ, PASS, JUMP
     }
 
+    /* 对象-块信息 */
+    public static class UnitData {
+        public int objId; // 对象id
+        public int blockId; // 块id
+        public DiskSpace space; // 空间
+
+        public UnitData(int objId, int blockId, DiskSpace space) {
+            this.objId = objId;
+            this.blockId = blockId;
+            this.space = space;
+        }
+    }
+
     // 本地磁盘类 - 存储磁盘信息
     public static class LocalDisk {
         public int diskId; // 磁盘id
@@ -171,10 +184,10 @@ public class Info {
         public HashMap<Integer, LinkedList<DiskSpace>> freespaceBySize;
 
         // 存储单元数据（对象ID, -1表示空）
-        public int[] unitData;
+        public ArrayList<UnitData> unitData;
 
         // 单元ID到空间的映射
-        public Map<Integer, DiskSpace> unitToSpace;
+        // public Map<Integer, DiskSpace> unitToSpace;
 
         public LocalDisk(int diskId, int unitNum) {
             this.diskId = diskId;
@@ -186,13 +199,13 @@ public class Info {
             // 初始化集合
             // 1-5大小的空闲空间列表
             this.freespaceBySize = new HashMap<>(5);
-            this.unitData = new int[unitNum];
-            this.unitToSpace = new HashMap<>(unitNum);
+            this.unitData = new ArrayList<>(unitNum);
+            // this.unitToSpace = new HashMap<>(unitNum);
 
             // 初始化存储单元数据
-            for (int i = 0; i < unitNum; i++) {
-                unitData[i] = -1; // -1表示空
-            }
+            // for (int i = 0; i < unitNum; i++) {
+            // unitData[i] = -1; // -1表示空
+            // }
 
             // 创建初始空闲空间
             DiskSpace initialSpace = new DiskSpace(true, 0, unitNum - 1, diskId);
@@ -208,7 +221,7 @@ public class Info {
 
             // 更新单元到空间的映射
             for (int i = 0; i < unitNum; i++) {
-                unitToSpace.put(i, initialSpace);
+                unitData.add(new UnitData(-1, -1, initialSpace));
             }
         }
 
@@ -221,7 +234,7 @@ public class Info {
         public int ptrDoAction(Action action) {
             switch (action) {
                 case READ:
-                    int objId = unitData[ptr];
+                    int objId = unitData.get(ptr).objId;
                     passPtr();
                     return objId;
                 case PASS:
@@ -246,7 +259,7 @@ public class Info {
         public DiskSpace getSpaceForUnit(int unitId) {
             if (unitId < 0 || unitId >= unitNum)
                 return null;
-            return unitToSpace.get(unitId);
+            return unitData.get(unitId).space;
         }
 
         /**
@@ -316,8 +329,8 @@ public class Info {
             // isFree = true
             space.isFree = true;
             // 合并前后空间
-            DiskSpace prevSpace = unitToSpace.get(space.start - 1);
-            DiskSpace nextSpace = unitToSpace.get(space.end + 1);
+            DiskSpace prevSpace = unitData.get(space.start - 1).space;
+            DiskSpace nextSpace = unitData.get(space.end + 1).space;
             if (prevSpace != null && prevSpace.isFree) {
                 space.setStartAndEnd(prevSpace.start, space.end);
                 freespaceBySize.get(prevSpace.sizeInMap).remove(prevSpace);
@@ -328,7 +341,7 @@ public class Info {
             }
             // 更新单元到空间的映射
             for (int i = space.start; i <= space.end; i++) {
-                unitToSpace.put(i, space);
+                unitData.get(i).space = space;
             }
             // 更新按大小组织的集合
             freespaceBySize.get(space.sizeInMap).addFirst(space);
@@ -351,9 +364,11 @@ public class Info {
         // unitToSpace.put(i, newSpace);
         // }
         // // 删除原有空间
-        // if (freespaceBySize.get(lastSize) != null && freespaceBySize.get(lastSize).size() > 0) {
+        // if (freespaceBySize.get(lastSize) != null &&
+        // freespaceBySize.get(lastSize).size() > 0) {
         // boolean removed = freespaceBySize.get(lastSize).remove(space);
-        // log.debug("删除原有空间: size=" + lastSize + ", space=" + space + ", removed=" + removed);
+        // log.debug("删除原有空间: size=" + lastSize + ", space=" + space + ", removed=" +
+        // removed);
         // }
         // log.debug("链表现状: " + freespaceBySize.toString());
         // }

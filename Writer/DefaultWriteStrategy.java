@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
+import Info.Info;
 import Info.Info.Replica;
 import Info.Info.LocalDisk;
 import Info.Info.UserObject;
@@ -26,6 +27,7 @@ public class DefaultWriteStrategy implements WriteStrategy {
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
             UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            Info.objMap.put(writeCommandIn.objId, obj);
 
             // 选3块磁盘
             ArrayList<LocalDisk> disks = selectDisk(obj);
@@ -77,23 +79,23 @@ public class DefaultWriteStrategy implements WriteStrategy {
     private void saveReplicaToDisk(LocalDisk disk, Replica replica) {
         log.debug("保存副本到磁盘: diskId=" + disk.diskId + ", objId=" + replica.objId);
         for (int unitId : replica.unitIdList) {
-            disk.unitData[unitId] = replica.objId;
+            disk.unitData.get(unitId).objId = replica.objId;
         }
     }
 
     private ArrayList<LocalDisk> selectDisk(UserObject obj) {
         // 选择三个磁盘
         int[] initialDisks = new int[3];
-        initialDisks[0] = ((obj.objId - 1 + Info.Info.diskNum) % Info.Info.diskNum);
-        initialDisks[1] = (obj.objId % Info.Info.diskNum);
-        initialDisks[2] = ((obj.objId + 1) % Info.Info.diskNum);
+        initialDisks[0] = ((obj.objId - 1 + Info.diskNum) % Info.diskNum);
+        initialDisks[1] = (obj.objId % Info.diskNum);
+        initialDisks[2] = ((obj.objId + 1) % Info.diskNum);
 
         log.debug("为对象" + obj.objId + "选择磁盘: " + initialDisks[0] + ", " + initialDisks[1] + ", " + initialDisks[2]);
 
         // 返回ArrayList<LocalDisk>
         ArrayList<LocalDisk> disks = new ArrayList<>();
         for (int diskId : initialDisks) {
-            LocalDisk disk = Info.Info.localDiskTbl.get(diskId);
+            LocalDisk disk = Info.localDiskTbl.get(diskId);
             if (disk != null) {
                 disks.add(disk);
             } else {
