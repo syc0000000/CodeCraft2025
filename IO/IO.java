@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import IO.model.*;
 import Info.Info;
 import Info.Info.Action;
+import Logger.LoggerFactory;
+import Logger.LoggerFactory.ModuleLogger;
 
 /**
  * IO模块的主要接口
@@ -16,6 +18,7 @@ public class IO {
 
     private static final int FRE_PER_SLICING = 1800;
     private static Scanner scanner = new Scanner(System.in);
+    private static final ModuleLogger log = LoggerFactory.getLogger("IO");
 
     /**
      * 预处理
@@ -110,32 +113,10 @@ public class IO {
         }
 
         int size = out.size();
+        log.info("输出写命令结果: " + out.size() + " 条");
         for (int i = 0; i < size; i++) {
-            System.out.println(out.get(i).objId);
-
-            // 输出副本1
-            System.out.print(out.get(i).copy1.diskId + 1);
-            for (int j = 0; j < out.get(i).copy1.unitIds.size(); j++) {
-                int outId = out.get(i).copy1.unitIds.get(j) + 1;
-                System.out.print(" " + outId);
-            }
-            System.out.println();
-
-            // 输出副本2
-            System.out.print(out.get(i).copy2.diskId + 1);
-            for (int j = 0; j < out.get(i).copy2.unitIds.size(); j++) {
-                int outId = out.get(i).copy2.unitIds.get(j) + 1;
-                System.out.print(" " + outId);
-            }
-            System.out.println();
-
-            // 输出副本3
-            System.out.print(out.get(i).copy3.diskId + 1);
-            for (int j = 0; j < out.get(i).copy3.unitIds.size(); j++) {
-                int outId = out.get(i).copy3.unitIds.get(j) + 1;
-                System.out.print(" " + outId);
-            }
-            System.out.println();
+            System.out.print(out.get(i));  // 这里会自动调用toString进行类型转型，log没支持这个feat
+            log.info("如下为输出的命令结果: \n" + out.get(i).toString());
         }
 
         flushAll();
