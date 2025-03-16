@@ -194,7 +194,7 @@ public class Info {
             this.unitNum = unitNum;
             this.ptr = 0;
             this.preoper = Action.PASS;
-            this.pretoken = 0;
+            this.pretoken = 64;
 
             // 初始化集合
             // 1-5大小的空闲空间列表

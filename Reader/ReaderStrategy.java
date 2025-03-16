@@ -19,8 +19,14 @@ public interface ReaderStrategy {
     public default int calculateToken(Info.Action action, LocalDisk disk) {
         switch (action) {
             case READ:
-                // 四舍五入
-                int token = (int) Math.round(disk.pretoken * 0.8);
+                // 向上取整
+                // readerLogger.debug("计算token: pretoken=" + disk.pretoken);
+                int token;
+                if (disk.preoper == action.READ) {
+                    token = (int) Math.ceil(disk.pretoken * 0.8);
+                } else {
+                    token = 64;
+                }
                 return token < 16 ? 16 : token;
             case JUMP:
                 return Info.tokenPerTick;

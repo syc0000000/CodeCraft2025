@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.HashSet;
 import IO.model.*;
 import Info.Info;
 import Info.Info.Action;
@@ -115,7 +116,7 @@ public class IO {
         int size = out.size();
         log.info("输出写命令结果: " + out.size() + " 条");
         for (int i = 0; i < size; i++) {
-            System.out.print(out.get(i));  // 这里会自动调用toString进行类型转型，log没支持这个feat
+            System.out.print(out.get(i)); // 这里会自动调用toString进行类型转型，log没支持这个feat
             log.info("如下为输出的命令结果: \n" + out.get(i).toString());
         }
 
@@ -205,12 +206,12 @@ public class IO {
      * 
      * @param out 读取完成命令输出结构列表
      */
-    public static void writeCompleteCommand(List<CompleteCommandOut> out) {
+    public static void writeCompleteCommand(HashSet<CompleteCommandOut> out) {
         int size = out.size();
         System.out.println(size);
 
-        for (int i = 0; i < size; i++) {
-            System.out.println(out.get(i).commandId);
+        for (CompleteCommandOut completeCommandOut : out) {
+            System.out.println(completeCommandOut.commandId);
         }
 
         flushAll();
