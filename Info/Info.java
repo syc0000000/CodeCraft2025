@@ -236,7 +236,12 @@ public class Info {
             return null;
         }
 
-        // 释放指定空间
+        /**
+         * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。 同时更新unitToSpace。
+         * 时间复杂度 O(n)
+         *
+         * @param space 要释放的DiskSpace对象
+         */
         public void releaseSpace(DiskSpace space) {
             if (space.diskId != diskId)
                 return;// 不是本磁盘，异常报错
