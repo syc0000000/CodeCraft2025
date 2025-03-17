@@ -7,7 +7,9 @@ import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
 import Info.Info.LocalDisk;
+import Info.Info.ReadTask;
 import Info.Info.Replica;
+import Info.Info.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -30,8 +32,7 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
     }
 
     /**
-     * 负责释放指定空间 维护freeSpaceBySize
-     * 时间复杂度：O(3 * 5 * n) = O(n)
+     * 负责释放指定空间 维护freeSpaceBySize 时间复杂度：O(3 * 5 * n) = O(n)
      * 
      * @param obj_id
      * @return
@@ -55,23 +56,26 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
      * 查找要被终止的读任务
      */
     public Set<Integer> findReadTaskToBeTerminated(int obj_id) {
-        Set<Integer> tasks_awaiting_deletion = Info.objTaskMap.get(obj_id);
-        // 在readTaskTbl中删除该任务
-        if (tasks_awaiting_deletion != null) {
-            for (int task_id : tasks_awaiting_deletion) {
-                log.debug("取消任务, ID = " + task_id);
-                Info.readTaskTbl.remove(task_id);
-            }
-        } else {
-            log.debug("没有找到要被终止的读任务");
-            return new HashSet<>();
+        UserObject obj = Info.objMap.get(obj_id);
+        Set<Integer> tasks_awaiting_deletion = new HashSet<>();
+
+        if (obj.readTasks == null) {
+            log.debug("当前对象没有正在进行的读任务");
         }
-        // 在objTaskMap中删除该对象
-        Info.objTaskMap.remove(obj_id);
+        for (ReadTask task : obj.readTasks) {
+            log.debug("终止进行中的读任务, ID = " + task.taskId);
+            tasks_awaiting_deletion.add(task.taskId);
+        }
 
-        // 删除该对象过期的任务
-        // TODO: Your task here
+        if (obj.readTasks == null) {
+            log.debug("当前对象已经超时的读任务");
+        }
 
+        for (int task_id : obj.timeoutTasks) {
+            log.debug("终止已超时的读任务, ID = " + task_id);
+            tasks_awaiting_deletion.add(task_id);
+        }
+        Info.objMap.remove(obj_id);
         return tasks_awaiting_deletion;
     }
 }

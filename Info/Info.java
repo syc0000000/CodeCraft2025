@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Set;
 import IO.model.PreprocessOut;
 import Logger.LoggerFactory;
@@ -33,10 +32,6 @@ public class Info {
     public static HashMap<Integer, UserObject> objMap = new HashMap<>();
     /** 本地磁盘信息 */
     public static ArrayList<LocalDisk> localDiskTbl = new ArrayList<>();
-    /** 对象id和任务id的映射 */
-    public static HashMap<Integer, HashSet<Integer>> objTaskMap = new HashMap<>();
-    /** taskid和实体的映射 */
-    public static HashMap<Integer, ReadTask> readTaskTbl = new HashMap<>();
 
     // 初始化Info模块
     public static void init() {
@@ -51,8 +46,6 @@ public class Info {
         // 清空映射
         objMap.clear();
         localDiskTbl.clear();
-        objTaskMap.clear();
-        readTaskTbl.clear();
     }
 
     // 根据预处理结果初始化系统参数
@@ -69,8 +62,6 @@ public class Info {
         }
         // 清空映射
         objMap.clear();
-        objTaskMap.clear();
-        readTaskTbl.clear();
     }
 
     // 副本类
@@ -101,12 +92,17 @@ public class Info {
         public int objSize; // 对象大小
         public int objTag; // 对象标签
         public ArrayList<Replica> replicas; // 副本ID到Replica的映射
+        /** 存放尚未完成的任务() */
+        public LinkedList<ReadTask> readTasks;
+        /** 存放过期的任务(task id) */
+        public Set<Integer> timeoutTasks = new HashSet<>();
 
         public UserObject(int objId, int objSize, int objTag) {
             this.objId = objId;
             this.objSize = objSize;
             this.objTag = objTag;
             this.replicas = new ArrayList<>(3);
+            this.readTasks = new LinkedList<>();
         }
 
         public UserObject(int objId, int objSize, int objTag, ArrayList<Replica> replicas) {
@@ -118,6 +114,16 @@ public class Info {
 
         public void addReplica(Replica replica) {
             replicas.add(replica.replicaId, replica);
+        }
+
+        public void addReadTask(ReadTask task) {
+            readTasks.add(task);
+        }
+
+        /**过期的任务调用这个方法，从readTask中移除，将TaskId加到timeoutTask中 */
+        public void expireTask(ReadTask task) {
+            readTasks.remove(task);
+            timeoutTasks.add(task.taskId);
         }
     }
 
