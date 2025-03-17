@@ -1,6 +1,7 @@
 package Deleter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
@@ -56,9 +57,14 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
     public Set<Integer> findReadTaskToBeTerminated(int obj_id) {
         Set<Integer> tasks_awaiting_deletion = Info.objTaskMap.get(obj_id);
         // 在readTaskTbl中删除该任务
-        for (int task_id : tasks_awaiting_deletion) {
-            log.debug("取消任务, ID = " + task_id);
-            Info.readTaskTbl.remove(task_id);
+        if (tasks_awaiting_deletion != null) {
+            for (int task_id : tasks_awaiting_deletion) {
+                log.debug("取消任务, ID = " + task_id);
+                Info.readTaskTbl.remove(task_id);
+            }
+        } else {
+            log.debug("没有找到要被终止的读任务");
+            return new HashSet<>();
         }
         // 在objTaskMap中删除该对象
         Info.objTaskMap.remove(obj_id);

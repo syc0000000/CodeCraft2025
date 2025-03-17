@@ -277,11 +277,11 @@ public class Info {
 
                 log.debug("恰好获取到大小相同的空闲空间: space_size = obj_size = " + obj_size + ", space信息为"
                         + exactSpace);
-                return spaceList.getFirst();
+                return exactSpace;
             }
             // space的大小大于obj的大小，此时需要拆分space
             // 原先的space会变成两个space，一个大小为obj_size，另一个为space_size - obj_size
-            for (int i = obj_size + 1; i <= 5; i++) {
+            for (int i = obj_size; i <= 5; i++) {
                 spaceList = freespaceBySize.get(i);
                 if (spaceList.size() > 0) {
                     DiskSpace spaceToCut = spaceList.removeFirst();
