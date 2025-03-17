@@ -129,7 +129,7 @@ public class Info {
         public int size; // 空间大小(缓存以避免重复计算)
         public int sizeInMap; // 空间大小(用于Map的key)
         public int diskId; // 所属磁盘ID
-        public Replica replica; // 所属副本
+        // public Replica replica; // 所属副本
 
         public DiskSpace(boolean isFree, int start, int end, int diskId) {
             this.isFree = isFree;
@@ -404,10 +404,22 @@ public class Info {
         public ReadTask(int taskId, int objId) {
             this.taskId = taskId;
             this.objId = objId;
-            this.startTime = 0;
+            this.startTime = Info.timestamp;
             this.taskValue = 0;
             this.blockFinished = new HashSet<>();
             this.blockNotFinished = new HashSet<>();
+        }
+
+        public ReadTask(int taskId, int objId, int objsize) {
+            this.taskId = taskId;
+            this.objId = objId;
+            this.startTime = Info.timestamp;
+            this.taskValue = 0;
+            this.blockFinished = new HashSet<>();
+            this.blockNotFinished = new HashSet<>();
+            for (int i = 0; i < objsize; i++) {
+                this.blockNotFinished.add(i);
+            }
         }
     }
 }

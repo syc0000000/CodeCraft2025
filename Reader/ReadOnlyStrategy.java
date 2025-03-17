@@ -23,10 +23,11 @@ public class ReadOnlyStrategy implements ReaderStrategy {
         ReadRetrun readRetrun = new ReadRetrun();
         // 填入ReadTask
         for (ReadCommandIn readCommandIn : readCommandIns) {
-            ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId);
+            UserObject object = Info.objMap.get(readCommandIn.objId);
+            ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
             Info.readTaskTbl.put(readCommandIn.commandId, readTask);
-            // readerLogger.debug("加入objTaskMap: " + readCommandIn.objId + " " +
-            // readCommandIn.commandId);
+            readerLogger.debug("加入objTaskMap: " + readCommandIn.objId + " " +
+                    readCommandIn.commandId);
             if (Info.objTaskMap.get(readCommandIn.objId) == null) {
                 HashSet<Integer> readTaskSet = new HashSet<>();
                 readTaskSet.add(readCommandIn.commandId);
@@ -74,8 +75,10 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                             while (iterator.hasNext()) {
                                 Integer task = iterator.next();
                                 ReadTask readTask = Info.readTaskTbl.get(task);
-                                readTask.blockFinished.add(blockId);
-                                readTask.blockNotFinished.remove(blockId);
+                                boolean addSucc = readTask.blockFinished.add(blockId);
+                                boolean removeSucc = readTask.blockNotFinished.remove(blockId);
+                                readerLogger.debug("taskId: " + task + "完成块: " + blockId + " addSucc: "
+                                        + addSucc + ", removeSucc: " + removeSucc);
                                 if (readTask.blockNotFinished.isEmpty()) {
                                     // 任务完成
                                     readerLogger.debug("任务完成: " + readTask.taskId);

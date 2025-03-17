@@ -48,7 +48,7 @@ public class DefaultWriteStrategy implements WriteStrategy {
                     }
                     // 分配空间
                     Replica replica = new Replica(writeCommandIn.objId, i, disk.diskId, unitIdList);
-                    space.replica = replica;
+                    // space.replica = replica;
                     addReplicaToObj(obj, replica);
                     saveReplicaToDisk(disk, replica);
 
@@ -78,8 +78,9 @@ public class DefaultWriteStrategy implements WriteStrategy {
 
     private void saveReplicaToDisk(LocalDisk disk, Replica replica) {
         log.debug("保存副本到磁盘: diskId=" + disk.diskId + ", objId=" + replica.objId);
-        for (int unitId : replica.unitIdList) {
-            disk.unitData.get(unitId).objId = replica.objId;
+        for (int i = 0; i < replica.unitIdList.size(); i++) {
+            disk.unitData.get(replica.unitIdList.get(i)).objId = replica.objId;
+            disk.unitData.get(replica.unitIdList.get(i)).blockId = i;
         }
     }
 
