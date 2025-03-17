@@ -1,5 +1,5 @@
 javac -d build ./Main.java
-
+rm -rf logs/app.log
 # 检查是否有-release参数
 DEBUG_OPTION="-d"
 for arg in "$@"; do

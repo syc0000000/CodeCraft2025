@@ -330,19 +330,23 @@ public class Info {
          * @param space 要释放的DiskSpace对象
          */
         public void releaseSpace(DiskSpace space) {
+            log.debug("释放空间: " + space);
             if (space.diskId != diskId)
                 return;// 不是本磁盘，异常报错
 
             // isFree = true
+            int lastSize = space.sizeInMap;
             space.isFree = true;
             // 合并前后空间
             DiskSpace prevSpace = space.start > 0 ? unitData.get(space.start - 1).space : null;
             DiskSpace nextSpace = space.end < unitNum - 1 ? unitData.get(space.end + 1).space : null;
             if (prevSpace != null && prevSpace.isFree) {
+                // log.debug("合并前空间: " + prevSpace);
                 space.setStartAndEnd(prevSpace.start, space.end);
                 freespaceBySize.get(prevSpace.sizeInMap).remove(prevSpace);
             }
             if (nextSpace != null && nextSpace.isFree) {
+                // log.debug("合并后空间: " + nextSpace);
                 space.setStartAndEnd(space.start, nextSpace.end);
                 freespaceBySize.get(nextSpace.sizeInMap).remove(nextSpace);
             }
@@ -351,6 +355,8 @@ public class Info {
                 unitData.get(i).space = space;
             }
             // 更新按大小组织的集合
+            log.debug("释放完成: " + space.toString());
+            freespaceBySize.get(lastSize).remove(space);
             freespaceBySize.get(space.sizeInMap).addFirst(space);
         }
 
