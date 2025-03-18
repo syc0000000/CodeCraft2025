@@ -18,19 +18,21 @@ public interface ReaderStrategy {
     public static final ModuleLogger readerLogger = LoggerFactory.getLogger("Reader");
 
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns);
-    //添加任务
-    public default void addReadTask(ArrayList<ReadCommandIn> readCommandIns){
+
+    // 添加任务
+    public default void addReadTask(ArrayList<ReadCommandIn> readCommandIns) {
         for (ReadCommandIn readCommandIn : readCommandIns) {
             UserObject object = Info.objMap.get(readCommandIn.objId);
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
             object.readTasks.add(readTask);
-            readerLogger.debug("加入objTaskMap: " + readCommandIn.objId + " " +
-                    readCommandIn.commandId);
+            readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
+                    readCommandIn.objId + "当前任务" + object.readTasks);
         }
     }
-    //对读写进行限制边界，在tick开始时进行检测，是否超越了这个边界，如果超越边界则跳跃回起始
-    public default void restrictRangeInDisk(LocalDisk disk, int start, int end, ReadCommandOut readCommandOut){
-        if(disk.ptr > end){
+
+    // 对读写进行限制边界，在tick开始时进行检测，是否超越了这个边界，如果超越边界则跳跃回起始
+    public default void restrictRangeInDisk(LocalDisk disk, int start, int end, ReadCommandOut readCommandOut) {
+        if (disk.ptr > end) {
             disk.ptr = start;
             readCommandOut.actions.add(Info.Action.JUMP);
             readCommandOut.jumpTarget = start;

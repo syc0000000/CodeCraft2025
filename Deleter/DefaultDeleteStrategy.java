@@ -24,6 +24,8 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
             int obj_id = deleteCommandIn.objId;
             maintainLocalDiskInfo(obj_id);
             Set<Integer> tasks_awaiting_deletion = findReadTaskToBeTerminated(obj_id);
+            Info.objMap.remove(obj_id);
+
             for (int task_id : tasks_awaiting_deletion) {
                 deleteCommandOuts.add(new DeleteCommandOut(task_id));
             }
@@ -48,6 +50,8 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
             for (int id : unit_ids) { // 最多循环5次
                 // log.debug("释放空间: " + localDisk.getSpaceForUnit(id));
                 localDisk.releaseSpace(localDisk.getSpaceForUnit(id));
+                localDisk.unitData.get(id).objId = -1;
+                localDisk.unitData.get(id).blockId = -1;
             }
         }
     }
@@ -75,7 +79,6 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
             log.debug("终止已超时的读任务, ID = " + task_id);
             tasks_awaiting_deletion.add(task_id);
         }
-        Info.objMap.remove(obj_id);
         return tasks_awaiting_deletion;
     }
 }

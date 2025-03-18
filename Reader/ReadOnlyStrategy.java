@@ -22,7 +22,7 @@ public class ReadOnlyStrategy implements ReaderStrategy {
     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
-        //添加所有的任务
+        // 添加所有的任务
         addReadTask(readCommandIns);
         // 每TickToken
         int tickToken = Info.tokenPerTick;
@@ -47,6 +47,7 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                     readCommandOut.actions.add(Info.Action.READ);
                     disk.pretoken = token;
                     disk.preoper = Info.Action.READ;
+                    int ptr = disk.ptr;
                     int objId = disk.ptrDoAction(Info.Action.READ);
                     UserObject obj = Info.objMap.get(objId);
                     DiskSpace space = disk.getSpaceForUnit(disk.ptr);
@@ -54,14 +55,22 @@ public class ReadOnlyStrategy implements ReaderStrategy {
 
                     if (objId != -1) {
                         // 检测完成
-                        // readerLogger.debug("objId: " + objId);
+                        readerLogger.debug("objId: " + objId);
                         // 遍历unit list 获取这一格是obj的第几个分片
-                        int blockId = disk.unitData.get(disk.ptr).blockId;
+                        int blockId = disk.unitData.get(ptr).blockId;
                         LinkedList<ReadTask> taskSet = obj.readTasks;
                         if (taskSet != null) {
                             Iterator<ReadTask> iterator = taskSet.iterator();
                             while (iterator.hasNext()) {
                                 ReadTask readTask = iterator.next();
+                                // 检测过期
+                                if (readTask.isTimeout()) {
+                                    // 任务完成
+                                    readerLogger.debug("任务过期: " + readTask.taskId);
+                                    obj.timeoutTasks.add(readTask.taskId);
+                                    iterator.remove();
+                                    continue;
+                                }
                                 boolean addSucc = readTask.blockFinished.add(blockId);
                                 boolean removeSucc = readTask.blockNotFinished.remove(blockId);
                                 readerLogger.debug("taskId: " + readTask.taskId + "完成块: " + blockId + " addSucc: "
