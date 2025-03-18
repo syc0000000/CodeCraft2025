@@ -139,7 +139,17 @@ public class Info {
         RWSPACE, BACKUPSPACE, UNUSED
     }
 
-    // 磁盘空间类 - 表示空闲或占用的空间
+    /**
+     * 磁盘空间类 - 表示空闲或占用的空间。调用<code>setStartAndEnd</code>维护位置信息，手动修改type，isFree信息
+     * 
+     * @param isFree true:空闲，false:占用
+     * @param start  空间起点
+     * @param end    空间终点
+     * @param size   空间大小，等于 end - start + 1
+     * @param sizeInMap 空间大小
+     * @param diskId 所属磁盘ID
+     * @param type 空间类型, 可选值为 <code>DiskSpaceType.UNUSED, DiskSpaceType.RWSPACE, DiskSpaceType.BACKUPSPACE</code>
+     */
     public static class DiskSpace {
         public boolean isFree; // true:空闲，false:占用
         public int start; // 空间起点
@@ -374,6 +384,13 @@ public class Info {
             // isFree = true
             int lastSize = space.sizeInMap;
             space.isFree = true;
+            space.type = DiskSpaceType.UNUSED;
+            // 更新剩余空间大小
+            sizeLeft += space.size;            
+            // 更新rwend
+            if (space.end == RWEnd) {
+                updateRWEndAfterRelease(space);
+            }
             // 合并前后空间
             DiskSpace prevSpace = space.start > 0 ? unitData.get(space.start - 1).space : null;
             DiskSpace nextSpace = space.end < unitNum - 1 ? unitData.get(space.end + 1).space : null;
@@ -395,6 +412,23 @@ public class Info {
             log.debug("释放完成: " + space.toString());
             freespaceBySize.get(lastSize).remove(space);
             freespaceBySize.get(space.sizeInMap).add(space);
+        }
+        
+        /**
+         * 作为releaseSpace的辅助方法
+         * 当release的space恰好是RWSpace的最后一个空间，调用该方法更新RWEnd；
+         * 
+         * @param space 释放的space，它恰好是RWSpace的最后一个空间
+         */
+        private void updateRWEndAfterRelease(DiskSpace space) {
+            int prevUnitIndex = space.start - 1;
+            DiskSpace prevDiskSpace = space.start > 0 ? unitData.get(prevUnitIndex).space : null;
+            while (prevDiskSpace != null && prevDiskSpace.isFree) {
+                prevUnitIndex = prevDiskSpace.start - 1;
+                prevDiskSpace = prevUnitIndex >= 0 ? unitData.get(prevUnitIndex).space : null;
+            }
+            log.debug("释放space后更新RWEnd: " + RWEnd + " -> " + prevUnitIndex);
+            RWEnd = prevUnitIndex;
         }
 
         // 切割空间
