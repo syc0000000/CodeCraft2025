@@ -36,7 +36,20 @@ public class ReadOnlyStrategy implements ReaderStrategy {
             readCommandOut.actions = new ArrayList<>();
             int tokenNow = tickToken;
             if (disk != null) {
-                while (true) {
+                boolean ifJump = false;
+                if (disk.ptr > disk.RWEnd) {
+                    readCommandOut.actions.add(Info.Action.JUMP);
+                    readCommandOut.jumpTarget = 0;
+                    disk.ptrDoAction(Info.Action.JUMP, 0);
+                    disk.preoper = Info.Action.JUMP;
+                    disk.pretoken = Info.tokenPerTick;
+                    ifJump = true;
+                }
+                while (!ifJump) {
+                    // 如果磁头指针大于RWEnd，则跳回开头
+                    if (disk.ptr > disk.RWEnd) {
+                        break;
+                    }
                     // 计算读取操作消耗的token
                     int token = calculateToken(Info.Action.READ, disk);
                     tokenNow -= token;

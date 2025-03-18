@@ -310,6 +310,9 @@ public class Info {
                 DiskSpace exactSpace = spaceList.pollFirst(); // space的大小与obj的大小恰好一致，此时不需要拆分
                 exactSpace.isFree = false;
 
+                // 维护freeSize
+                sizeLeft -= obj_size;
+
                 log.debug("恰好获取到大小相同的空闲空间: space_size = obj_size = " + obj_size + ", space信息为"
                         + exactSpace);
                 return exactSpace;
@@ -335,12 +338,55 @@ public class Info {
                     freespaceBySize.get(spaceToRemain.sizeInMap).add(spaceToRemain);
                     log.debug("切分后的两个空间: spaceToUse信息为" + spaceToUse + ", spaceToRemain信息为"
                             + spaceToRemain);
+                    // 维护freeSize
+                    sizeLeft -= obj_size;
                     return spaceToUse;
                 }
             }
             return null;
         }
 
+        public DiskSpace getFreeSpaceBySizeFromEnd(int obj_size) {
+            TreeSet<DiskSpace> spaceList = freespaceBySize.get(obj_size);
+            if (spaceList.size() > 0 && spaceList.last().size == obj_size) {
+                DiskSpace exactSpace = spaceList.pollLast(); // space的大小与obj的大小恰好一致，此时不需要拆分，从后往前找
+                exactSpace.isFree = false;
+
+                log.debug("恰好获取到大小相同的空闲空间: space_size = obj_size = " + obj_size + ", space信息为"
+                        + exactSpace);
+                // 维护freeSize
+                sizeLeft -= obj_size;
+                return exactSpace;
+            }
+            // space的大小大于obj的大小，此时需要拆分space
+            // 原先的space会变成两个space，一个大小为obj_size，另一个为space_size - obj_size
+            for (int i = obj_size; i <= 5; i++) {
+                spaceList = freespaceBySize.get(i);
+                if (spaceList.size() > 0) {
+                    DiskSpace spaceToCut = spaceList.pollLast();
+                    log.debug("切分空间: Space的信息为: " + spaceToCut + ", 要写入的对象大小为: " + obj_size);
+                    DiskSpace spaceToUse = new DiskSpace(false, spaceToCut.end - obj_size + 1,
+                            spaceToCut.end, diskId);
+                    spaceToUse.type = DiskSpaceType.BACKUPSPACE;
+                    DiskSpace spaceToRemain = new DiskSpace(true, spaceToCut.start,
+                            spaceToCut.end - obj_size, diskId);
+                    // 更新单元到空间的映射
+                    for (int j = spaceToUse.start; j <= spaceToUse.end; j++) {
+                        unitData.get(j).space = spaceToUse;
+                    }
+                    for (int j = spaceToRemain.start; j <= spaceToRemain.end; j++) {
+                        unitData.get(j).space = spaceToRemain;
+                    }
+                    freespaceBySize.get(spaceToRemain.sizeInMap).add(spaceToRemain);
+                    log.debug("切分后的两个空间: spaceToUse信息为" + spaceToUse + ", spaceToRemain信息为"
+                            + spaceToRemain);
+                    // 维护freeSize
+                    sizeLeft -= obj_size;
+                    return spaceToUse;
+                }
+            }
+            return null;
+        }
         // public DiskSpace getFreeSpaceBySize(int size) {
         // LinkedList<DiskSpace> spaceList = freespaceBySize.get(size);
         // if (spaceList.size() > 0) {

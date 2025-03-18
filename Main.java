@@ -51,10 +51,11 @@ public class Main {
 
         // 初始化策略
         Deleter deleter = new Deleter("default");
-        Writer writer = new Writer("default");
+        // Writer writer = new Writer("default");
+        Writer writer = new Writer("rw");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 1000000);
+        logger.enableTimeRange(12811, 12812);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片

@@ -71,12 +71,12 @@ public class DefaultWriteStrategy implements WriteStrategy {
         return writeCommandOuts;
     }
 
-    private void addReplicaToObj(UserObject obj, Replica replica) {
+    protected void addReplicaToObj(UserObject obj, Replica replica) {
         log.debug("添加副本到对象: objId=" + obj.objId + ", replicaId=" + replica.replicaId);
         obj.addReplica(replica);
     }
 
-    private void saveReplicaToDisk(LocalDisk disk, Replica replica) {
+    protected void saveReplicaToDisk(LocalDisk disk, Replica replica) {
         log.debug("保存副本到磁盘: diskId=" + disk.diskId + ", objId=" + replica.objId);
         for (int i = 0; i < replica.unitIdList.size(); i++) {
             disk.unitData.get(replica.unitIdList.get(i)).objId = replica.objId;
@@ -105,4 +105,5 @@ public class DefaultWriteStrategy implements WriteStrategy {
         }
         return disks;
     }
+
 }

@@ -182,7 +182,8 @@ public class IO {
                 // 判断是否是JUMP操作
                 if (out.get(i).actions != null && !out.get(i).actions.isEmpty() &&
                         out.get(i).actions.get(0) == Action.JUMP) {
-                    System.out.println("j " + out.get(i).jumpTarget);
+                    int target = out.get(i).jumpTarget + 1;
+                    System.out.println("j " + target);
                 } else {
                     // 输出读取或通过操作
                     for (Action action : out.get(i).actions) {
