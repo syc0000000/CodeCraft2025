@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
@@ -21,21 +22,8 @@ public class ReadOnlyStrategy implements ReaderStrategy {
     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
-        // 填入ReadTask
-        for (ReadCommandIn readCommandIn : readCommandIns) {
-            UserObject object = Info.objMap.get(readCommandIn.objId);
-            ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
-            Info.readTaskTbl.put(readCommandIn.commandId, readTask);
-            readerLogger.debug("加入objTaskMap: " + readCommandIn.objId + " " +
-                    readCommandIn.commandId);
-            if (Info.objTaskMap.get(readCommandIn.objId) == null) {
-                HashSet<Integer> readTaskSet = new HashSet<>();
-                readTaskSet.add(readCommandIn.commandId);
-                Info.objTaskMap.put(readCommandIn.objId, readTaskSet);
-            } else {
-                Info.objTaskMap.get(readCommandIn.objId).add(readCommandIn.commandId);
-            }
-        }
+        // 添加所有的任务
+        addReadTask(readCommandIns);
         // 每TickToken
         int tickToken = Info.tokenPerTick;
         // readerLogger.debug("tokenPerTick: " + tickToken);
@@ -59,6 +47,7 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                     readCommandOut.actions.add(Info.Action.READ);
                     disk.pretoken = token;
                     disk.preoper = Info.Action.READ;
+                    int ptr = disk.ptr;
                     int objId = disk.ptrDoAction(Info.Action.READ);
                     UserObject obj = Info.objMap.get(objId);
                     DiskSpace space = disk.getSpaceForUnit(disk.ptr);
@@ -66,18 +55,25 @@ public class ReadOnlyStrategy implements ReaderStrategy {
 
                     if (objId != -1) {
                         // 检测完成
-                        // readerLogger.debug("objId: " + objId);
+                        readerLogger.debug("objId: " + objId);
                         // 遍历unit list 获取这一格是obj的第几个分片
-                        int blockId = disk.unitData.get(disk.ptr).blockId;
-                        HashSet<Integer> taskSet = Info.objTaskMap.get(objId);
+                        int blockId = disk.unitData.get(ptr).blockId;
+                        LinkedList<ReadTask> taskSet = obj.readTasks;
                         if (taskSet != null) {
-                            Iterator<Integer> iterator = taskSet.iterator();
+                            Iterator<ReadTask> iterator = taskSet.iterator();
                             while (iterator.hasNext()) {
-                                Integer task = iterator.next();
-                                ReadTask readTask = Info.readTaskTbl.get(task);
+                                ReadTask readTask = iterator.next();
+                                // 检测过期
+                                if (readTask.isTimeout()) {
+                                    // 任务完成
+                                    readerLogger.debug("任务过期: " + readTask.taskId);
+                                    obj.timeoutTasks.add(readTask.taskId);
+                                    iterator.remove();
+                                    continue;
+                                }
                                 boolean addSucc = readTask.blockFinished.add(blockId);
                                 boolean removeSucc = readTask.blockNotFinished.remove(blockId);
-                                readerLogger.debug("taskId: " + task + "完成块: " + blockId + " addSucc: "
+                                readerLogger.debug("taskId: " + readTask.taskId + "完成块: " + blockId + " addSucc: "
                                         + addSucc + ", removeSucc: " + removeSucc);
                                 if (readTask.blockNotFinished.isEmpty()) {
                                     // 任务完成

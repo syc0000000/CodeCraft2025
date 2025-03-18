@@ -120,7 +120,7 @@ public class Info {
             readTasks.add(task);
         }
 
-        /**过期的任务调用这个方法，从readTask中移除，将TaskId加到timeoutTask中 */
+        /** 过期的任务调用这个方法，从readTask中移除，将TaskId加到timeoutTask中 */
         public void expireTask(ReadTask task) {
             readTasks.remove(task);
             timeoutTasks.add(task.taskId);
@@ -337,8 +337,10 @@ public class Info {
          */
         public void releaseSpace(DiskSpace space) {
             log.debug("释放空间: " + space);
-            if (space.diskId != diskId)
+            if (space.diskId != diskId) {
+                log.error("释放空间: " + space + " 不是本磁盘，异常");
                 return;// 不是本磁盘，异常报错
+            }
 
             // isFree = true
             int lastSize = space.sizeInMap;
@@ -426,6 +428,10 @@ public class Info {
             for (int i = 0; i < objsize; i++) {
                 this.blockNotFinished.add(i);
             }
+        }
+
+        public boolean isTimeout() {
+            return Info.timestamp - startTime > 106;
         }
     }
 }
