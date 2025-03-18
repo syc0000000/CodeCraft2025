@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
+import java.util.Comparator;
+import java.util.TreeSet;
 import IO.model.PreprocessOut;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -127,6 +129,16 @@ public class Info {
         }
     }
 
+    /**
+     * 磁盘空间类型
+     * RWSPACE: 读写空间
+     * BACKUPSPACE: 备份空间
+     * UNUSED: 未使用空间
+     */
+    public enum DiskSpaceType {
+        RWSPACE, BACKUPSPACE, UNUSED
+    }
+
     // 磁盘空间类 - 表示空闲或占用的空间
     public static class DiskSpace {
         public boolean isFree; // true:空闲，false:占用
@@ -135,7 +147,17 @@ public class Info {
         public int size; // 空间大小(缓存以避免重复计算)
         public int sizeInMap; // 空间大小(用于Map的key)
         public int diskId; // 所属磁盘ID
+
+        public DiskSpaceType type; // 空间类型
         // public Replica replica; // 所属副本
+
+        // 定义Comparator，按start升序排序
+        public static Comparator<DiskSpace> comparator = new Comparator<DiskSpace>() {
+            @Override
+            public int compare(DiskSpace o1, DiskSpace o2) {
+                return o1.start - o2.start;
+            }
+        };
 
         public DiskSpace(boolean isFree, int start, int end, int diskId) {
             this.isFree = isFree;
@@ -143,6 +165,7 @@ public class Info {
             this.end = end;
             this.size = end - start + 1;
             this.diskId = diskId;
+            this.type = DiskSpaceType.UNUSED;
             this.sizeInMap = size > 5 ? 5 : size;
         }
 
@@ -182,12 +205,16 @@ public class Info {
         public int diskId; // 磁盘id
         public int unitNum; // 存储单元数量
         public int ptr; // 当前磁头指针位置
+
+        public int RWEnd; // 读写空间结束位置
+        public int sizeLeft; // 剩余空间大小
+
         public Action preoper; // 上一次操作
         public int pretoken; // 上一次令牌数量
 
         // 优化: 按大小组织空闲空间的集合
         // key: 空间大小1-5, value: 该大小的空闲空间列表
-        public HashMap<Integer, LinkedList<DiskSpace>> freespaceBySize;
+        public HashMap<Integer, TreeSet<DiskSpace>> freespaceBySize;
 
         // 存储单元数据（对象ID, -1表示空）
         public ArrayList<UnitData> unitData;
@@ -199,6 +226,8 @@ public class Info {
             this.diskId = diskId;
             this.unitNum = unitNum;
             this.ptr = 0;
+            this.RWEnd = 0;
+            this.sizeLeft = unitNum;
             this.preoper = Action.PASS;
             this.pretoken = 64;
 
@@ -217,11 +246,11 @@ public class Info {
             DiskSpace initialSpace = new DiskSpace(true, 0, unitNum - 1, diskId);
 
             // 添加到按大小组织的集合
-            freespaceBySize.put(1, new LinkedList<>());
-            freespaceBySize.put(2, new LinkedList<>());
-            freespaceBySize.put(3, new LinkedList<>());
-            freespaceBySize.put(4, new LinkedList<>());
-            freespaceBySize.put(5, new LinkedList<>());
+            freespaceBySize.put(1, new TreeSet<>(DiskSpace.comparator));
+            freespaceBySize.put(2, new TreeSet<>(DiskSpace.comparator));
+            freespaceBySize.put(3, new TreeSet<>(DiskSpace.comparator));
+            freespaceBySize.put(4, new TreeSet<>(DiskSpace.comparator));
+            freespaceBySize.put(5, new TreeSet<>(DiskSpace.comparator));
 
             freespaceBySize.get(5).add(initialSpace);
 
@@ -276,9 +305,9 @@ public class Info {
          * @return 空闲空间，用于存放对象
          */
         public DiskSpace getFreeSpaceBySize(int obj_size) {
-            LinkedList<DiskSpace> spaceList = freespaceBySize.get(obj_size);
-            if (spaceList.size() > 0 && spaceList.getFirst().size == obj_size) {
-                DiskSpace exactSpace = spaceList.removeFirst(); // space的大小与obj的大小恰好一致，此时不需要拆分
+            TreeSet<DiskSpace> spaceList = freespaceBySize.get(obj_size);
+            if (spaceList.size() > 0 && spaceList.first().size == obj_size) {
+                DiskSpace exactSpace = spaceList.pollFirst(); // space的大小与obj的大小恰好一致，此时不需要拆分
                 exactSpace.isFree = false;
 
                 log.debug("恰好获取到大小相同的空闲空间: space_size = obj_size = " + obj_size + ", space信息为"
@@ -290,7 +319,7 @@ public class Info {
             for (int i = obj_size; i <= 5; i++) {
                 spaceList = freespaceBySize.get(i);
                 if (spaceList.size() > 0) {
-                    DiskSpace spaceToCut = spaceList.removeFirst();
+                    DiskSpace spaceToCut = spaceList.pollFirst();
                     log.debug("切分空间: Space的信息为: " + spaceToCut + ", 要写入的对象大小为: " + obj_size);
                     DiskSpace spaceToUse = new DiskSpace(false, spaceToCut.start,
                             spaceToCut.start + obj_size - 1, diskId);
@@ -365,7 +394,7 @@ public class Info {
             // 更新按大小组织的集合
             log.debug("释放完成: " + space.toString());
             freespaceBySize.get(lastSize).remove(space);
-            freespaceBySize.get(space.sizeInMap).addFirst(space);
+            freespaceBySize.get(space.sizeInMap).add(space);
         }
 
         // 切割空间
