@@ -1,16 +1,12 @@
 // main.java
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import Deleter.Deleter;
 import IO.IO;
-import IO.model.CompleteCommandOut;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import IO.model.PreprocessOut;
 import IO.model.ReadCommandIn;
-import IO.model.ReadCommandOut;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import IO.model.ReadRetrun;
