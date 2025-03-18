@@ -139,7 +139,17 @@ public class Info {
         RWSPACE, BACKUPSPACE, UNUSED
     }
 
-    // 磁盘空间类 - 表示空闲或占用的空间
+    /**
+     * 磁盘空间类 - 表示空闲或占用的空间。调用<code>setStartAndEnd</code>维护位置信息，手动修改type，isFree信息
+     * 
+     * @param isFree true:空闲，false:占用
+     * @param start  空间起点
+     * @param end    空间终点
+     * @param size   空间大小，等于 end - start + 1
+     * @param sizeInMap 空间大小
+     * @param diskId 所属磁盘ID
+     * @param type 空间类型, 可选值为 <code>DiskSpaceType.UNUSED, DiskSpaceType.RWSPACE, DiskSpaceType.BACKUPSPACE</code>
+     */
     public static class DiskSpace {
         public boolean isFree; // true:空闲，false:占用
         public int start; // 空间起点
