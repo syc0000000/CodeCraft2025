@@ -384,6 +384,13 @@ public class Info {
             // isFree = true
             int lastSize = space.sizeInMap;
             space.isFree = true;
+            space.type = DiskSpaceType.UNUSED;
+            // 更新剩余空间大小
+            sizeLeft += space.size;            
+            // 更新rwend
+            if (space.end == RWEnd) {
+                updateRWEndAfterRelease(space);
+            }
             // 合并前后空间
             DiskSpace prevSpace = space.start > 0 ? unitData.get(space.start - 1).space : null;
             DiskSpace nextSpace = space.end < unitNum - 1 ? unitData.get(space.end + 1).space : null;
@@ -405,6 +412,20 @@ public class Info {
             log.debug("释放完成: " + space.toString());
             freespaceBySize.get(lastSize).remove(space);
             freespaceBySize.get(space.sizeInMap).add(space);
+        }
+        
+        /**
+         * release的space恰好是RWSpace的最后一个空间，此时需要更新RWEnd
+         * 
+         * @param space 释放的space，它恰好是RWSpace的最后一个空间
+         */
+        private void updateRWEndAfterRelease(DiskSpace space) {
+            int prevUnitIndex = space.start - 1; // 
+            while (unitData.get(prevUnitIndex).objId < 0) {
+                prevUnitIndex--;
+            }
+            log.debug("释放space后更新RWEnd: " + RWEnd + " -> " + prevUnitIndex);
+            RWEnd = prevUnitIndex;
         }
 
         // 切割空间
