@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
+import argparse
 
-def plot_disk_rw():
+def plot_disk_rw(show_inflection_points=False):
     # 读取数据
     try:
         with open('disk0RWEnd.txt', 'r') as file:
@@ -22,8 +23,8 @@ def plot_disk_rw():
     # 创建时间点数组
     time_points = np.arange(1, len(rw_end_data) + 1)
 
-    # 创建图形
-    plt.figure(figsize=(12, 6))
+    # 创建图形，调整宽高比
+    plt.figure(figsize=(24, 6))  # 将宽度从12增加到24
     
     # 绘制两条曲线
     plt.plot(time_points, rw_end_data, 'b-', label='RWEnd Position')
@@ -56,24 +57,26 @@ def plot_disk_rw():
                     ha='center', va='top',
                     fontsize=8)
     
-    # 检测并标记拐点
-    rw_end_array = np.array(rw_end_data)
-    # 计算一阶差分
-    diff1 = np.diff(rw_end_array)
-    # 计算二阶差分
-    diff2 = np.diff(diff1)
-    # 找到拐点（二阶差分的零点）
-    inflection_points = np.where(np.diff(np.sign(diff2)))[0]
-    
-    # 标记拐点
-    for i in inflection_points:
-        if i < len(rw_end_data) and rw_end_data[i] >= 1000:  # 只标记值大于等于1000的拐点
-            plt.plot(time_points[i], rw_end_data[i], 'g*', markersize=10)  # 绿色星形标记拐点
-            y_offset = 15 if rw_end_data[i] > 1000 else -15
-            plt.annotate(f'({time_points[i]}, {rw_end_data[i]})', 
-                        xy=(time_points[i], rw_end_data[i]),
-                        xytext=(10, y_offset), textcoords='offset points',
-                        fontsize=8)
+    # 如果启用了拐点检测，则标记拐点
+    if show_inflection_points:
+        # 检测并标记拐点
+        rw_end_array = np.array(rw_end_data)
+        # 计算一阶差分
+        diff1 = np.diff(rw_end_array)
+        # 计算二阶差分
+        diff2 = np.diff(diff1)
+        # 找到拐点（二阶差分的零点）
+        inflection_points = np.where(np.diff(np.sign(diff2)))[0]
+        
+        # 标记拐点
+        for i in inflection_points:
+            if i < len(rw_end_data) and rw_end_data[i] >= 1000:  # 只标记值大于等于1000的拐点
+                plt.plot(time_points[i], rw_end_data[i], 'g*', markersize=10)  # 绿色星形标记拐点
+                y_offset = 15 if rw_end_data[i] > 1000 else -15
+                plt.annotate(f'({time_points[i]}, {rw_end_data[i]})', 
+                            xy=(time_points[i], rw_end_data[i]),
+                            xytext=(10, y_offset), textcoords='offset points',
+                            fontsize=8)
     
     # 设置图表属性
     plt.title('Disk 0 RWEnd and Head Position Over Time', fontsize=14)
@@ -93,4 +96,13 @@ def plot_disk_rw():
     plt.show()
 
 if __name__ == "__main__":
-    plot_disk_rw() 
+    # 创建命令行参数解析器
+    parser = argparse.ArgumentParser(description='Plot disk RWEnd and head position')
+    parser.add_argument('--show-inflection', action='store_true', 
+                      help='Show inflection points on the plot')
+    
+    # 解析命令行参数
+    args = parser.parse_args()
+    
+    # 调用绘图函数，传入参数
+    plot_disk_rw(show_inflection_points=args.show_inflection)
