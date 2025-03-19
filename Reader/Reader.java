@@ -11,6 +11,8 @@ public class Reader {
     public Reader(String readerStrategy) {
         if (readerStrategy.equals("ReadOnly")) {
             this.readerStrategy = new ReadOnlyStrategy();
+        } else if (readerStrategy.equals("default")) {
+            this.readerStrategy = new DefaultReaderStrategy();
         } else {
             throw new IllegalArgumentException("Invalid reader strategy: " + readerStrategy);
         }

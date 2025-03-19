@@ -49,7 +49,7 @@ public class Main {
         Deleter deleter = new Deleter("default");
         // Writer writer = new Writer("default");
         Writer writer = new Writer("rw");
-        Reader reader = new Reader("ReadOnly");
+        Reader reader = new Reader("default");
         // 设置在特定时间片范围内启用详细日志
         logger.enableTimeRange(12811, 12812);
         logger.enableModule("IO");
