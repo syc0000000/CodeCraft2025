@@ -37,8 +37,8 @@ public interface ReaderStrategy {
                 }
                 
             }
-            readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
-                    readCommandIn.objId + "当前任务" + object.readTasks);
+            //readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
+            //        readCommandIn.objId + "当前任务");
         }
     }
     
