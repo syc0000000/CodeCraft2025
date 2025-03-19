@@ -7,7 +7,7 @@ import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
 import Info.Info.LocalDisk;
-import Info.Info.DiskSpace;;
+import Info.Info.DiskSpace;
 import Info.Info.ReadTask;
 import Info.Info.Replica;
 import Info.Info.UserObject;
