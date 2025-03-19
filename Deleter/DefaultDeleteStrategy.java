@@ -7,6 +7,7 @@ import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
 import Info.Info.LocalDisk;
+import Info.Info.DiskSpace;;
 import Info.Info.ReadTask;
 import Info.Info.Replica;
 import Info.Info.UserObject;
@@ -46,13 +47,10 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
             log.debug("开始释放副本所占用的空间，副本信息：" + replica);
             int disk_id = replica.diskId;
             ArrayList<Integer> unit_ids = replica.unitIdList;
-            LocalDisk localDisk = Info.localDiskTbl.get(disk_id);
-            for (int id : unit_ids) { // 最多循环5次
-                // log.debug("释放空间: " + localDisk.getSpaceForUnit(id));
-                localDisk.releaseSpace(localDisk.getSpaceForUnit(id));
-                localDisk.unitData.get(id).objId = -1;
-                localDisk.unitData.get(id).blockId = -1;
-            }
+            LocalDisk disk = Info.localDiskTbl.get(disk_id);
+            DiskSpace space = disk.unitData.get(replica.unitIdList.get(0)).space;
+            log.debug("释放空间: " + space);
+            disk.releaseSpace(space);
         }
     }
 

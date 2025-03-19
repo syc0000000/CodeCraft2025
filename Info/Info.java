@@ -431,8 +431,6 @@ public class Info {
             int lastSize = space.sizeInMap;
             space.isFree = true;
             space.type = DiskSpaceType.UNUSED;
-            // 更新剩余空间大小
-            sizeLeft += space.size;            
             // 更新rwend
             if (space.end == RWEnd) {
                 updateRWEndAfterRelease(space);
@@ -452,7 +450,9 @@ public class Info {
             }
             // 更新单元到空间的映射
             for (int i = space.start; i <= space.end; i++) {
-                unitData.get(i).space = space;
+                unitData.get(i).space = space;            
+                unitData.get(i).objId = -1;
+                unitData.get(i).blockId = -1;
             }
             // 更新按大小组织的集合
             log.debug("释放完成: " + space.toString());
