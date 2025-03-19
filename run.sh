@@ -21,8 +21,8 @@ done
 # 检测操作系统类型
 if [ "$(uname -s)" = "Darwin" ]; then
     # Mac系统
-    python3 ./test/run.py ./test/interactor_mac $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION
+    python3 ./test/run.py ./test/interactor_mac $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION -r 39260 39261
 else
     # 其他系统
-    python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION
+    python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION -r 39260 39261
 fi

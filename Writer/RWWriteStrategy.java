@@ -102,14 +102,24 @@ public class RWWriteStrategy extends DefaultWriteStrategy {
                 size3 = disk.sizeLeft;
             }
         }
+        log.debug("选择三块磁盘：max1: " + max1 + ", max2: " + max2 + ", max3: " + max3);
 
         // 按顺序添加到结果列表中
-        if (max1 != null)
+        if (max1 != null) {
             disks.add(max1);
-        if (max2 != null)
+        } else {
+            log.error("max1 选不出来");
+        }
+        if (max2 != null) {
             disks.add(max2);
-        if (max3 != null)
+        } else {
+            log.error("max2 选不出来");
+        }
+        if (max3 != null) {
             disks.add(max3);
+        } else {
+            log.error("max3 选不出来");
+        }
 
         return disks;
     }

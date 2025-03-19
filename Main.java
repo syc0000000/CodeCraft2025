@@ -26,7 +26,7 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.ERROR);
+        logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
@@ -51,7 +51,7 @@ public class Main {
         Writer writer = new Writer("rw");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(12811, 12812);
+        logger.enableTimeRange(39260, 39262);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片

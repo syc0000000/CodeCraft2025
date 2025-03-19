@@ -142,13 +142,14 @@ public class Info {
     /**
      * 磁盘空间类 - 表示空闲或占用的空间。调用<code>setStartAndEnd</code>维护位置信息，手动修改type，isFree信息
      * 
-     * @param isFree true:空闲，false:占用
-     * @param start  空间起点
-     * @param end    空间终点
-     * @param size   空间大小，等于 end - start + 1
+     * @param isFree    true:空闲，false:占用
+     * @param start     空间起点
+     * @param end       空间终点
+     * @param size      空间大小，等于 end - start + 1
      * @param sizeInMap 空间大小
-     * @param diskId 所属磁盘ID
-     * @param type 空间类型, 可选值为 <code>DiskSpaceType.UNUSED, DiskSpaceType.RWSPACE, DiskSpaceType.BACKUPSPACE</code>
+     * @param diskId    所属磁盘ID
+     * @param type      空间类型, 可选值为
+     *                  <code>DiskSpaceType.UNUSED, DiskSpaceType.RWSPACE, DiskSpaceType.BACKUPSPACE</code>
      */
     public static class DiskSpace {
         public boolean isFree; // true:空闲，false:占用
@@ -395,6 +396,7 @@ public class Info {
                     return spaceToUse;
                 }
             }
+            log.error("getFreeSpaceBySizeFromEnd: 无法找到大小为" + obj_size + "的空闲空间");
             return null;
         }
         // public DiskSpace getFreeSpaceBySize(int size) {
@@ -432,7 +434,7 @@ public class Info {
             space.isFree = true;
             space.type = DiskSpaceType.UNUSED;
             // 更新剩余空间大小
-            sizeLeft += space.size;            
+            sizeLeft += space.size;
             // 更新rwend
             if (space.end == RWEnd) {
                 updateRWEndAfterRelease(space);
@@ -459,7 +461,7 @@ public class Info {
             freespaceBySize.get(lastSize).remove(space);
             freespaceBySize.get(space.sizeInMap).add(space);
         }
-        
+
         /**
          * 作为releaseSpace的辅助方法
          * 当release的space恰好是RWSpace的最后一个空间，调用该方法更新RWEnd；
