@@ -202,11 +202,12 @@ public class Info {
         public int objId; // 对象id
         public int blockId; // 块id
         public DiskSpace space; // 空间
-
+        public boolean isInTask;
         public UnitData(int objId, int blockId, DiskSpace space) {
             this.objId = objId;
             this.blockId = blockId;
             this.space = space;
+            this.isInTask = false;
         }
     }
 
@@ -272,7 +273,7 @@ public class Info {
 
         public void passPtr() {
             ptr++;
-            ptr %= unitNum;
+            ptr %= RWEnd;
         }
 
         // 执行操作

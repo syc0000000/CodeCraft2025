@@ -9,6 +9,7 @@ import IO.model.ReadRetrun;
 import Info.Info;
 import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
+import Info.Info.Replica;
 import Info.Info.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -25,6 +26,17 @@ public interface ReaderStrategy {
             UserObject object = Info.objMap.get(readCommandIn.objId);
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
             object.readTasks.add(readTask);
+            for(int i = 0; i < 3; i++){
+                //找到对应的副本
+                Replica replica = object.replicas.get(i);
+                int diskId = replica.diskId;
+                ArrayList<Integer> unitIDList = replica.unitIdList;
+                for(int j = 0; j < object.objSize; j++){
+                    //设置单元中的isInTask为true
+                    Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(j)).isInTask = true; 
+                }
+                
+            }
             readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
                     readCommandIn.objId + "当前任务" + object.readTasks);
         }
