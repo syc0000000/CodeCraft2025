@@ -273,7 +273,6 @@ public class Info {
 
         public void passPtr() {
             ptr++;
-            ptr %= RWEnd;
         }
 
         // 执行操作

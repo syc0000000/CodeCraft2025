@@ -36,9 +36,18 @@ public class DefaultReaderStrategy implements ReaderStrategy {
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
             readCommandOut.actions = new ArrayList<>();
-            
+            //如果检测到需要跳转，则直接跳转
+            if(disk.ptr > disk.RWEnd){
+                readCommandOut.actions.add(Info.Action.JUMP);
+                readCommandOut.jumpTarget = 0;
+                disk.ptrDoAction(Info.Action.JUMP, 0);
+                disk.preoper = Info.Action.JUMP;
+                disk.pretoken = Info.tokenPerTick;
+                continue;
+            }
             //准备消耗token
             while(tokenNow > 0){
+                if(disk.ptr > disk.RWEnd) break;
                 boolean isInTask = disk.unitData.get(disk.ptr).isInTask;
                 if(isInTask){
                     //如果token足够，则直接进行操作
@@ -70,13 +79,9 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         //设为没有任务
                         disk.unitData.get(disk.ptr).isInTask = false;
                         //输出
-                        readCommandOut.actions.add(Info.Action.READ);
-                        //token操作
-                        disk.pretoken = calculateToken(Info.Action.READ, disk);
-                        disk.preoper = Info.Action.READ;
+                        processAction(Info.Action.READ, disk, readCommandOut);
+                        //减少token
                         tokenNow -= disk.pretoken;
-                        //指针操作
-                        disk.ptrDoAction(Info.Action.READ);
                         continue;
                     }
                     //如果token不足，则直接退出，等待下一个tick进行处理
@@ -84,43 +89,49 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         break;
                     }
                 }
+                //如果是发现已经跑出范围，则直接退出
                 int k;
-                int restrict = (disk.RWEnd - disk.ptr + 1) < (tokenNow - 63) ? disk.RWEnd - disk.ptr : tokenNow - 63;
+                int restrict = (disk.RWEnd - disk.ptr + 2) < (tokenNow - 63) ? disk.RWEnd - disk.ptr : tokenNow - 63;
+                //找任务，找到就直接退出，尝试处理任务
                 for(k = 1; k < restrict ; k++){
                     if(disk.unitData.get(disk.ptr + k).isInTask){
                         break;
                     }
                 }
+                //寻找出了RWEnd的范围
+                if(disk.ptr + k > disk.RWEnd) break;
+                //没找到
+                if(!disk.unitData.get(disk.ptr + k).isInTask) break;
+                //判某几种情况
                 if(k == 1){
                     if(disk.pretoken < 52){
-                        readCommandOut.actions.add(Info.Action.READ);
-                        disk.pretoken = calculateToken(Info.Action.READ, disk);
-                        disk.preoper = Info.Action.READ;
+                        processAction(Info.Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        disk.ptrDoAction(Info.Action.READ);
+                    }
+                    else{
+                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
                     }
                 }
                 else if(k == 2){
                     if(disk.pretoken < 34){
-                        readCommandOut.actions.add(Info.Action.READ);
-                        disk.pretoken = calculateToken(Info.Action.READ, disk);
-                        disk.preoper = Info.Action.READ;
+                        processAction(Info.Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        disk.ptrDoAction(Info.Action.READ);
-                        readCommandOut.actions.add(Info.Action.READ);
-                        disk.pretoken = calculateToken(Info.Action.READ, disk);
-                        disk.preoper = Info.Action.READ;
+                        processAction(Info.Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        disk.ptrDoAction(Info.Action.READ);
+                    }
+                    else{
+                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
                     }
                 }
+                //任务离得很远
                 else{
                     while(k > 0){
-                        readCommandOut.actions.add(Info.Action.PASS);
-                        disk.pretoken = calculateToken(Info.Action.PASS, disk);
-                        disk.preoper = Info.Action.PASS;
+                        processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        disk.ptrDoAction(Info.Action.PASS);
                         k--;
                     }
                 }

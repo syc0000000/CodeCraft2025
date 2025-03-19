@@ -41,7 +41,7 @@ public interface ReaderStrategy {
                     readCommandIn.objId + "当前任务" + object.readTasks);
         }
     }
-
+    
     // 对读写进行限制边界，在tick开始时进行检测，是否超越了这个边界，如果超越边界则跳跃回起始
     public default void restrictRangeInDisk(LocalDisk disk, int start, int end, ReadCommandOut readCommandOut) {
         if (disk.ptr > end) {
@@ -73,5 +73,17 @@ public interface ReaderStrategy {
             default:
                 return -1;// 异常
         }
+    }
+    /**
+     * @brief 根据硬盘和action，执行操作，将操作记录在readCmmandout中。只允许read和pass操作
+     * @param action
+     * @param disk
+     * @param readCommandOut
+     */
+    public default void processAction(Info.Action action, LocalDisk disk, ReadCommandOut readCommandOut){
+        readCommandOut.actions.add(action);
+        disk.pretoken = calculateToken(action, disk);
+        disk.preoper = action;
+        disk.ptrDoAction(action);
     }
 }
