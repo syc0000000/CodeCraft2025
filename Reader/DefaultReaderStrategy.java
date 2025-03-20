@@ -37,7 +37,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
             ReadCommandOut readCommandOut = new ReadCommandOut();
             readCommandOut.actions = new ArrayList<>();
             // 如果检测到需要跳转，则直接跳转
-            readerLogger.debug("磁盘编号"+i+"目前ptr位置为"+disk.ptr);
+            readerLogger.debug("磁盘编号"+i+"目前ptr位置为"+disk.ptr+"RWEnd位置为"+disk.RWEnd);
             if (disk.ptr > disk.RWEnd) {
                 readerLogger.debug("指针跳转");
                 readCommandOut.actions.add(Info.Action.JUMP);
@@ -49,6 +49,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                 continue;
             }
             // 准备消耗token
+            readerLogger.debug("token剩余"+tokenNow);
             while (tokenNow > 0) {
                 if (disk.ptr > disk.RWEnd)
                     break;
@@ -65,6 +66,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         UserObject object = Info.objMap.get(objId);
                         // 有任务就直接处理
                         readerLogger.debug("objid为"+objId+"blockid为"+blockId);
+                        
                         Iterator<ReadTask> iterator = object.readTasks.iterator();
                         while (iterator.hasNext()) {
                             ReadTask readTask = iterator.next();
@@ -106,29 +108,27 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                 }
                 // 如果是发现已经跑出范围，则直接退出
                 int k;
-                int restrict = (disk.RWEnd - disk.ptr + 2) < (tokenNow - 63) ? disk.RWEnd - disk.ptr : tokenNow - 63;
                 // 找任务，找到就直接退出，尝试处理任务
-                for (k = 1; k < restrict; k++) {
+                if(tokenNow - calculateToken(Info.Action.READ, disk) < 0) break;
+                for (k = 1; k < tokenNow - 64; k++) {
                     if (disk.unitData.get(disk.ptr + k).isInTask) {
+                        readerLogger.debug("向后寻找到任务");
                         break;
                     }
                 }
                 // 寻找出了RWEnd的范围
-                if (disk.ptr + k > disk.RWEnd)
-                    break;
                 // 没找到
-                if (!disk.unitData.get(disk.ptr + k).isInTask)
-                    break;
+                
                 // 判某几种情况
                 if (k == 1) {
-                    if (disk.pretoken < 52) {
+                    if (disk.pretoken < 52 && tokenNow > calculateToken(Info.Action.READ, disk)) {
                         processAction(Info.Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     } else {
                         processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
-                } else if (k == 2) {
+                } else if (k == 2 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
                     if (disk.pretoken < 34) {
                         processAction(Info.Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
@@ -143,6 +143,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                 }
                 // 任务离得很远
                 else {
+                    readerLogger.debug("向后寻找不到任务");
                     while (k > 0) {
                         processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;

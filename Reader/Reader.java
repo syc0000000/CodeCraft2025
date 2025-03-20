@@ -13,6 +13,8 @@ public class Reader {
             this.readerStrategy = new ReadOnlyStrategy();
         } else if (readerStrategy.equals("default")) {
             this.readerStrategy = new DefaultReaderStrategy();
+        } else if (readerStrategy.equals("newReader")){
+            this.readerStrategy = new NewReaderStratrgy();
         } else {
             throw new IllegalArgumentException("Invalid reader strategy: " + readerStrategy);
         }
