@@ -39,7 +39,7 @@ public class RWWriteStrategy extends DefaultWriteStrategy {
                 addReplicaToObj(obj, replica);
                 saveReplicaToDisk(rwDisk, replica);
                 // 维护RWEnd
-                rwDisk.RWEnd = Math.max(rwDisk.RWEnd, space.end);
+                rwDisk.RWEnd = Math.min(Math.max(rwDisk.RWEnd, space.end), (int) (Info.unitNum / 2.5));
                 log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
                 writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
             }
