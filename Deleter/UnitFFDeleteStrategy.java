@@ -3,18 +3,20 @@ package Deleter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
-import Info.Info.LocalDisk;
 import Info.Info.DiskSpace;
+import Info.Info.DiskSpaceType;
+import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
 import Info.Info.Replica;
 import Info.Info.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
-public class DefaultDeleteStrategy implements DeleteStrategy {
+public class UnitFFDeleteStrategy implements DeleteStrategy {
     ModuleLogger log = LoggerFactory.getLogger("Deleter");
 
     @Override
@@ -35,7 +37,7 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
     }
 
     /**
-     * 负责释放指定空间 维护freeSpaceBySize 时间复杂度：O(3 * 5 * n) = O(n)
+     * 负责释放指定空间 维护的信息,unitData
      * 
      * @param obj_id
      * @return
@@ -46,10 +48,25 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
         for (Replica replica : replicas) { // 循环3次
             log.debug("开始释放副本所占用的空间，副本信息：" + replica);
             int disk_id = replica.diskId;
+            ArrayList<Integer> unit_ids = replica.unitIdList;
             LocalDisk disk = Info.localDiskTbl.get(disk_id);
-            DiskSpace space = disk.unitData.get(replica.unitIdList.get(0)).space;
-            log.debug("释放空间: " + space);
-            disk.releaseSpace(space);
+
+            for (int unit_id : unit_ids) {
+                DiskSpace space = disk.unitData.get(unit_id).space;
+                space.type = DiskSpaceType.UNUSED;
+                // 更新rwend
+                if (space.end == disk.RWEnd) {
+                    while (disk.RWEnd > 0
+                            && disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED) {
+                        disk.RWEnd--;
+                    }
+                }
+                disk.unitData.get(unit_id).space = space;
+                disk.unitData.get(unit_id).objId = -1;
+                disk.unitData.get(unit_id).blockId = -1;
+                disk.freeUnitIdSet.add(space);
+                disk.sizeLeft += space.size;
+            }
         }
     }
 
