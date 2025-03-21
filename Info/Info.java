@@ -63,7 +63,7 @@ public class Info {
         MAX_RW_END = (int) (unitNum / 2.9); // 最大读写空间
         // 初始化磁盘表
         for (int i = 0; i < diskNum; i++) {
-            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "no_space"));
+            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "space"));
         }
         // 清空映射
         objMap.clear();
@@ -233,15 +233,21 @@ public class Info {
         // 存储单元数据（对象ID, -1表示空）
         public ArrayList<UnitData> unitData;
 
-        public TreeSet<UnitData> freeUnitIdSet; // 可用单元ID集合
+        public TreeSet<DiskSpace> freeUnitIdSet; // 可用单元ID集合
         // 单元ID到空间的映射
         // public Map<Integer, DiskSpace> unitToSpace;
 
         public static LocalDisk createDisk(int diskId, int unitNum, String type) {
             LocalDisk disk = new LocalDisk(diskId, unitNum);
             switch (type) {
-                case "no_space":
-                    disk.freeUnitIdSet = new TreeSet<>(UnitData.comparator);
+                case "unit":
+                    disk.freeUnitIdSet = new TreeSet<>(DiskSpace.comparator);
+                    // diskspace size均为1
+                    for (int i = 0; i < unitNum; i++) {
+                        DiskSpace space = new DiskSpace(true, i, i, diskId);
+                        disk.unitData.add(new UnitData(-1, -1, space));
+                        disk.freeUnitIdSet.add(space);
+                    }
                     break;
                 case "space":
                     // 创建初始空闲空间
@@ -411,6 +417,52 @@ public class Info {
                 }
             }
             return null;
+        }
+
+        public ArrayList<Integer> getFreeUnitsBySize(int obj_size, int obj_id) {
+            if (sizeLeft < obj_size) {
+                log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft);
+                return null;
+            }
+            ArrayList<Integer> unitIdList = new ArrayList<>();
+
+            for (int i = 0; i < obj_size; i++) {
+                DiskSpace space = freeUnitIdSet.pollFirst();
+                unitIdList.add(space.start);
+                unitData.get(space.start).objId = obj_id;
+                space.isFree = false;
+            }
+
+            // 更新RWEnd
+            if (RWEnd < unitIdList.get(unitIdList.size() - 1)) {
+                RWEnd = unitIdList.get(unitIdList.size() - 1);
+            }
+            // 更新sizeLeft
+            sizeLeft -= obj_size;
+            return unitIdList;
+        }
+
+        public ArrayList<Integer> getFreeUnitBySizeFromEndWithRWEndLimit(int obj_size, int obj_id) {
+            if (sizeLeft < obj_size) {
+                log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft);
+                return null;
+            }
+            ArrayList<Integer> unitIdList = new ArrayList<>();
+
+            for (int i = 0; i < obj_size; i++) {
+                DiskSpace space = freeUnitIdSet.pollLast();
+                unitIdList.add(space.start);
+                unitData.get(space.start).objId = obj_id;
+                space.isFree = false;
+            }
+
+            // 更新RWEnd
+            if (RWEnd < unitIdList.get(unitIdList.size() - 1)) {
+                RWEnd = unitIdList.get(unitIdList.size() - 1);
+            }
+            // 更新sizeLeft
+            sizeLeft -= obj_size;
+            return unitIdList;
         }
 
         /**

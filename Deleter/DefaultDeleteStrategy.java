@@ -46,7 +46,6 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
         for (Replica replica : replicas) { // 循环3次
             log.debug("开始释放副本所占用的空间，副本信息：" + replica);
             int disk_id = replica.diskId;
-            ArrayList<Integer> unit_ids = replica.unitIdList;
             LocalDisk disk = Info.localDiskTbl.get(disk_id);
             DiskSpace space = disk.unitData.get(replica.unitIdList.get(0)).space;
             log.debug("释放空间: " + space);
