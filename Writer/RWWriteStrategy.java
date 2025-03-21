@@ -39,14 +39,14 @@ public class RWWriteStrategy extends DefaultWriteStrategy {
                 addReplicaToObj(obj, replica);
                 saveReplicaToDisk(rwDisk, replica);
                 // 维护RWEnd
-                rwDisk.RWEnd = Math.max(rwDisk.RWEnd, space.end);
+                rwDisk.RWEnd = Math.min(Info.MAX_RW_END, Math.max(rwDisk.RWEnd, space.end));
                 log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
                 writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
             }
             // 处理Backup磁盘
             for (int i = 1; i < disks.size(); i++) {
                 LocalDisk backupDisk = disks.get(i);
-                space = backupDisk.getFreeSpaceBySizeFromEnd(obj.objSize);
+                space = backupDisk.getFreeSpaceBySizeFromEndWithRWEndLimit(obj.objSize);
                 if (space != null) {
                     ArrayList<Integer> unitIdList = new ArrayList<>();
                     for (int j = 0; j < space.size; j++) {

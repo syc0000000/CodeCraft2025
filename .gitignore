@@ -3,3 +3,4 @@ logs/*
 *.txt
 *.png
 test/sample_practice.in
+env/*
