@@ -46,7 +46,7 @@ public class RWWriteStrategy extends DefaultWriteStrategy {
             // 处理Backup磁盘
             for (int i = 1; i < disks.size(); i++) {
                 LocalDisk backupDisk = disks.get(i);
-                space = backupDisk.getFreeSpaceBySizeFromEnd(obj.objSize);
+                space = backupDisk.getFreeSpaceBySizeFromEndWithRWEndLimit(obj.objSize);
                 if (space != null) {
                     ArrayList<Integer> unitIdList = new ArrayList<>();
                     for (int j = 0; j < space.size; j++) {
