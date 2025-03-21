@@ -63,7 +63,7 @@ public class Info {
         MAX_RW_END = (int) (unitNum / 2.9); // 最大读写空间
         // 初始化磁盘表
         for (int i = 0; i < diskNum; i++) {
-            localDiskTbl.add(new LocalDisk(i, unitNum));
+            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "no_space"));
         }
         // 清空映射
         objMap.clear();
@@ -233,8 +233,34 @@ public class Info {
         // 存储单元数据（对象ID, -1表示空）
         public ArrayList<UnitData> unitData;
 
+        public TreeSet<UnitData> freeUnitIdSet; // 可用单元ID集合
         // 单元ID到空间的映射
         // public Map<Integer, DiskSpace> unitToSpace;
+
+        public static LocalDisk createDisk(int diskId, int unitNum, String type) {
+            LocalDisk disk = new LocalDisk(diskId, unitNum);
+            switch (type) {
+                case "no_space":
+                    disk.freeUnitIdSet = new TreeSet<>(UnitData.comparator);
+                    break;
+                case "space":
+                    // 创建初始空闲空间
+                    DiskSpace initialSpace = new DiskSpace(true, 0, unitNum - 1, diskId);
+                    // 添加到按大小组织的集合
+                    disk.freespaceBySize.put(1, new TreeSet<>(DiskSpace.comparator));
+                    disk.freespaceBySize.put(2, new TreeSet<>(DiskSpace.comparator));
+                    disk.freespaceBySize.put(3, new TreeSet<>(DiskSpace.comparator));
+                    disk.freespaceBySize.put(4, new TreeSet<>(DiskSpace.comparator));
+                    disk.freespaceBySize.put(5, new TreeSet<>(DiskSpace.comparator));
+                    disk.freespaceBySize.get(5).add(initialSpace);
+
+                    // 更新单元到空间的映射
+                    for (int i = 0; i < unitNum; i++) {
+                        disk.unitData.add(new UnitData(-1, -1, initialSpace));
+                    }
+            }
+            return disk;
+        }
 
         public LocalDisk(int diskId, int unitNum) {
             this.diskId = diskId;
@@ -250,28 +276,6 @@ public class Info {
             this.freespaceBySize = new HashMap<>(5);
             this.unitData = new ArrayList<>(unitNum);
             // this.unitToSpace = new HashMap<>(unitNum);
-
-            // 初始化存储单元数据
-            // for (int i = 0; i < unitNum; i++) {
-            // unitData[i] = -1; // -1表示空
-            // }
-
-            // 创建初始空闲空间
-            DiskSpace initialSpace = new DiskSpace(true, 0, unitNum - 1, diskId);
-
-            // 添加到按大小组织的集合
-            freespaceBySize.put(1, new TreeSet<>(DiskSpace.comparator));
-            freespaceBySize.put(2, new TreeSet<>(DiskSpace.comparator));
-            freespaceBySize.put(3, new TreeSet<>(DiskSpace.comparator));
-            freespaceBySize.put(4, new TreeSet<>(DiskSpace.comparator));
-            freespaceBySize.put(5, new TreeSet<>(DiskSpace.comparator));
-
-            freespaceBySize.get(5).add(initialSpace);
-
-            // 更新单元到空间的映射
-            for (int i = 0; i < unitNum; i++) {
-                unitData.add(new UnitData(-1, -1, initialSpace));
-            }
         }
 
         public void passPtr() {
