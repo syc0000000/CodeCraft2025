@@ -1,4 +1,6 @@
 logs/*
 *.class
 *.txt
+*.png
 test/sample_practice.in
+env/*
