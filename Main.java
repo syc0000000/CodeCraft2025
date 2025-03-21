@@ -57,7 +57,7 @@ public class Main {
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
-        try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", true)) {
+        try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {
             for (int i = 1; i <= preprocessOut.T + 105; i++) {
             Info.timestamp = i; // 更新当前时间戳
 
