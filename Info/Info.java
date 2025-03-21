@@ -510,7 +510,11 @@ public class Info {
 
         /**
          * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。 同时更新unitToSpace。 时间复杂度 O(n)
-         *
+         * 维护的信息有
+         * 1. localdisk的rwEnd
+         * 2. unitData的objId和blockId
+         * 3. freespaceBySize
+         * 
          * @param space 要释放的DiskSpace对象
          */
         public void releaseSpace(DiskSpace space) {
