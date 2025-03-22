@@ -11,12 +11,13 @@ public class Deleter {
     public Deleter(String deleteStrategy) {
         if (deleteStrategy.equals("default")) {
             this.deleteStrategy = new DefaultDeleteStrategy();
+        } else if (deleteStrategy.equals("ff")) {
+            this.deleteStrategy = new UnitFFDeleteStrategy();
         } else {
             throw new IllegalArgumentException("Invalid delete strategy: " + deleteStrategy);
         }
     }
 
- 
     public ArrayList<DeleteCommandOut> delete(ArrayList<DeleteCommandIn> deleteCommandIns) {
         return deleteStrategy.delete(deleteCommandIns);
     }

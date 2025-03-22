@@ -1,6 +1,5 @@
 // main.java
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,7 +57,8 @@ public class Main {
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
-        for (int i = 1; i <= preprocessOut.T + 105; i++) {
+        try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {
+            for (int i = 1; i <= preprocessOut.T + 105; i++) {
             Info.timestamp = i; // 更新当前时间戳
 
             mainLogger.debug("开始处理时间片 " + i);
@@ -68,29 +68,13 @@ public class Main {
             // 测量disk0 RWEnd位置和磁头位置
             int disk0RWEnd = Info.localDiskTbl.get(0).RWEnd;
             int disk0HeadPos = Info.localDiskTbl.get(0).ptr;
-            // 写入文件中
-            try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", true)) {
-                fileWriter.write(String.valueOf(disk0RWEnd));
-                fileWriter.write(" ");
-                fileWriter.write(String.valueOf(disk0HeadPos));
-                fileWriter.write(System.lineSeparator()); // 添加换行符
-            } catch (IOException e) {
-                mainLogger.error("写入 disk0RWEnd.txt 文件时发生错误: " + e.getMessage());
-                e.printStackTrace();
-            }
-            // 测量disk5 RWEnd位置和磁头位置
-            // int disk5RWEnd = Info.localDiskTbl.get(5).RWEnd;
-            // int disk5HeadPos = Info.localDiskTbl.get(5).ptr;
-            // // 写入文件中
-            // try (FileWriter fileWriter = new FileWriter("disk5RWEnd.txt", true)) {
-            // fileWriter.write(String.valueOf(disk5RWEnd));
-            // fileWriter.write(" ");
-            // fileWriter.write(String.valueOf(disk5HeadPos));
-            // fileWriter.write(System.lineSeparator()); // 添加换行符
-            // } catch (IOException e) {
-            // mainLogger.error("写入 disk5RWEnd.txt 文件时发生错误: " + e.getMessage());
-            // e.printStackTrace();
-            // }
+
+            // 写入文件
+            fileWriter.write(String.valueOf(disk0RWEnd));
+            fileWriter.write(" ");
+            fileWriter.write(String.valueOf(disk0HeadPos));
+            fileWriter.write(System.lineSeparator()); // 添加换行符
+
             // 处理删除命令
             ArrayList<DeleteCommandIn> deleteIn = IO.readDeleteCommand();
             if (!deleteIn.isEmpty()) {
@@ -117,6 +101,10 @@ public class Main {
             IO.writeCompleteCommand(readRetrun.completeCommandOuts);
 
             mainLogger.debug("完成处理时间片 " + i);
+            }
+        } catch (IOException e) {
+            mainLogger.error("写入 disk0RWEnd.txt 文件时发生错误: " + e.getMessage());
+            e.printStackTrace();
         }
 
         mainLogger.info("程序执行完毕");

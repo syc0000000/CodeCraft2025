@@ -1,18 +1,18 @@
 package Writer;
 
 import java.util.ArrayList;
-import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.UserObject;
-import Info.Info.DiskSpace;
-import Info.Info.Replica;
+
 import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
+import Info.Info;
+import Info.Info.LocalDisk;
+import Info.Info.Replica;
+import Info.Info.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
-public class RWWriteStrategy extends DefaultWriteStrategy {
+public class UnitFFWriteStrategy extends DefaultWriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 
     @Override
@@ -24,39 +24,42 @@ public class RWWriteStrategy extends DefaultWriteStrategy {
             UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
             ArrayList<LocalDisk> disks = selectDiskBySizeLeft();
+
             // 处理RW磁盘
-            LocalDisk rwDisk = disks.get(0);
-            DiskSpace space = rwDisk.getFreeSpaceBySize(obj.objSize);
-            // 找到写入空间
-            if (space != null) {
-                ArrayList<Integer> unitIdList = new ArrayList<>();
-                for (int j = 0; j < space.size; j++) {
-                    unitIdList.add(space.start + j);
-                }
-                // 分配空间
-                Replica replica = new Replica(writeCommandIn.objId, 0, rwDisk.diskId, unitIdList);
-                // space.replica = replica;
-                addReplicaToObj(obj, replica);
-                saveReplicaToDisk(rwDisk, replica);
-                // 维护RWEnd
-                rwDisk.RWEnd = Math.min(Info.MAX_RW_END, Math.max(rwDisk.RWEnd, space.end));
-                log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
-                writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
-            }
-            // 处理Backup磁盘
-            for (int i = 1; i < disks.size(); i++) {
-                LocalDisk backupDisk = disks.get(i);
-                space = backupDisk.getFreeSpaceBySizeFromEndWithRWEndLimit(obj.objSize);
-                if (space != null) {
-                    ArrayList<Integer> unitIdList = new ArrayList<>();
-                    for (int j = 0; j < space.size; j++) {
-                        unitIdList.add(space.start + j);
+            if (!disks.isEmpty()) {
+                LocalDisk rwDisk = disks.get(0);
+                ArrayList<Integer> unitIdList = rwDisk.getFreeUnitsBySize(obj.objSize, obj.objId);
+
+                if (!unitIdList.isEmpty()) {
+                    // 分配空间
+                    Replica replica = new Replica(writeCommandIn.objId, 0, rwDisk.diskId, unitIdList);
+                    addReplicaToObj(obj, replica);
+                    saveReplicaToDisk(rwDisk, replica);
+
+                    // 维护RWEnd - 找出最大的unitId
+                    int maxUnitId = Integer.MIN_VALUE;
+                    for (Integer unitId : unitIdList) {
+                        maxUnitId = Math.max(maxUnitId, unitId);
                     }
+                    rwDisk.RWEnd = Math.min(Info.MAX_RW_END, Math.max(rwDisk.RWEnd, maxUnitId + 1));
+
+                    log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
+                    writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
+                }
+            }
+
+            // 处理Backup磁盘
+            for (int i = 1; i < disks.size() && i <= 2; i++) {
+                LocalDisk backupDisk = disks.get(i);
+                ArrayList<Integer> unitIdList = backupDisk.getFreeUnitBySizeFromEndWithRWEndLimit(obj.objSize,
+                        obj.objId);
+
+                if (!unitIdList.isEmpty()) {
                     // 分配空间
                     Replica replica = new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
-                    // space.replica = replica;
                     addReplicaToObj(obj, replica);
                     saveReplicaToDisk(backupDisk, replica);
+
                     log.debug("成功写入副本" + i + "到磁盘" + backupDisk.diskId);
                     if (i == 1) {
                         writeCommandOut.copy2 = new DiskUnit(backupDisk.diskId, unitIdList);
@@ -73,8 +76,7 @@ public class RWWriteStrategy extends DefaultWriteStrategy {
     /**
      * 选择3个磁盘，[0]作为RW磁盘，[1,2]作为Backup磁盘。
      * 
-     * @param size
-     * @return
+     * @return 按可用空间排序的磁盘列表
      */
     private ArrayList<LocalDisk> selectDiskBySizeLeft() {
         ArrayList<LocalDisk> disks = new ArrayList<>(3);
