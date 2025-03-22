@@ -44,6 +44,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
                 readCommandOut.jumpTarget = 0;
                 disk.ptr = 0;
                 readCommandOuts.put(i, readCommandOut);
+                readerLogger.debug("磁盘编号" + i + "已经跳转");
                 continue;
             }
             //准备优化的读取序列
@@ -60,51 +61,44 @@ public class NewReaderStratrgy implements ReaderStrategy {
                     break;
                 case 54:
                     k = 2;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 case 42:
                     k = 3;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 case 34:
                     k = 4;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 case 28:
                     k = 5;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 case 23:
                     k = 6;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 case 19:
                     k = 7;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 case 16:
                     k = 8;
-                    while(k > 0){
+                    for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
-                        k--;
                     }
                     break;
                 default:
@@ -121,6 +115,9 @@ public class NewReaderStratrgy implements ReaderStrategy {
             Result result = new Result();
             while(newtoken != pasttoken){
                 //添加未优化路径
+                if(Info.timestamp == 1552){
+                    readerLogger.debug("磁盘编号" + i + "重复优化中");
+                }
                 while(tokencpy > 0){
                     if(disk.unitData.get(disk.ptr + sequenceptr).isInTask){
                         int tokenIsToUse = calculateToken(Info.Action.READ, preoper, pretoken);
@@ -142,8 +139,10 @@ public class NewReaderStratrgy implements ReaderStrategy {
                         tokencpy -= pretoken;
                         preoper = Info.Action.PASS;
                     }
+                    
                     sequenceptr++;
                 }
+                readerLogger.debug("tokenRead"+tokenRead+"newtoken"+newtoken+"pasttoken"+pasttoken+"tokencpy"+tokencpy);
                 pasttoken = tokenRead + tokenNow - tokencpy;
                 
                 result = SequenceOptimizer.optimizeSequence(sequence);
@@ -153,6 +152,9 @@ public class NewReaderStratrgy implements ReaderStrategy {
             }
             //将最优序列添加到输出中
             for(int temp = k; temp < result.sequence.size(); temp++){
+                if(i == 4){
+                    //readerLogger.debug("添加了一个操作" + result.sequence.get(temp));
+                }
                 readCommandOut.actions.add(result.sequence.get(temp));
             }
             for (int j = 0; j < readCommandOut.actions.size(); j++) {

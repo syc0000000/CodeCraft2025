@@ -53,7 +53,7 @@ public class Main {
         Writer writer = new Writer("rw");
         Reader reader = new Reader("newReader");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(100, 100);
+        logger.enableTimeRange(1552, 1552);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
