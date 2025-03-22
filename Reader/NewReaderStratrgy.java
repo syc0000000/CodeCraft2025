@@ -7,6 +7,7 @@ import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info.UserObject;
+import Reader.SequenceOptimizer.Result;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import Info.Info.ReadTask;
 import Info.Info.UserObject;
 
 public class NewReaderStratrgy implements ReaderStrategy {
+    private static final int[] R_COSTS = { 64, 52, 42, 34, 28, 23, 19, 16 };
     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         // TODO: 实现默认的读取策略
@@ -36,8 +38,6 @@ public class NewReaderStratrgy implements ReaderStrategy {
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
-            if (Info.timestamp < 100)
-                continue;
             if (disk.ptr > disk.RWEnd) {
                 readCommandOut.actions.add(Info.Action.JUMP);
                 disk.preoper = Info.Action.JUMP;
@@ -46,31 +46,115 @@ public class NewReaderStratrgy implements ReaderStrategy {
                 readCommandOuts.put(i, readCommandOut);
                 continue;
             }
-            ArrayList<Action> actionLast = new ArrayList<>();
-            actionLast.add(disk.preoper);
-            if (i == 8)
-                readerLogger.debug("剩余token为" + tokenNow);
-            readCommandOut.actions = new ArrayList<>(findStrategy(disk, disk.ptr, tokenNow, actionLast, disk.pretoken));
-            readCommandOut.actions.remove(0);
-            disk.preoper = readCommandOut.actions.get(readCommandOut.actions.size() - 1);
-            // 反向遍历actions，算有多少连续的read，算pretoken
-            int pretoken = 64;
-            boolean isFirstRead = true;
-            for (int j = readCommandOut.actions.size() - 1; j >= 0; j--) {
-                if (readCommandOut.actions.get(j) == Info.Action.READ) {
-                    if (!isFirstRead) {
-                        pretoken = (int) Math.ceil(pretoken * 0.8);
-                    }
-                    isFirstRead = false;
-                } else {
+            //准备优化的读取序列
+            ArrayList<Action> sequence = new ArrayList<>();
+            int k = 0; //向前加入READ序列
+            int tokencpy = tokenNow; //token的拷贝
+            int tokenRead = 0; //在这个序列中已经使用过的token数量
+            int newtoken = 0; //新的token
+            int pasttoken = 1;  //上一次的token
+            switch (disk.pretoken) {
+                case 64:
+                    k = 1;
+                    sequence.add(Info.Action.READ);
                     break;
-                }
+                case 54:
+                    k = 2;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                case 42:
+                    k = 3;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                case 34:
+                    k = 4;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                case 28:
+                    k = 5;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                case 23:
+                    k = 6;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                case 19:
+                    k = 7;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                case 16:
+                    k = 8;
+                    while(k > 0){
+                        sequence.add(Info.Action.READ);
+                        k--;
+                    }
+                    break;
+                default:
+                    break;
             }
-            disk.pretoken = pretoken > 16 ? pretoken : 16;
-            readerLogger.debug("objid=" + disk.unitData.get(disk.ptr).objId + " diskid=" + disk.diskId
-                    + " pretoken为" + pretoken + " ptr为" + disk.ptr + " readsize为" + readCommandOut.actions.size()
-                    + " actions为" + readCommandOut.actions);
+            //将额外操作的token加入
+            for(int temp = 0; temp < k; temp++){
+                tokenRead += R_COSTS[temp];
+            }
+            //添加从目前位置向后的序列
+            int pretoken = disk.pretoken; //手动添加序列操作中，上一次的token
+            Action preoper = disk.preoper; //手动添加序列操作中，上一次的操作
+            int sequenceptr = 0; //手动添加序列操作中，用到的指针
+            Result result = new Result();
+            while(newtoken != pasttoken){
+                //添加未优化路径
+                while(tokencpy > 0){
+                    if(disk.unitData.get(disk.ptr + sequenceptr).isInTask){
+                        int tokenIsToUse = calculateToken(Info.Action.READ, preoper, pretoken);
+                        if(tokencpy - tokenIsToUse < 0){
+                            break;
+                        }
+                        pretoken = tokenIsToUse;
+                        sequence.add(Info.Action.READ);
+                        tokencpy -= pretoken;
+                        preoper = Info.Action.READ;
+                    }
+                    else{
+                        int tokenIsToUse = calculateToken(Info.Action.PASS, preoper, pretoken);
+                        if(tokencpy - tokenIsToUse < 0){
+                            break;
+                        }
+                        pretoken = tokenIsToUse;
+                        sequence.add(Info.Action.PASS);
+                        tokencpy -= pretoken;
+                        preoper = Info.Action.PASS;
+                    }
+                    sequenceptr++;
+                }
+                pasttoken = tokenRead + tokenNow - tokencpy;
+                
+                result = SequenceOptimizer.optimizeSequence(sequence);
+                newtoken = result.cost;
+                tokencpy = pasttoken - newtoken;
 
+            }
+            //将最优序列添加到输出中
+            for(int temp = k; temp < result.sequence.size(); temp++){
+                readCommandOut.actions.add(result.sequence.get(temp));
+            }
             for (int j = 0; j < readCommandOut.actions.size(); j++) {
                 if (disk.unitData.get(disk.ptr + j).isInTask) {
                     disk.unitData.get(disk.ptr + j).isInTask = false;
@@ -106,7 +190,10 @@ public class NewReaderStratrgy implements ReaderStrategy {
                     }
                 }
             }
-            disk.ptr += readCommandOut.actions.size();
+            //更新硬盘信息
+            disk.preoper = preoper;
+            disk.pretoken = pretoken;
+            disk.ptr += sequenceptr;
 
             // 如果检测到需要跳转，则直接跳转
             readerLogger.debug("磁盘编号" + i + "目前ptr位置为" + disk.ptr + "RWEnd位置为" + disk.RWEnd);
@@ -116,4 +203,25 @@ public class NewReaderStratrgy implements ReaderStrategy {
         readRetrun.completeCommandOuts = completeCommandOuts;
         return readRetrun;
     }
+    public int calculateToken(Info.Action action, Action preoper, int pretoken) {
+        switch (action) {
+            case READ:
+                // 向上取整
+                // readerLogger.debug("计算token: pretoken=" + disk.pretoken);
+                int token;
+                if (preoper == action.READ) {
+                    token = (int) Math.ceil(pretoken * 0.8);
+                } else {
+                    token = 64;
+                }
+                return token < 16 ? 16 : token;
+            case JUMP:
+                return Info.tokenPerTick;
+            case PASS:
+                return 1;
+            default:
+                return -1;// 异常
+        }
+    }
+    
 }
