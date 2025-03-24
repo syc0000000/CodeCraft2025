@@ -31,7 +31,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
         int tickToken = Info.tokenPerTick;
         Map<Integer, ReadCommandOut> readCommandOuts = new HashMap<>();
         HashSet<CompleteCommandOut> completeCommandOuts = new HashSet<>();
-        readerLogger.debug("进入读取模块");
+        //readerLogger.debug("进入读取模块");
         // 遍历磁盘
         for (int i = 0; i < Info.diskNum; i++) {
             // 基础准备
@@ -44,7 +44,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
                 readCommandOut.jumpTarget = 0;
                 disk.ptr = 0;
                 readCommandOuts.put(i, readCommandOut);
-                readerLogger.debug("磁盘编号" + i + "已经跳转");
+                //readerLogger.debug("磁盘编号" + i + "已经跳转");
                 continue;
             }
             //准备优化的读取序列
@@ -59,7 +59,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
                     k = 1;
                     sequence.add(Info.Action.READ);
                     break;
-                case 54:
+                case 52:
                     k = 2;
                     for (int temp = 0; temp < k; temp++) {
                         sequence.add(Info.Action.READ);
@@ -115,9 +115,6 @@ public class NewReaderStratrgy implements ReaderStrategy {
             Result result = new Result();
             while(newtoken != pasttoken){
                 //添加未优化路径
-                if(Info.timestamp == 1552){
-                    readerLogger.debug("磁盘编号" + i + "重复优化中");
-                }
                 while(tokencpy > 0){
                     if(disk.unitData.get(disk.ptr + sequenceptr).isInTask){
                         int tokenIsToUse = calculateToken(Info.Action.READ, preoper, pretoken);
@@ -142,19 +139,14 @@ public class NewReaderStratrgy implements ReaderStrategy {
                     
                     sequenceptr++;
                 }
-                readerLogger.debug("tokenRead"+tokenRead+"newtoken"+newtoken+"pasttoken"+pasttoken+"tokencpy"+tokencpy);
+
                 pasttoken = tokenRead + tokenNow - tokencpy;
-                
                 result = SequenceOptimizer.optimizeSequence(sequence);
                 newtoken = result.cost;
-                tokencpy = pasttoken - newtoken;
-
+                tokencpy += pasttoken - newtoken;            
             }
             //将最优序列添加到输出中
             for(int temp = k; temp < result.sequence.size(); temp++){
-                if(i == 4){
-                    //readerLogger.debug("添加了一个操作" + result.sequence.get(temp));
-                }
                 readCommandOut.actions.add(result.sequence.get(temp));
             }
             for (int j = 0; j < readCommandOut.actions.size(); j++) {
@@ -163,17 +155,17 @@ public class NewReaderStratrgy implements ReaderStrategy {
                     int blockId = disk.unitData.get(disk.ptr + j).blockId;
                     int objId = disk.unitData.get(disk.ptr + j).objId;
                     UserObject obj = Info.objMap.get(objId);
-                    readerLogger.debug("已读到objid为" + objId + " obj为" + obj + " blockid为" + blockId);
+                    //readerLogger.debug("ptr为"+(disk.ptr+j)+"已读到objid为" + objId + " obj为" + obj + " blockid为" + blockId);
                     Iterator<ReadTask> iterator = obj.readTasks.iterator();
                     while (iterator.hasNext()) {
                         ReadTask readTask = iterator.next();
                         if (readTask.blockNotFinished.contains(blockId)) {
                             // 检测任务的完成
                             // 检测过期
-                            readerLogger.debug("任务ID，objid，blockid为" + readTask.taskId + "," + objId + "," + blockId);
+                            //readerLogger.debug("任务ID，objid，blockid为" + readTask.taskId + "," + objId + "," + blockId);
                             // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
                             if (readTask.isTimeout()) {
-                                readerLogger.debug("任务过期: " + readTask.taskId);
+                                //readerLogger.debug("任务过期: " + readTask.taskId);
                                 obj.timeoutTasks.add(readTask.taskId);
                                 iterator.remove();
                                 continue;
@@ -184,7 +176,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
                             readTask.blockFinished.add(blockId);
                             // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
                             if (readTask.blockNotFinished.isEmpty()) {
-                                readerLogger.debug("上报任务id " + readTask.taskId + " objID" + objId);
+                                //readerLogger.debug("上报任务id " + readTask.taskId + " objID" + objId);
                                 completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
                                 iterator.remove();
                             }
@@ -198,7 +190,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
             disk.ptr += sequenceptr;
 
             // 如果检测到需要跳转，则直接跳转
-            readerLogger.debug("磁盘编号" + i + "目前ptr位置为" + disk.ptr + "RWEnd位置为" + disk.RWEnd);
+            //readerLogger.debug("磁盘编号" + i + "目前ptr位置为" + disk.ptr + "RWEnd位置为" + disk.RWEnd);
             readCommandOuts.put(i, readCommandOut);
         }
         readRetrun.readCommandOuts = readCommandOuts;

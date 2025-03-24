@@ -29,9 +29,9 @@ public class Main {
     public static void main(String[] args) {
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
-        logger.enableModule("Main");
+        //logger.enableModule("Main");
         // logger.enableModule("Writer");
-        // logger.enableModule("Deleter");
+        logger.enableModule("Deleter");
         // logger.enableModule("Info");
         logger.enableModule("Reader");
         // 启用文件日志
@@ -51,10 +51,10 @@ public class Main {
         Deleter deleter = new Deleter("default");
         // Writer writer = new Writer("default");
         Writer writer = new Writer("rw");
-        Reader reader = new Reader("newReader");
+        Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(1552, 1552);
-        logger.enableModule("IO");
+        logger.enableTimeRange(0, 0);
+        //logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
         try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {
