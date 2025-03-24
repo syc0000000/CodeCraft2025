@@ -20,6 +20,7 @@ public class IO {
     private static final int FRE_PER_SLICING = 1800;
     private static Scanner scanner = new Scanner(System.in);
     private static final ModuleLogger log = LoggerFactory.getLogger("IO");
+    public static ArrayList<Integer> tagsUnitUsage = new ArrayList<>(); // 硬盘使用率数据
 
     /**
      * 预处理
@@ -66,17 +67,23 @@ public class IO {
             }
         }
 
-        // 计算写入-删除的差值
-        ArrayList<ArrayList<Integer>> write_minus_del = new ArrayList<>();
+        // 计算写入-删除的累计差值
+        ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
         for (int i = 0; i < M; i++) {
             ArrayList<Integer> diffData = new ArrayList<>();
             for (int j = 0; j < fre_write.get(i).size(); j++) {
-                diffData.add(fre_write.get(i).get(j) - fre_del.get(i).get(j));
+            diffData.add(fre_write.get(i).get(j) - fre_del.get(i).get(j));
             }
-            write_minus_del.add(diffData);
+            cumulative_write_minus_del.add(calculateCumulative(diffData));
+            // tagsUnitUsage中添加cumulative_write_minus_del[i]中的最大的数据
+            int max = 0;
+            for (int j = 0; j < cumulative_write_minus_del.get(i).size(); j++) {
+            if (cumulative_write_minus_del.get(i).get(j) > max) {
+                max = cumulative_write_minus_del.get(i).get(j);
+            }
+            }
+            IO.tagsUnitUsage.add(max);
         }
-
-        
 
         System.out.println("OK");
         flushAll();
@@ -88,6 +95,17 @@ public class IO {
         out.V = V;
         out.G = G;
         return out;
+    }
+    
+    private static ArrayList<Integer> calculateCumulative(ArrayList<Integer> data) {
+        ArrayList<Integer> cumulative = new ArrayList<>();
+        cumulative.add(0); // 初始值为0
+        int sum = 0;
+        for (int value : data) {
+            sum += value;
+            cumulative.add(sum);
+        }
+        return cumulative;
     }
 
     /**
