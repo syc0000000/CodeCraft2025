@@ -89,38 +89,34 @@ def generate_plot(data, ylabel, title, filename):
         if local_max > max_val:
             max_val = local_max
 
-        cumulative2 = calculate_cumulative(data[tag_idx])
-        print(cumulative)
-        print(cumulative2)
-
         # 智能打点配置
         marker_interval = max(1, len(cumulative) // 50)  # 自动计算显示密度
 
-    #     plt.plot(
-    #         range(T + 105 + 1),
-    #         cumulative,
-    #         color=colors[tag_idx % len(colors)],  # 使用指定颜色
-    #         linewidth=1.5,
-    #         marker="o",
-    #         markersize=3,
-    #         markevery=marker_interval,
-    #         markerfacecolor=colors[tag_idx % len(colors)],
-    #         markeredgecolor=colors[tag_idx % len(colors)],
-    #         label=f"Tag {tag_idx+1}",
-    #     )
+        plt.plot(
+            range(T + 105 + 1),
+            cumulative,
+            color=colors[tag_idx % len(colors)],  # 使用指定颜色
+            linewidth=1.5,
+            marker="o",
+            markersize=3,
+            markevery=marker_interval,
+            markerfacecolor=colors[tag_idx % len(colors)],
+            markeredgecolor=colors[tag_idx % len(colors)],
+            label=f"Tag {tag_idx+1}",
+        )
 
-    # # 设置纵轴范围
-    # y_upper = max_val * 1.1
-    # plt.xlim(0, T + 105)
-    # plt.ylim(0, y_upper)
-    # plt.xlabel("Time Slice", fontsize=14)
-    # plt.ylabel(ylabel, fontsize=14)
-    # plt.title(title, fontsize=16)
-    # plt.legend(bbox_to_anchor=(1.02, 0.98), loc="upper left", ncol=2 if M > 10 else 1)
-    # plt.grid(True, linestyle="--", alpha=0.6)
-    # plt.tight_layout()
-    # plt.savefig(filename, bbox_inches="tight")
-    # plt.close()
+    # 设置纵轴范围
+    y_upper = max_val * 1.1
+    plt.xlim(0, T + 105)
+    plt.ylim(0, y_upper)
+    plt.xlabel("Time Slice", fontsize=14)
+    plt.ylabel(ylabel, fontsize=14)
+    plt.title(title, fontsize=16)
+    plt.legend(bbox_to_anchor=(1.02, 0.98), loc="upper left", ncol=2 if M > 10 else 1)
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(filename, bbox_inches="tight")
+    plt.close()
 
 
 if __name__ == "__main__":
@@ -147,7 +143,7 @@ if __name__ == "__main__":
             f.write(f"tag{tag+1},")
             # write write_minus_del[i]
             for period in range(math.ceil(T / 1800)):
-                f.write(f"{disk_usage[period]},")
+                f.write(f"{disk_usage[period+1]},")
             f.write("\n")
 
     # # 生成写入-删除差异图
@@ -158,10 +154,10 @@ if __name__ == "__main__":
         filename="write_delete_difference.png",
     )
 
-    # # 生成预读取数据图
-    # generate_plot(
-    #     data=fre_read,
-    #     ylabel="Pre-Read Value",
-    #     title="Pre-Read Operation Visualization",
-    #     filename="pre_read_visualization.png",
-    # )
+    # 生成预读取数据图
+    generate_plot(
+        data=fre_read,
+        ylabel="Pre-Read Value",
+        title="Pre-Read Operation Visualization",
+        filename="pre_read_visualization.png",
+    )
