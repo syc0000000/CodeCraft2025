@@ -39,24 +39,44 @@ public class IO {
         V = scanner.nextInt();
         G = scanner.nextInt();
 
-        // 暂时不存标签数据，跳过
+        // 保存删除频率数据
+        ArrayList<ArrayList<Integer>> fre_del = new ArrayList<>();
+        for (int i = 0; i < M; i++) {
+            ArrayList<Integer> tagData = new ArrayList<>();
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                tagData.add(scanner.nextInt());
+            }
+            fre_del.add(tagData);
+        }
+
+        // 保存写入频率数据
+        ArrayList<ArrayList<Integer>> fre_write = new ArrayList<>();
+        for (int i = 0; i < M; i++) {
+            ArrayList<Integer> tagData = new ArrayList<>();
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                tagData.add(scanner.nextInt());
+            }
+            fre_write.add(tagData);
+        }
+
+        // 读取读取频率数据，暂时用不到
         for (int i = 0; i < M; i++) {
             for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
                 scanner.nextInt();
             }
         }
 
+        // 计算写入-删除的差值
+        ArrayList<ArrayList<Integer>> write_minus_del = new ArrayList<>();
         for (int i = 0; i < M; i++) {
-            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
-                scanner.nextInt();
+            ArrayList<Integer> diffData = new ArrayList<>();
+            for (int j = 0; j < fre_write.get(i).size(); j++) {
+                diffData.add(fre_write.get(i).get(j) - fre_del.get(i).get(j));
             }
+            write_minus_del.add(diffData);
         }
 
-        for (int i = 0; i < M; i++) {
-            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
-                scanner.nextInt();
-            }
-        }
+        
 
         System.out.println("OK");
         flushAll();
