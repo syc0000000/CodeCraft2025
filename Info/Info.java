@@ -149,7 +149,7 @@ public class Info {
      * @param start     空间起点
      * @param end       空间终点
      * @param size      空间大小，等于 end - start + 1
-     * @param sizeInMap 空间大小
+     * @param sizeInMap 空间大小(用于Map的key)
      * @param diskId    所属磁盘ID
      * @param type      空间类型, 可选值为
      *                  <code>DiskSpaceType.UNUSED, DiskSpaceType.RWSPACE, DiskSpaceType.BACKUPSPACE</code>
@@ -398,7 +398,7 @@ public class Info {
                     log.debug("切分空间: Space的信息为: " + spaceToCut + ", 要写入的对象大小为: " + obj_size);
                     DiskSpace spaceToUse = new DiskSpace(false, spaceToCut.end - obj_size + 1,
                             spaceToCut.end, diskId);
-                    spaceToUse.type = DiskSpaceType.BACKUPSPACE;
+                    spaceToUse.type = DiskSpaceType.RWSPACE;
                     DiskSpace spaceToRemain = new DiskSpace(true, spaceToCut.start,
                             spaceToCut.end - obj_size, diskId);
                     // 更新单元到空间的映射
@@ -562,6 +562,23 @@ public class Info {
             }
 
             return null;
+        }
+
+        // 从某位置开始，向两侧获取最近的space
+        public DiskSpace getFreeSpaceBySizeFromMiddle(int obj_size, int middle) {
+            // 获取中心块
+            int now_end = middle;
+            while (true) {
+                if (unitData.get(now_end).space.isFree && unitData.get(now_end).space.size == obj_size) {
+                    // 找到合适的空间，直接分配
+                    DiskSpace space = unitData.get(now_end).space;
+                    space.isFree = false;
+                    sizeLeft -= obj_size;
+                    log.debug("找到合适的空间: space_size = obj_size = " + obj_size + ", space信息为" + space);
+                    return space;
+                }
+                now_end--;
+            }
         }
 
         /**

@@ -57,7 +57,8 @@ public class UnitFFDeleteStrategy implements DeleteStrategy {
                 // 更新rwend
                 if (space.end == disk.RWEnd) {
                     while (disk.RWEnd > 0
-                            && disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED) {
+                            && (disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
+                                    || disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
                         disk.RWEnd--;
                     }
                 }

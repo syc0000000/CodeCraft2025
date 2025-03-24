@@ -53,7 +53,7 @@ public class Main {
         mainLogger.info("每种Tag的Write-Delete的最大值" + IO.tagsUnitUsage.toString());
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
         Map<Integer, List<DiskDistributionMT.Split>> distribution = DiskDistributionMT.entrypoint(tagValues);
-        
+
         mainLogger.info("每种Tag的分配结果: " + distribution.toString());
 
         // 初始化策略
@@ -62,7 +62,7 @@ public class Main {
         Writer writer = new Writer("rw");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(12811, 12812);
+        logger.enableTimeRange(0, 1);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
