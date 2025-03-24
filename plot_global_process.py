@@ -31,11 +31,12 @@ def read_input_file(filename):
     return T, M, N, V, G, fre_del, fre_write, fre_read
 
 
-# 使用示例（文件路径需要根据实际情况修改）
-T, M, N, V, G, fre_del, fre_write, fre_read = read_input_file(
-    "./test/global_process_practice.txt"
-)
-
+def calculate_cumulative(data):
+    """计算累积值的函数"""
+    cumulative = [0] * (len(data) + 1)
+    for i in range(1, len(data) + 1):
+        cumulative[i] = cumulative[i - 1] + data[i - 1]
+    return cumulative
 
 def generate_plot(data, ylabel, title, filename):
     """通用绘图函数"""
@@ -61,6 +62,7 @@ def generate_plot(data, ylabel, title, filename):
     plt.figure(figsize=(25, 12))
     max_val = 0
     for tag_idx in range(M):
+
         cumulative = [0.0] * (T + 105 + 1)
 
         # 处理时间窗口
@@ -117,18 +119,45 @@ def generate_plot(data, ylabel, title, filename):
     plt.close()
 
 
-# 生成写入-删除差异图
-generate_plot(
-    data=[[w - d for w, d in zip(fre_write[i], fre_del[i])] for i in range(M)],
-    ylabel="Write-Delete Difference",
-    title="Storage Operation Difference Visualization",
-    filename="write_delete_difference.png",
-)
+if __name__ == "__main__":
+    # 使用示例（文件路径需要根据实际情况修改）
+    T, M, N, V, G, fre_del, fre_write, fre_read = read_input_file(
+        "./test/global_process_practice.txt"
+    )
 
-# 生成预读取数据图
-generate_plot(
-    data=fre_read,
-    ylabel="Pre-Read Value",
-    title="Pre-Read Operation Visualization",
-    filename="pre_read_visualization.png",
-)
+    write_minus_del = [
+        [w - d for w, d in zip(fre_write[i], fre_del[i])] for i in range(M)
+    ]
+
+    # 写入csv, 横title：period，竖title: tag
+    with open("write_minus_del.csv", "w") as f:
+        f.write("tag\\period,")
+        # from 1 to ceil(T/1800)
+        for period in range(math.ceil(T / 1800)):
+            f.write(f"period{period+1},")
+        f.write("\n")
+
+        # from tag1 to tagM
+        for tag in range(M):
+            disk_usage = calculate_cumulative(write_minus_del[tag])
+            f.write(f"tag{tag+1},")
+            # write write_minus_del[i]
+            for period in range(math.ceil(T / 1800)):
+                f.write(f"{disk_usage[period+1]},")
+            f.write("\n")
+
+    # # 生成写入-删除差异图
+    generate_plot(
+        data=write_minus_del,
+        ylabel="Write-Delete Difference",
+        title="Storage Operation Difference Visualization",
+        filename="write_delete_difference.png",
+    )
+
+    # 生成预读取数据图
+    generate_plot(
+        data=fre_read,
+        ylabel="Pre-Read Value",
+        title="Pre-Read Operation Visualization",
+        filename="pre_read_visualization.png",
+    )
