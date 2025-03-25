@@ -65,7 +65,7 @@ public class Info {
         MAX_RW_END = (int) (unitNum / 2.9); // 最大读写空间
         // 初始化磁盘表
         for (int i = 0; i < diskNum; i++) {
-            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "space"));
+            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "unit"));
         }
         // 清空映射
         objMap.clear();
@@ -281,7 +281,7 @@ public class Info {
         // 存储单元数据（对象ID, -1表示空）
         public ArrayList<UnitData> unitData;
 
-        public TreeSet<DiskSpace> freeUnitIdSet; // 可用单元ID集合
+        public TreeSet<DiskSpace> freespaceNotBySize; // 可用单元ID集合
         // 单元ID到空间的映射
         // public Map<Integer, DiskSpace> unitToSpace;
 
@@ -289,12 +289,12 @@ public class Info {
             LocalDisk disk = new LocalDisk(diskId, unitNum);
             switch (type) {
                 case "unit":
-                    disk.freeUnitIdSet = new TreeSet<>(DiskSpace.comparator);
+                    disk.freespaceNotBySize = new TreeSet<>(DiskSpace.comparator);
                     // diskspace size均为1
                     for (int i = 0; i < unitNum; i++) {
                         DiskSpace space = new DiskSpace(true, i, i, diskId);
                         disk.unitData.add(new UnitData(-1, -1, space));
-                        disk.freeUnitIdSet.add(space);
+                        disk.freespaceNotBySize.add(space);
                     }
                     break;
                 case "space":
@@ -475,7 +475,7 @@ public class Info {
             ArrayList<Integer> unitIdList = new ArrayList<>();
 
             for (int i = 0; i < obj_size; i++) {
-                DiskSpace space = freeUnitIdSet.pollFirst();
+                DiskSpace space = freespaceNotBySize.pollFirst();
                 unitIdList.add(space.start);
                 unitData.get(space.start).objId = obj_id;
                 space.isFree = false;
@@ -491,14 +491,24 @@ public class Info {
         }
 
         public ArrayList<Integer> getFreeUnitBySizeFromEndWithRWEndLimit(int obj_size, int obj_id) {
-            if (sizeLeft < obj_size) {
-                log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft);
+            if (sizeLeft < obj_size || freespaceNotBySize.size() < obj_size) {
+                log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft + ", freespace size = "
+                        + freespaceNotBySize.size());
                 return null;
             }
             ArrayList<Integer> unitIdList = new ArrayList<>();
 
             for (int i = 0; i < obj_size; i++) {
-                DiskSpace space = freeUnitIdSet.pollLast();
+                DiskSpace space = freespaceNotBySize.pollLast();
+                if (space == null) {
+                    log.debug("获取空闲空间失败，i = " + i);
+                    // Restore already polled spaces
+                    for (DiskSpace polledSpace : unitIdList.stream().map(id -> unitData.get(id).space).toList()) {
+                        polledSpace.isFree = true;
+                        freespaceNotBySize.add(polledSpace);
+                    }
+                    return null;
+                }
                 unitIdList.add(space.start);
                 unitData.get(space.start).objId = obj_id;
                 space.isFree = false;
@@ -650,6 +660,8 @@ public class Info {
                 return null;
             }
             // 判断空间尺寸
+            sizeLeft -= obj_size;
+            freespaceNotBySize.remove(space);
             if (space.size == obj_size) {
                 space.isFree = false;
                 space.type = DiskSpaceType.RWSPACE;
@@ -763,6 +775,7 @@ public class Info {
                 space2remain = new DiskSpace(true, end + 1, space.end, diskId);
             }
             space2remain.type = DiskSpaceType.UNUSED;
+            freespaceNotBySize.add(space2remain);
             space.isFree = false;
             space.type = DiskSpaceType.RWSPACE;
             // 维护unit信息

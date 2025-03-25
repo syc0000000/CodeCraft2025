@@ -88,7 +88,7 @@ public class Main {
         // 转化tag结果为middle位置，写入Tag中
 
         // 初始化策略
-        Deleter deleter = new Deleter("default");
+        Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志

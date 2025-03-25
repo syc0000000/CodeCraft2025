@@ -26,7 +26,7 @@ public class TagWriterStrategy implements WriteStrategy {
             UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
             // Get disks based on tag information
-            Tag tag = Info.tags.get(writeCommandIn.tag);
+            Tag tag = Info.tags.get(writeCommandIn.tag - 1);
             ArrayList<LocalDisk> disks = selectDiskByTag(tag.tagId, obj.objSize);
 
             if (disks == null || disks.size() < 3) {
@@ -54,15 +54,10 @@ public class TagWriterStrategy implements WriteStrategy {
             // 处理Backup磁盘, same as RWWriteStrategy
             for (int i = 1; i < disks.size(); i++) {
                 LocalDisk backupDisk = disks.get(i);
-                space = backupDisk.getFreeSpaceBySizeFromEndWithRWEndLimit(obj.objSize);
-                if (space != null) {
-                    ArrayList<Integer> unitIdList = new ArrayList<>();
-                    for (int j = 0; j < space.size; j++) {
-                        unitIdList.add(space.start + j);
-                    }
+                ArrayList<Integer> unitIdList = backupDisk.getFreeUnitBySizeFromEndWithRWEndLimit(obj.objSize, obj.objId);
+                if (unitIdList != null) {
                     // 分配空间
                     Replica replica = new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
-                    // space.replica = replica;
                     addReplicaToObj(obj, replica);
                     saveReplicaToDisk(backupDisk, replica);
                     log.debug("成功写入副本" + i + "到磁盘" + backupDisk.diskId);
@@ -94,7 +89,6 @@ public class TagWriterStrategy implements WriteStrategy {
         // select disks based on tag information
         Tag tag = Info.tags.get(tagId);
         int rwDiskId = tag.getDiskId();
-        // tag.sizeList.set(rwDiskId, tag.sizeList.get(rwDiskId) - objSize);
         LocalDisk rwDisk = Info.localDiskTbl.get(rwDiskId);
 
         // 选两个磁盘放对象的backup replica，优先选择sizeLeft最大的2个磁盘
