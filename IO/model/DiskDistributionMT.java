@@ -26,8 +26,8 @@ public class DiskDistributionMT {
 
     // 定义分配方案的数据结构
     public static class Split {
-        int diskIdx;
-        int portion; // 拆分的百分比
+        public int diskIdx;
+        public int portion; // 拆分的百分比
 
         public Split(int d, int p) {
             this.diskIdx = d;

@@ -78,11 +78,15 @@ public class Info {
         public ArrayList<Integer> sizeList; // 大小列表，key:DiskId, value:size
         public ArrayList<Integer> middleList; // 中间位置列表，key:DiskId, value:middle
 
-        public Tag(int tagId, int sizeMax) {
+        public Tag(int tagId, int sizeMax, int disk_num) {
             this.tagId = tagId;
             this.sizeMax = sizeMax;
-            this.sizeList = new ArrayList<>();
-            this.middleList = new ArrayList<>();
+            this.sizeList = new ArrayList<>(disk_num);
+            this.middleList = new ArrayList<>(disk_num);
+            for (int i = 0; i < disk_num; i++) {
+                this.sizeList.add(0);
+                this.middleList.add(0);
+            }
         }
 
         /**

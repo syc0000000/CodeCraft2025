@@ -16,6 +16,7 @@ import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info;
+import Info.Info.Tag;
 import Logger.Logger;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -53,6 +54,35 @@ public class Main {
         mainLogger.info("每种Tag的Write-Delete的最大值" + IO.tagsUnitUsage.toString());
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
         Map<Integer, List<DiskDistributionMT.Split>> distribution = DiskDistributionMT.entrypoint(tagValues);
+
+        // 临时变量，帮助记录每个Tag在每个Disk上的middle位置
+        ArrayList<Integer> startPositionForDisk = new ArrayList<>();
+        for (int i = 0; i < Info.diskNum; i++) {
+            startPositionForDisk.add(0);
+        }
+
+        for (int i = 0; i < tagValues.length; i++) {
+            Tag tag = new Info.Tag(i, tagValues[i], Info.diskNum);
+            for (DiskDistributionMT.Split split : distribution.get(i)) {
+                int diskId = split.diskIdx;
+                int sizeInThisDisk = (int) Math.ceil(tagValues[i] * split.portion / 100.0);
+                // sizeList的diskId位置，写入sizeInThisDisk
+                tag.sizeList.set(diskId, sizeInThisDisk);
+                int middle = startPositionForDisk.get(diskId) + sizeInThisDisk / 2;
+                tag.middleList.set(diskId, middle);
+                startPositionForDisk.set(diskId, startPositionForDisk.get(diskId) + sizeInThisDisk);
+            }
+            Info.tags.add(tag);
+        }
+
+        // 输出每个Tag在每个Disk上的middle位置
+        for (int i = 0; i < 16; i++) {
+            mainLogger.info(
+                    "Tag " + i + " 在每个Disk上的middle位置: " + Info.tags.get(i).middleList.toString());
+            mainLogger.info(
+                    "Tag " + i + " 在每个Disk上的size: " + Info.tags.get(i).sizeList.toString());
+            
+        }
 
         mainLogger.info("每种Tag的分配结果: " + distribution.toString());
         // 转化tag结果为middle位置，写入Tag中
