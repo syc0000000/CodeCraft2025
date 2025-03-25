@@ -37,6 +37,9 @@ public class TagWriterStrategy implements WriteStrategy {
             // rw disk
             LocalDisk rwDisk = disks.get(0);
             DiskSpace space = rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
+            if (space == null) {
+                log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到空间");
+            }
             if (space != null) {
                 ArrayList<Integer> unitIdList = new ArrayList<>();
                 for (int j = 0; j < space.size; j++) {
