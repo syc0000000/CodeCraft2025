@@ -564,21 +564,172 @@ public class Info {
             return null;
         }
 
-        // 从某位置开始，向两侧获取最近的space
-        public DiskSpace getFreeSpaceBySizeFromMiddle(int obj_size, int middle) {
+        // 从某位置开始，向两侧获取最近的free的space，未切割
+        public DiskSpace findSpaceNearMiddle(int obj_size, int middle) {
             // 获取中心块
-            int now_end = middle;
+            int i = middle;
+            int j = middle + 1;
             while (true) {
-                if (unitData.get(now_end).space.isFree && unitData.get(now_end).space.size == obj_size) {
-                    // 找到合适的空间，直接分配
-                    DiskSpace space = unitData.get(now_end).space;
+                if (i < 0) {
+                    break;
+                }
+                if (j >= unitNum) {
+                    break;
+                }
+                if (unitData.get(i).space.isFree && unitData.get(i).space.size >= obj_size) {
+                    return unitData.get(i).space;
+                }
+                if (unitData.get(j).space.isFree && unitData.get(j).space.size >= obj_size) {
+                    return unitData.get(j).space;
+                }
+                i--;
+                j++;
+            }
+            return null;
+        }
+
+        /**
+         * 获取距离middle最近空闲空间，不维护freespaceBySize
+         * 
+         * @param obj_size 对象大小，范围1-5
+         * @param middle   中间位置
+         * @return 空闲空间，用于存放对象。优先返回MAX_RW_END之后的空间，如果没有才返回之前的空间
+         */
+        public DiskSpace getSpaceNearMiddle(int obj_size, int middle) {
+            DiskSpace space = findSpaceNearMiddle(obj_size, middle);
+            if (space == null) {
+                log.debug("写炸了！！！！！磁盘" + diskId + "没有找到合适的空间");
+                return null;
+            }
+            // 判断空间尺寸
+            if (space.size == obj_size) {
+                space.isFree = false;
+                space.type = DiskSpaceType.RWSPACE;
+                // 维护unit信息
+                for (int i = space.start; i <= space.end; i++) {
+                    unitData.get(i).space = space;
+                    unitData.get(i).objId = -1;
+                    unitData.get(i).blockId = -1;
+                }
+                return space;
+            }
+            // 那么就是大于obj_size的，判断空间是否横跨middle
+            if (space.start <= middle && space.end >= middle) {
+                // 需要切割成3块
+                // 1. 以middle为中心，对称切割出obj_size的空间
+                int left, right;
+                if (obj_size % 2 == 0) {
+                    // 偶数大小，左右各分一半
+                    left = middle - (obj_size / 2);
+                    right = middle + (obj_size / 2) - 1;
+                } else {
+                    // 奇数大小，中心点归属于右边
+                    left = middle - (obj_size / 2);
+                    right = middle + (obj_size / 2);
+                }
+                // 判断left和right是否在space的范围内，如果不在，则需要调整
+                // 且此时只有两个空间
+                if (left <= space.start) {
+                    left = space.start;
+                    right = left + obj_size - 1;
+                    space.setStartAndEnd(left, right);
+                    DiskSpace space2remain = new DiskSpace(true, right + 1, space.end, diskId);
+                    space2remain.type = DiskSpaceType.UNUSED;
                     space.isFree = false;
-                    sizeLeft -= obj_size;
-                    log.debug("找到合适的空间: space_size = obj_size = " + obj_size + ", space信息为" + space);
+                    space.type = DiskSpaceType.RWSPACE;
+                    // 维护unit信息
+                    for (int i = space.start; i <= space.end; i++) {
+                        unitData.get(i).space = space;
+                        unitData.get(i).objId = -1;
+                        unitData.get(i).blockId = -1;
+                    }
+                    for (int i = space2remain.start; i <= space2remain.end; i++) {
+                        unitData.get(i).space = space2remain;
+                        unitData.get(i).objId = -1;
+                        unitData.get(i).blockId = -1;
+                    }
                     return space;
                 }
-                now_end--;
+                if (right >= space.end) {
+                    right = space.end;
+                    left = right - obj_size + 1;
+                    space.setStartAndEnd(left, right);
+                    DiskSpace space2remain = new DiskSpace(true, space.start, left - 1, diskId);
+                    space2remain.type = DiskSpaceType.UNUSED;
+                    space.isFree = false;
+                    space.type = DiskSpaceType.RWSPACE;
+                    // 维护unit信息
+                    for (int i = space.start; i <= space.end; i++) {
+                        unitData.get(i).space = space;
+                        unitData.get(i).objId = -1;
+                        unitData.get(i).blockId = -1;
+                    }
+                    for (int i = space2remain.start; i <= space2remain.end; i++) {
+                        unitData.get(i).space = space2remain;
+                        unitData.get(i).objId = -1;
+                        unitData.get(i).blockId = -1;
+                    }
+                    return space;
+                }
+                // 不在边缘，需要切成三块
+                DiskSpace spaceLeft = new DiskSpace(true, space.start, left - 1, diskId);
+                DiskSpace spaceRight = new DiskSpace(true, right + 1, space.end, diskId);
+                spaceLeft.type = DiskSpaceType.UNUSED;
+                spaceRight.type = DiskSpaceType.UNUSED;
+                space.setStartAndEnd(left, right);
+                space.isFree = false;
+                space.type = DiskSpaceType.RWSPACE;
+                // 维护unit信息
+                for (int i = space.start; i <= space.end; i++) {
+                    unitData.get(i).space = space;
+                    unitData.get(i).objId = -1;
+                    unitData.get(i).blockId = -1;
+                }
+                for (int i = spaceLeft.start; i <= spaceLeft.end; i++) {
+                    unitData.get(i).space = spaceLeft;
+                    unitData.get(i).objId = -1;
+                    unitData.get(i).blockId = -1;
+                }
+                for (int i = spaceRight.start; i <= spaceRight.end; i++) {
+                    unitData.get(i).space = spaceRight;
+                    unitData.get(i).objId = -1;
+                    unitData.get(i).blockId = -1;
+                }
+                return space;
             }
+            // 那么就是不横跨middle，从边缘开始切割
+            DiskSpace space2remain = null;
+            int start = 0;
+            int end = 0;
+            if (space.end <= middle) {
+                // 从end开始切割
+                end = space.end;
+                start = end - obj_size + 1;
+                space.setStartAndEnd(start, end);
+                space2remain = new DiskSpace(true, space.start, start - 1, diskId);
+            } else {
+                // 从start开始切割
+                start = space.start;
+                end = start + obj_size - 1;
+                space.setStartAndEnd(start, end);
+                space2remain = new DiskSpace(true, end + 1, space.end, diskId);
+            }
+            space2remain.type = DiskSpaceType.UNUSED;
+            space.isFree = false;
+            space.type = DiskSpaceType.RWSPACE;
+            // 维护unit信息
+            for (int i = space.start; i <= space.end; i++) {
+                unitData.get(i).space = space;
+                unitData.get(i).objId = -1;
+                unitData.get(i).blockId = -1;
+            }
+            for (int i = space2remain.start; i <= space2remain.end; i++) {
+                unitData.get(i).space = space2remain;
+                unitData.get(i).objId = -1;
+                unitData.get(i).blockId = -1;
+            }
+            return space;
+
         }
 
         /**
