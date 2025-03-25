@@ -27,16 +27,16 @@ public class TagWriterStrategy implements WriteStrategy {
             Info.objMap.put(writeCommandIn.objId, obj);
             // Get disks based on tag information
             Tag tag = Info.tags.get(writeCommandIn.tag);
-            ArrayList<LocalDisk> disk = selectDiskByTag(tag.tagId);
+            ArrayList<LocalDisk> disks = selectDiskByTag(tag.tagId, obj.objSize);
 
-            if (disk == null || disk.size() < 3) {
+            if (disks == null || disks.size() < 3) {
                 log.error("无法为对象" + writeCommandIn.objId + "找到足够的磁盘");
                 continue;
             }
 
             // rw disk
-            LocalDisk rwDisk = disk.get(0);
-            DiskSpace space = rwDisk.findSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
+            LocalDisk rwDisk = disks.get(0);
+            DiskSpace space = rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
             if (space != null) {
                 ArrayList<Integer> unitIdList = new ArrayList<>();
                 for (int j = 0; j < space.size; j++) {
@@ -81,7 +81,7 @@ public class TagWriterStrategy implements WriteStrategy {
     /**
      * 基于给定的标签ID和对象大小选择磁盘。
      * 选择一个与标签关联的读写磁盘，以及两个具有最大可用空间的备份磁盘。
-     * 1. 函数内部更换tag对应的disk的sizeList
+     * <del>1. 函数内部更换tag对应的disk的sizeList</del>
      *
      * @param tagId   标签的ID。
      * @param objSize 要写入的对象的大小。
@@ -94,13 +94,13 @@ public class TagWriterStrategy implements WriteStrategy {
         // select disks based on tag information
         Tag tag = Info.tags.get(tagId);
         int rwDiskId = tag.getDiskId();
-        tag.sizeList.get(rwDiskId) -= objSize;
-        LocalDisk rwDisk = Info.disks.get(rwDiskId);
+        // tag.sizeList.set(rwDiskId, tag.sizeList.get(rwDiskId) - objSize);
+        LocalDisk rwDisk = Info.localDiskTbl.get(rwDiskId);
 
         // 选两个磁盘放对象的backup replica，优先选择sizeLeft最大的2个磁盘
         LocalDisk backupDisk1 = null, backupDisk2 = null;
         int size1 = Integer.MIN_VALUE, size2 = Integer.MIN_VALUE;
-        for (LocalDisk disk : Info.disks) {
+        for (LocalDisk disk : Info.localDiskTbl) {
             if (disk.diskId == rwDiskId) {
                 continue;
             }
@@ -125,7 +125,8 @@ public class TagWriterStrategy implements WriteStrategy {
         if (backupDisk2 != null) {
             candidateDisks.add(backupDisk2);
         }
-
+        log.debug("选择磁盘: rwDisk=" + rwDisk.diskId + ", backupDisk1=" + (backupDisk1 == null ? "null" : backupDisk1.diskId)
+                + ", backupDisk2=" + (backupDisk2 == null ? "null" : backupDisk2.diskId));
         return candidateDisks;
     }
     

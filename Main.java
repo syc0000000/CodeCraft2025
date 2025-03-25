@@ -32,7 +32,7 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.ERROR);
+        logger.setLevel(Logger.Level.INFO);
         logger.enableModule("Main");
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
@@ -76,24 +76,23 @@ public class Main {
         }
 
         // 输出每个Tag在每个Disk上的middle位置
-        for (int i = 0; i < 16; i++) {
-            mainLogger.info(
-                    "Tag " + i + " 在每个Disk上的middle位置: " + Info.tags.get(i).middleList.toString());
-            mainLogger.info(
-                    "Tag " + i + " 在每个Disk上的size: " + Info.tags.get(i).sizeList.toString());
+        // for (int i = 0; i < 16; i++) {
+        //     mainLogger.info(
+        //             "Tag " + i + " 在每个Disk上的middle位置: " + Info.tags.get(i).middleList.toString());
+        //     mainLogger.info(
+        //             "Tag " + i + " 在每个Disk上的size: " + Info.tags.get(i).sizeList.toString());
             
-        }
+        // }
 
         mainLogger.info("每种Tag的分配结果: " + distribution.toString());
         // 转化tag结果为middle位置，写入Tag中
 
         // 初始化策略
         Deleter deleter = new Deleter("default");
-        // Writer writer = new Writer("default");
-        Writer writer = new Writer("rw");
+        Writer writer = new Writer("tag");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(12811, 12812);
+        logger.enableTimeRange(1, 12812);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片

@@ -613,7 +613,7 @@ public class Info {
         }
 
         // 从某位置开始，向两侧获取最近的free的space，未切割
-        public DiskSpace findSpaceNearMiddle(int obj_size, int middle) {
+        private DiskSpace findSpaceNearMiddle(int obj_size, int middle) {
             // 获取中心块
             int i = middle;
             int j = middle + 1;
