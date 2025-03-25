@@ -37,6 +37,8 @@ public class Info {
     public static HashMap<Integer, UserObject> objMap = new HashMap<>();
     /** 本地磁盘信息 */
     public static ArrayList<LocalDisk> localDiskTbl = new ArrayList<>();
+    /** 标签信息 */
+    public static ArrayList<Tag> tags = new ArrayList<>();
 
     // 初始化Info模块
     public static void init() {
@@ -67,6 +69,48 @@ public class Info {
         }
         // 清空映射
         objMap.clear();
+    }
+
+    // Tag类
+    public static class Tag {
+        public int tagId; // 标签id
+        public int sizeMax; // 大小
+        public ArrayList<Integer> sizeList; // 大小列表，key:DiskId, value:size
+        public ArrayList<Integer> middleList; // 中间位置列表，key:DiskId, value:middle
+
+        public Tag(int tagId, int sizeMax) {
+            this.tagId = tagId;
+            this.sizeMax = sizeMax;
+            this.sizeList = new ArrayList<>();
+            this.middleList = new ArrayList<>();
+        }
+
+        /**
+         * 权重随机选disk
+         * 
+         * @return
+         */
+        public int getDiskId() {
+            // 计算总权重
+            int totalWeight = 0;
+            for (int size : sizeList) {
+                totalWeight += size;
+            }
+            if (totalWeight <= 0) {
+                return 0; // 或者抛出异常
+            }
+
+            // 使用 [0, totalWeight) 范围内的随机数
+            int random = (int) (Math.random() * totalWeight);
+            int sum = 0;
+            for (int i = 0; i < sizeList.size(); i++) {
+                sum += sizeList.get(i);
+                if (random < sum) {
+                    return i;
+                }
+            }
+            return 0; // 如果所有条件都不满足，返回第一个索引
+        }
     }
 
     // 副本类
@@ -148,7 +192,7 @@ public class Info {
      * @param isFree    true:空闲，false:占用
      * @param start     空间起点
      * @param end       空间终点
-     * @param size      空间大小，等于 end - start + 1
+     * @param sizeMax   空间大小，等于 end - start + 1
      * @param sizeInMap 空间大小(用于Map的key)
      * @param diskId    所属磁盘ID
      * @param type      空间类型, 可选值为

@@ -55,6 +55,7 @@ public class Main {
         Map<Integer, List<DiskDistributionMT.Split>> distribution = DiskDistributionMT.entrypoint(tagValues);
 
         mainLogger.info("每种Tag的分配结果: " + distribution.toString());
+        // 转化tag结果为middle位置，写入Tag中
 
         // 初始化策略
         Deleter deleter = new Deleter("default");
@@ -62,7 +63,7 @@ public class Main {
         Writer writer = new Writer("rw");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 1);
+        logger.enableTimeRange(12811, 12812);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
