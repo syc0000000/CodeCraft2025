@@ -14,6 +14,6 @@ public class WriteCommandIn {
     public WriteCommandIn(int objId, int size, int tag) {
         this.objId = objId;
         this.size = size;
-        this.tag = tag;
+        this.tag = tag - 1;
     }
 }
