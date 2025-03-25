@@ -65,7 +65,7 @@ public class UnitFFDeleteStrategy implements DeleteStrategy {
                 disk.unitData.get(unit_id).space = space;
                 disk.unitData.get(unit_id).objId = -1;
                 disk.unitData.get(unit_id).blockId = -1;
-                disk.freeUnitIdSet.add(space);
+                disk.freespaceNotBySize.add(space);
                 disk.sizeLeft += space.size;
             }
         }
