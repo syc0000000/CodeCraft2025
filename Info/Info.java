@@ -312,6 +312,14 @@ public class Info {
                     for (int i = 0; i < unitNum; i++) {
                         disk.unitData.add(new UnitData(-1, -1, initialSpace));
                     }
+                case "tag":
+                    int backUpStart = unitNum / 3;
+                    DiskSpace backupDiskSpace = new DiskSpace(false, backUpStart, unitNum - 1, diskId);
+                    for (int i = backUpStart; i < unitNum; i++) {
+                        disk.unitData.add(new UnitData(-1, -1, space));
+                        disk.freespaceNotBySize.add(space);
+                    }
+                    // rwEnd
             }
             return disk;
         }
