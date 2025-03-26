@@ -324,21 +324,21 @@ public class Info {
                     }
                 case "tag":
                     // 初始化rw,backup边界
-                    logicalRWEnd = unitNum / 3 - 1;
-                    logicalBackStart = unitNum / 3;
+                    disk.logicalRWEnd = unitNum / 3 - 1;
+                    disk.logicalBackStart = unitNum / 3;
                     // 初始化剩余空间
-                    backSizeLeft = unitNum - logicalBackStart;
-                    rwSizeLeft = unitNum / 3;
+                    disk.backSizeLeft = unitNum - disk.logicalBackStart;
+                    disk.rwSizeLeft = unitNum / 3;
                     // 整个backup区域算作一个space，后续不会再对它进行切分
                     DiskSpace backupDiskSpace =
-                            new DiskSpace(false, logicalBackStart, unitNum - 1, diskId);
+                            new DiskSpace(false, disk.logicalBackStart, unitNum - 1, diskId);
                     backupDiskSpace.type = DiskSpaceType.BACKUPSPACE;
-                    for (int i = logicalBackStart; i < unitNum; i++) {
-                        disk.unitData.add(new UnitData(-1, -1, space));
+                    for (int i = disk.logicalBackStart; i < unitNum; i++) {
+                        disk.unitData.add(new UnitData(-1, -1, backupDiskSpace));
                     }
                     // RW space
-                    int rwSpace = new DiskSpace(true, 0, logicalRWEnd, diskId);
-                    for (int i = 0; i < logicalBackStart; i++) {
+                    DiskSpace rwSpace = new DiskSpace(true, 0, disk.logicalRWEnd, diskId);
+                    for (int i = 0; i < disk.logicalBackStart; i++) {
                         disk.unitData.add(new UnitData(-1, -1, rwSpace));
                     }
             }
@@ -873,120 +873,6 @@ public class Info {
                 }
             }
             return null;
-        }
-
-        /**
-         * 从磁盘末尾获取空闲空间
-         * 
-         * @param obj_size 需要分配的对象大小（1-5）
-         * @return 分配的空间（优先使用磁盘尾部空间）
-         */
-        public DiskSpace getSpaceFromEnd(int obj_size) {
-            DiskSpace space = findSpaceFromEnd(obj_size);
-            if (space == null) {
-                log.debug("磁盘" + diskId + "没有找到合适的空间存放备份replica");
-                return null;
-            }
-
-            sizeLeft -= obj_size;
-
-            // 刚好满足大小直接使用
-            if (space.size == obj_size) {
-                space.isFree = false;
-                space.type = DiskSpaceType.BACKUPSPACE;
-                for (int i = space.start; i <= space.end; i++) {
-                    unitData.get(i).space = space;
-                    unitData.get(i).objId = -1;
-                    unitData.get(i).blockId = -1;
-                }
-                return space;
-            }
-
-            // 空间足够大时进行切割（从尾部切割）
-            int newStart = space.end - obj_size + 1;
-            DiskSpace remainingSpace = new DiskSpace(true, space.start, newStart - 1, diskId);
-            remainingSpace.type = DiskSpaceType.UNUSED;
-
-            // 更新原始空间信息
-            space.setStartAndEnd(newStart, space.end);
-            space.isFree = false;
-            space.type = DiskSpaceType.BACKUPSPACE;
-
-            // 更新单元信息
-            for (int i = space.start; i <= space.end; i++) {
-                unitData.get(i).space = space;
-                unitData.get(i).objId = -1;
-                unitData.get(i).blockId = -1;
-                // log.debug("111111设置位置" + i + "的space=" + unitData.get(i).space);
-            }
-            for (int i = remainingSpace.start; i <= remainingSpace.end; i++) {
-                unitData.get(i).space = remainingSpace;
-                unitData.get(i).objId = -1;
-                unitData.get(i).blockId = -1;
-                // log.debug("222222设置位置" + i + "的space=" + unitData.get(i).space);
-            }
-
-            return space;
-        }
-
-        public ArrayList<Integer> getUnitsFromEndTag(int obj_size, int obj_id) {
-            if (sizeLeft < obj_size) {
-                log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft);
-                return null;
-            }
-            ArrayList<Integer> unitIdList = new ArrayList<>();
-
-            int end = unitNum - 1;
-            int neededSize = obj_size;
-
-            while (neededSize != 0) {
-                DiskSpace space = unitData.get(end).space;
-                end = space.start - 1;
-
-                if (space.isFree) {
-                    continue;
-                }
-
-                space.isFree = false;
-                space.type = DiskSpaceType.BACKUPSPACE;
-                if (neededSize - space.size >= 0) {
-                    // 占用space的所有空间
-                    for (int i = space.start; i <= space.end; i++) {
-                        unitData.get(i).space = space;
-                        unitData.get(i).objId = obj_id;
-                        unitIdList.add(i);
-                    }
-                    neededSize -= space.size;
-                } else if (neededSize - space.size < 0) {
-                    // 需要切割空间，拆分成(space.size-neededSize, neededSize)两部分
-                    int newFreeStart = space.start;
-                    int newFreeEnd = space.end - neededSize;
-                    DiskSpace newFreeSpace = new DiskSpace(true, newFreeStart, newFreeEnd, diskId);
-                    newFreeSpace.type = DiskSpaceType.UNUSED;
-                    for (int i = newFreeStart; i <= newFreeEnd; i++) {
-                        unitData.get(i).space = newFreeSpace;
-                        unitData.get(i).objId = -1;
-                        unitData.get(i).blockId = -1;
-                    }
-                    // 更新原始空间信息
-                    space.setStartAndEnd(space.end - neededSize + 1, space.end);
-                    for (int i = space.start; i <= space.end; i++) {
-                        unitData.get(i).space = space;
-                        unitData.get(i).objId = obj_id;
-                        unitIdList.add(i);
-                    }
-                    neededSize = 0;
-                    break;
-                }
-            }
-
-            // 更新RWEnd
-            if (RWEnd < unitIdList.get(unitIdList.size() - 1)) {
-                RWEnd = unitIdList.get(unitIdList.size() - 1);
-            }
-            // 更新sizeLeft
-            sizeLeft -= obj_size;
-            return unitIdList;
         }
 
         /**
