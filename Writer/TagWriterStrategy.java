@@ -74,7 +74,13 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 Replica replica =
                         new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
                 addReplicaToObj(obj, replica);
+                for (int id : unitIdList) {
+                    log.debug("disk中unitid原先的objId: " + backupDisk.unitData.get(id).objId);
+                }
                 saveReplicaToDisk(backupDisk, replica); // BUG 疑似这里设置ObjId没生效
+                for (int id : unitIdList) {
+                    log.debug("disk中unitid更新后的objId: : " + backupDisk.unitData.get(id).objId);
+                }
                 backupDisk.backSizeLeft -= obj.objSize;
 
                 if (i == 1) {
