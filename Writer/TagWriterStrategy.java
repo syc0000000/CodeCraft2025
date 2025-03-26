@@ -57,8 +57,12 @@ public class TagWriterStrategy implements WriteStrategy {
             // 处理Backup磁盘, same as RWWriteStrategy
             for (int i = 1; i < disks.size(); i++) {
                 LocalDisk backupDisk = disks.get(i);
-                ArrayList<Integer> unitIdList = backupDisk.getFreeUnitBySizeFromEndWithRWEndLimit(obj.objSize, obj.objId);
-                if (unitIdList != null) {
+                space = backupDisk.getSpaceFromEnd(obj.objSize);
+                if (space != null) {
+                    ArrayList<Integer> unitIdList = new ArrayList<>();
+                    for (int j = 0; j < space.size; j++) {
+                        unitIdList.add(space.start + j);
+                    }
                     // 分配空间
                     Replica replica = new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
                     addReplicaToObj(obj, replica);

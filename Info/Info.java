@@ -65,7 +65,7 @@ public class Info {
         MAX_RW_END = (int) (unitNum / 2.9); // 最大读写空间
         // 初始化磁盘表
         for (int i = 0; i < diskNum; i++) {
-            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "unit"));
+            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "space"));
         }
         // 清空映射
         objMap.clear();
@@ -467,6 +467,8 @@ public class Info {
             return null;
         }
 
+        // unit ff 策略调用方法
+
         public ArrayList<Integer> getFreeUnitsBySize(int obj_size, int obj_id) {
             if (sizeLeft < obj_size) {
                 log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft);
@@ -661,7 +663,6 @@ public class Info {
             }
             // 判断空间尺寸
             sizeLeft -= obj_size;
-            freespaceNotBySize.remove(space);
             if (space.size == obj_size) {
                 space.isFree = false;
                 space.type = DiskSpaceType.RWSPACE;
@@ -775,7 +776,6 @@ public class Info {
                 space2remain = new DiskSpace(true, end + 1, space.end, diskId);
             }
             space2remain.type = DiskSpaceType.UNUSED;
-            freespaceNotBySize.add(space2remain);
             space.isFree = false;
             space.type = DiskSpaceType.RWSPACE;
             // 维护unit信息
@@ -791,6 +791,69 @@ public class Info {
             }
             return space;
 
+        }
+
+        // 从末尾开始查找可用空间
+        private DiskSpace findSpaceFromEnd(int obj_size) {
+            for (int i = unitNum - 1; i >= 0; i--) {
+                DiskSpace space = unitData.get(i).space;
+                if (space.isFree && space.size >= obj_size) {
+                    return space;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * 从磁盘末尾获取空闲空间
+         * 
+         * @param obj_size 需要分配的对象大小（1-5）
+         * @return 分配的空间（优先使用磁盘尾部空间）
+         */
+        public DiskSpace getSpaceFromEnd(int obj_size) {
+            DiskSpace space = findSpaceFromEnd(obj_size);
+            if (space == null) {
+                log.debug("磁盘" + diskId + "没有找到合适的空间存放备份replica");
+                return null;
+            }
+
+            sizeLeft -= obj_size;
+
+            // 刚好满足大小直接使用
+            if (space.size == obj_size) {
+                space.isFree = false;
+                space.type = DiskSpaceType.RWSPACE;
+                for (int i = space.start; i <= space.end; i++) {
+                    unitData.get(i).space = space;
+                    unitData.get(i).objId = -1;
+                    unitData.get(i).blockId = -1;
+                }
+                return space;
+            }
+
+            // 空间足够大时进行切割（从尾部切割）
+            int newStart = space.end - obj_size + 1;
+            DiskSpace remainingSpace = new DiskSpace(true, space.start, newStart - 1, diskId);
+            remainingSpace.type = DiskSpaceType.UNUSED;
+
+            // 更新原始空间信息
+            space.setStartAndEnd(newStart, space.end);
+            space.isFree = false;
+            space.type = DiskSpaceType.RWSPACE;
+
+            // 更新单元信息
+            for (int i = space.start; i <= space.end; i++) {
+                unitData.get(i).space = space;
+                unitData.get(i).objId = -1;
+                unitData.get(i).blockId = -1;
+            }
+            for (int i = remainingSpace.start; i <= remainingSpace.end; i++) {
+                unitData.get(i).space = remainingSpace;
+                unitData.get(i).objId = -1;
+                unitData.get(i).blockId = -1;
+            }
+
+            return space;
         }
 
         /**
