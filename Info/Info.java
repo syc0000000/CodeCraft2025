@@ -872,7 +872,7 @@ public class Info {
             // 更新原始空间信息
             space.setStartAndEnd(newStart, space.end);
             space.isFree = false;
-            space.type = DiskSpaceType.RWSPACE;
+            space.type = DiskSpaceType.BACKUPSPACE;
 
             // 更新单元信息
             for (int i = space.start; i <= space.end; i++) {
@@ -910,15 +910,14 @@ public class Info {
                 }
 
                 space.isFree = false;
-                space.type = DiskSpaceType.RWSPACE;
-                
-                for (int i = space.start; i <= space.end; i++) {
-                    unitIdList.add(i);
-                    unitData.get(i).space = space;
-                    unitData.get(i).objId = obj_id;
-                }
-
-                if (neededSize - space.size > 0) {
+                space.type = DiskSpaceType.BACKUPSPACE;
+                if (neededSize - space.size >= 0) {
+                    // 占用space的所有空间
+                    for (int i = space.start; i <= space.end; i++) {
+                        unitData.get(i).space = space;
+                        unitData.get(i).objId = obj_id;
+                        unitIdList.add(i);
+                    }
                     neededSize -= space.size;
                 } else if (neededSize - space.size < 0) {
                     // 需要切割空间，拆分成(space.size-neededSize, neededSize)两部分
@@ -933,14 +932,6 @@ public class Info {
                     }
                     // 更新原始空间信息
                     space.setStartAndEnd(space.end - neededSize + 1, space.end);
-                    for (int i = space.start; i <= space.end; i++) {
-                        unitData.get(i).space = space;
-                        unitData.get(i).objId = obj_id;
-                        unitIdList.add(i);
-                    }
-                    neededSize = 0;
-                    break;
-                } else { // 恰好满足
                     for (int i = space.start; i <= space.end; i++) {
                         unitData.get(i).space = space;
                         unitData.get(i).objId = obj_id;
