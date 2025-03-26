@@ -312,12 +312,13 @@ public class Info {
                     for (int i = 0; i < unitNum; i++) {
                         disk.unitData.add(new UnitData(-1, -1, initialSpace));
                     }
+                    break;
                 case "tag":
                     int backUpStart = unitNum / 3;
                     DiskSpace backupDiskSpace = new DiskSpace(false, backUpStart, unitNum - 1, diskId);
                     for (int i = backUpStart; i < unitNum; i++) {
-                        disk.unitData.add(new UnitData(-1, -1, space));
-                        disk.freespaceNotBySize.add(space);
+                        disk.unitData.add(new UnitData(-1, -1, backupDiskSpace));
+                        disk.freespaceNotBySize.add(backupDiskSpace);
                     }
                     // rwEnd
             }
@@ -513,7 +514,8 @@ public class Info {
                 if (space == null) {
                     log.debug("获取空闲空间失败，i = " + i);
                     // Restore already polled spaces
-                    for (DiskSpace polledSpace : unitIdList.stream().map(id -> unitData.get(id).space).collect(java.util.stream.Collectors.toList())) {
+                    for (DiskSpace polledSpace : unitIdList.stream().map(id -> unitData.get(id).space)
+                            .collect(java.util.stream.Collectors.toList())) {
                         polledSpace.isFree = true;
                         freespaceNotBySize.add(polledSpace);
                     }

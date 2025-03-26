@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import Deleter.Deleter;
 import IO.IO;
-import IO.model.DiskDistributionMT;
+import IO.model.DiskDistributionGA;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import IO.model.PreprocessOut;
@@ -37,6 +37,8 @@ public class Main {
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
         logger.enableModule("Info");
+        logger.enableModule("DiskGA");
+        logger.enableModule("IO");
         // logger.enableModule("Reader");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
@@ -53,7 +55,8 @@ public class Main {
 
         mainLogger.info("每种Tag的Write-Delete的最大值" + IO.tagsUnitUsage.toString());
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
-        Map<Integer, List<DiskDistributionMT.Split>> distribution = DiskDistributionMT.entrypoint(tagValues);
+        Map<Integer, List<DiskDistributionGA.Split>> distribution = DiskDistributionGA.entrypoint(tagValues);
+        mainLogger.info("遗传算法分配结果: " + distribution.toString());
 
         // 临时变量，帮助记录每个Tag在每个Disk上的middle位置
         ArrayList<Integer> startPositionForDisk = new ArrayList<>();
@@ -63,9 +66,10 @@ public class Main {
 
         for (int i = 0; i < tagValues.length; i++) {
             Tag tag = new Info.Tag(i, tagValues[i], Info.diskNum);
-            for (DiskDistributionMT.Split split : distribution.get(i)) {
+            mainLogger.info("Tag " + i + " 的分配结果: " + distribution.get(i).toString());
+            for (DiskDistributionGA.Split split : distribution.get(i)) {
                 int diskId = split.diskIdx;
-                int sizeInThisDisk = (int) Math.ceil(tagValues[i] * split.portion / 100.0);
+                int sizeInThisDisk = (int) Math.ceil(tagValues[i] * split.portion / 100.0 * 0.9);
                 // sizeList的diskId位置，写入sizeInThisDisk
                 tag.sizeList.set(diskId, sizeInThisDisk);
                 int middle = startPositionForDisk.get(diskId) + sizeInThisDisk / 2;
@@ -93,8 +97,7 @@ public class Main {
         Writer writer = new Writer("tag");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(25330, 25333);
-        logger.enableModule("IO");
+        logger.enableTimeRange(0, 1);
 
         // 主循环 - 处理每个时间片
         try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {
