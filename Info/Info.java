@@ -505,7 +505,7 @@ public class Info {
                 if (space == null) {
                     log.debug("获取空闲空间失败，i = " + i);
                     // Restore already polled spaces
-                    for (DiskSpace polledSpace : unitIdList.stream().map(id -> unitData.get(id).space).toList()) {
+                    for (DiskSpace polledSpace : unitIdList.stream().map(id -> unitData.get(id).space).collect(java.util.stream.Collectors.toList())) {
                         polledSpace.isFree = true;
                         freespaceNotBySize.add(polledSpace);
                     }
