@@ -74,6 +74,19 @@ public class TagWriterStrategy implements WriteStrategy {
                     } else if (i == 2) {
                         writeCommandOut.copy3 = new DiskUnit(backupDisk.diskId, unitIdList);
                     }
+                } else {
+                    ArrayList<Integer> unitIdList =
+                            backupDisk.getUnitsFromEndTag(obj.objSize, obj.objId);
+                    Replica replica =
+                            new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
+                    addReplicaToObj(obj, replica);
+                    saveReplicaToDisk(backupDisk, replica);
+                    log.debug("成功写入副本" + i + "到磁盘" + backupDisk.diskId);
+                    if (i == 1) {
+                        writeCommandOut.copy2 = new DiskUnit(backupDisk.diskId, unitIdList);
+                    } else if (i == 2) {
+                        writeCommandOut.copy3 = new DiskUnit(backupDisk.diskId, unitIdList);
+                    }
                 }
             }
             writeCommandOuts.add(writeCommandOut);

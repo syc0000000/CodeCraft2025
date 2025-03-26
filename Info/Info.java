@@ -891,6 +891,75 @@ public class Info {
             return space;
         }
 
+        public ArrayList<Integer> getUnitsFromEndTag(int obj_size, int obj_id) {
+            if (sizeLeft < obj_size) {
+                log.debug("没有足够的空间，obj_size = " + obj_size + ", sizeLeft = " + sizeLeft);
+                return null;
+            }
+            ArrayList<Integer> unitIdList = new ArrayList<>();
+
+            int end = unitNum - 1;
+            int neededSize = obj_size;
+
+            while (neededSize != 0) {
+                DiskSpace space = unitData.get(end).space;
+                end = space.start - 1;
+
+                if (space.isFree) {
+                    continue;
+                }
+
+                space.isFree = false;
+                space.type = DiskSpaceType.RWSPACE;
+                
+                for (int i = space.start; i <= space.end; i++) {
+                    unitIdList.add(i);
+                    unitData.get(i).space = space;
+                    unitData.get(i).objId = obj_id;
+                }
+
+                if (neededSize - space.size > 0) {
+                    neededSize -= space.size;
+                } else if (neededSize - space.size < 0) {
+                    // 需要切割空间，拆分成(space.size-neededSize, neededSize)两部分
+                    int newFreeStart = space.start;
+                    int newFreeEnd = space.end - neededSize;
+                    DiskSpace newFreeSpace = new DiskSpace(true, newFreeStart, newFreeEnd, diskId);
+                    newFreeSpace.type = DiskSpaceType.UNUSED;
+                    for (int i = newFreeStart; i <= newFreeEnd; i++) {
+                        unitData.get(i).space = newFreeSpace;
+                        unitData.get(i).objId = -1;
+                        unitData.get(i).blockId = -1;
+                    }
+                    // 更新原始空间信息
+                    space.setStartAndEnd(space.end - neededSize + 1, space.end);
+                    for (int i = space.start; i <= space.end; i++) {
+                        unitData.get(i).space = space;
+                        unitData.get(i).objId = obj_id;
+                        unitIdList.add(i);
+                    }
+                    neededSize = 0;
+                    break;
+                } else { // 恰好满足
+                    for (int i = space.start; i <= space.end; i++) {
+                        unitData.get(i).space = space;
+                        unitData.get(i).objId = obj_id;
+                        unitIdList.add(i);
+                    }
+                    neededSize = 0;
+                    break;
+                }
+            }
+
+            // 更新RWEnd
+            if (RWEnd < unitIdList.get(unitIdList.size() - 1)) {
+                RWEnd = unitIdList.get(unitIdList.size() - 1);
+            }
+            // 更新sizeLeft
+            sizeLeft -= obj_size;
+            return unitIdList;
+        }
+
         /**
          * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。 同时更新unitToSpace。 时间复杂度 O(n)
          * 维护的信息有
