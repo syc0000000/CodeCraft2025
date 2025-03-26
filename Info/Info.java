@@ -627,23 +627,32 @@ public class Info {
         // 从某位置开始，向两侧获取最近的free的space，未切割
         private DiskSpace findSpaceNearMiddle(int obj_size, int middle) {
             // 获取中心块
+            log.debug("寻找距离middle最近的空闲空间: obj_size=" + obj_size + ", middle=" + middle);
             int i = middle;
             int j = middle + 1;
             while (true) {
-                if (i < 0) {
+                if (i < 0 && j >= unitNum) {
                     break;
                 }
-                if (j >= unitNum) {
-                    break;
+                log.debug("i=" + i + ", j=" + j);
+                if (i >= 0 && i < unitNum) {
+                    log.debug(
+                            "位置" + i + "的space=" + unitData.get(i).space + ", 位置" + j + "的space=" +
+                                    unitData.get(j).space);
                 }
-                if (unitData.get(i).space.isFree && unitData.get(i).space.size >= obj_size) {
+                if (i >= 0 && unitData.get(i).space.isFree && unitData.get(i).space.size >= obj_size) {
+                    log.debug("找到距离middle最近的空闲空间: space_size=" + unitData.get(i).space.size + ", space_start="
+                            + unitData.get(i).space.start + ", space_end=" + unitData.get(i).space.end);
                     return unitData.get(i).space;
                 }
-                if (unitData.get(j).space.isFree && unitData.get(j).space.size >= obj_size) {
+                if (j < unitNum && unitData.get(j).space.isFree && unitData.get(j).space.size >= obj_size) {
+                    log.debug("找到距离middle最近的空闲空间: space_size=" + unitData.get(j).space.size + ", space_start="
+                            + unitData.get(j).space.start + ", space_end=" + unitData.get(j).space.end);
                     return unitData.get(j).space;
                 }
                 i--;
                 j++;
+
             }
             return null;
         }
@@ -671,7 +680,10 @@ public class Info {
                     unitData.get(i).space = space;
                     unitData.get(i).objId = -1;
                     unitData.get(i).blockId = -1;
+                    // log.debug("000000设置位置" + i + "的space=" + unitData.get(i).space);
                 }
+                log.debug("分配空间完成: space_size=" + space.size + ", space_start=" + space.start
+                        + ", space_end=" + space.end);
                 return space;
             }
             // 那么就是大于obj_size的，判断空间是否横跨middle
@@ -693,8 +705,9 @@ public class Info {
                 if (left <= space.start) {
                     left = space.start;
                     right = left + obj_size - 1;
-                    space.setStartAndEnd(left, right);
+
                     DiskSpace space2remain = new DiskSpace(true, right + 1, space.end, diskId);
+                    space.setStartAndEnd(left, right);
                     space2remain.type = DiskSpaceType.UNUSED;
                     space.isFree = false;
                     space.type = DiskSpaceType.RWSPACE;
@@ -703,19 +716,24 @@ public class Info {
                         unitData.get(i).space = space;
                         unitData.get(i).objId = -1;
                         unitData.get(i).blockId = -1;
+                        // log.debug("1111设置位置" + i + "的space=" + unitData.get(i).space);
                     }
                     for (int i = space2remain.start; i <= space2remain.end; i++) {
                         unitData.get(i).space = space2remain;
                         unitData.get(i).objId = -1;
                         unitData.get(i).blockId = -1;
+                        // log.debug("2222设置位置" + i + "的space=" + unitData.get(i).space);
                     }
+                    log.debug("disk" + diskId + "分配空间完成: space_size=" + space.size + ", space_start="
+                            + space.start + ", space_end=" + space.end);
                     return space;
                 }
                 if (right >= space.end) {
                     right = space.end;
                     left = right - obj_size + 1;
-                    space.setStartAndEnd(left, right);
+
                     DiskSpace space2remain = new DiskSpace(true, space.start, left - 1, diskId);
+                    space.setStartAndEnd(left, right);
                     space2remain.type = DiskSpaceType.UNUSED;
                     space.isFree = false;
                     space.type = DiskSpaceType.RWSPACE;
@@ -724,12 +742,16 @@ public class Info {
                         unitData.get(i).space = space;
                         unitData.get(i).objId = -1;
                         unitData.get(i).blockId = -1;
+                        // log.debug("3333设置位置" + i + "的space=" + unitData.get(i).space);
                     }
                     for (int i = space2remain.start; i <= space2remain.end; i++) {
                         unitData.get(i).space = space2remain;
                         unitData.get(i).objId = -1;
                         unitData.get(i).blockId = -1;
+                        // log.debug("4444设置位置" + i + "的space=" + unitData.get(i).space);
                     }
+                    log.debug("disk" + diskId + "分配空间完成: space_size=" + space.size + ", space_start="
+                            + space.start + ", space_end=" + space.end);
                     return space;
                 }
                 // 不在边缘，需要切成三块
@@ -745,17 +767,22 @@ public class Info {
                     unitData.get(i).space = space;
                     unitData.get(i).objId = -1;
                     unitData.get(i).blockId = -1;
+                    // log.debug("111设置位置" + i + "的space=" + unitData.get(i).space);
                 }
                 for (int i = spaceLeft.start; i <= spaceLeft.end; i++) {
                     unitData.get(i).space = spaceLeft;
                     unitData.get(i).objId = -1;
                     unitData.get(i).blockId = -1;
+                    // log.debug("222设置位置" + i + "的space=" + unitData.get(i).space);
                 }
                 for (int i = spaceRight.start; i <= spaceRight.end; i++) {
                     unitData.get(i).space = spaceRight;
                     unitData.get(i).objId = -1;
                     unitData.get(i).blockId = -1;
+                    // log.debug("333设置位置" + i + "的space=" + unitData.get(i).space);
                 }
+                log.debug("disk" + diskId + "分配空间完成: space_size=" + space.size + ", space_start="
+                        + space.start + ", space_end=" + space.end);
                 return space;
             }
             // 那么就是不横跨middle，从边缘开始切割
@@ -766,14 +793,16 @@ public class Info {
                 // 从end开始切割
                 end = space.end;
                 start = end - obj_size + 1;
-                space.setStartAndEnd(start, end);
+
                 space2remain = new DiskSpace(true, space.start, start - 1, diskId);
+                space.setStartAndEnd(start, end);
             } else {
                 // 从start开始切割
                 start = space.start;
                 end = start + obj_size - 1;
-                space.setStartAndEnd(start, end);
+
                 space2remain = new DiskSpace(true, end + 1, space.end, diskId);
+                space.setStartAndEnd(start, end);
             }
             space2remain.type = DiskSpaceType.UNUSED;
             space.isFree = false;
@@ -783,12 +812,16 @@ public class Info {
                 unitData.get(i).space = space;
                 unitData.get(i).objId = -1;
                 unitData.get(i).blockId = -1;
+                // log.debug("11111设置位置" + i + "的space=" + unitData.get(i).space);
             }
             for (int i = space2remain.start; i <= space2remain.end; i++) {
                 unitData.get(i).space = space2remain;
                 unitData.get(i).objId = -1;
                 unitData.get(i).blockId = -1;
+                // log.debug("22222设置位置" + i + "的space=" + unitData.get(i).space);
             }
+            log.debug("disk" + diskId + "分配空间完成: space_size=" + space.size + ", space_start=" + space.start
+                    + ", space_end=" + space.end);
             return space;
 
         }
@@ -822,7 +855,7 @@ public class Info {
             // 刚好满足大小直接使用
             if (space.size == obj_size) {
                 space.isFree = false;
-                space.type = DiskSpaceType.RWSPACE;
+                space.type = DiskSpaceType.BACKUPSPACE;
                 for (int i = space.start; i <= space.end; i++) {
                     unitData.get(i).space = space;
                     unitData.get(i).objId = -1;
@@ -846,11 +879,13 @@ public class Info {
                 unitData.get(i).space = space;
                 unitData.get(i).objId = -1;
                 unitData.get(i).blockId = -1;
+                // log.debug("111111设置位置" + i + "的space=" + unitData.get(i).space);
             }
             for (int i = remainingSpace.start; i <= remainingSpace.end; i++) {
                 unitData.get(i).space = remainingSpace;
                 unitData.get(i).objId = -1;
                 unitData.get(i).blockId = -1;
+                // log.debug("222222设置位置" + i + "的space=" + unitData.get(i).space);
             }
 
             return space;

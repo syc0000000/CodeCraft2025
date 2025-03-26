@@ -32,14 +32,14 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.INFO);
+        logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
         logger.enableModule("Info");
-        logger.enableModule("Reader");
+        // logger.enableModule("Reader");
         // 启用文件日志
-        // logger.enableFileLogging("logs/app.log");
+        logger.enableFileLogging("logs/app.log");
 
         mainLogger.info("程序启动");
 
@@ -77,11 +77,12 @@ public class Main {
 
         // 输出每个Tag在每个Disk上的middle位置
         // for (int i = 0; i < 16; i++) {
-        //     mainLogger.info(
-        //             "Tag " + i + " 在每个Disk上的middle位置: " + Info.tags.get(i).middleList.toString());
-        //     mainLogger.info(
-        //             "Tag " + i + " 在每个Disk上的size: " + Info.tags.get(i).sizeList.toString());
-            
+        // mainLogger.info(
+        // "Tag " + i + " 在每个Disk上的middle位置: " +
+        // Info.tags.get(i).middleList.toString());
+        // mainLogger.info(
+        // "Tag " + i + " 在每个Disk上的size: " + Info.tags.get(i).sizeList.toString());
+
         // }
 
         mainLogger.info("每种Tag的分配结果: " + distribution.toString());
@@ -92,7 +93,7 @@ public class Main {
         Writer writer = new Writer("tag");
         Reader reader = new Reader("ReadOnly");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(1, 12812);
+        logger.enableTimeRange(25330, 25333);
         logger.enableModule("IO");
 
         // 主循环 - 处理每个时间片
@@ -149,6 +150,6 @@ public class Main {
         mainLogger.info("程序执行完毕");
 
         // 程序结束前关闭文件日志
-        // logger.disableFileLogging();
+        logger.disableFileLogging();
     }
 }

@@ -35,6 +35,7 @@ public class TagWriterStrategy implements WriteStrategy {
             }
 
             // rw disk
+            log.debug("为对象" + writeCommandIn.objId + "选择磁盘: rwDisk=" + disks.get(0).diskId);
             LocalDisk rwDisk = disks.get(0);
             DiskSpace space = rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
             if (space == null) {
@@ -79,7 +80,7 @@ public class TagWriterStrategy implements WriteStrategy {
         }
         return writeCommandOuts;
     }
-    
+
     /**
      * 基于给定的标签ID和对象大小选择磁盘。
      * 选择一个与标签关联的读写磁盘，以及两个具有最大可用空间的备份磁盘。
@@ -126,11 +127,12 @@ public class TagWriterStrategy implements WriteStrategy {
         if (backupDisk2 != null) {
             candidateDisks.add(backupDisk2);
         }
-        log.debug("选择磁盘: rwDisk=" + rwDisk.diskId + ", backupDisk1=" + (backupDisk1 == null ? "null" : backupDisk1.diskId)
-                + ", backupDisk2=" + (backupDisk2 == null ? "null" : backupDisk2.diskId));
+        log.debug(
+                "选择磁盘: rwDisk=" + rwDisk.diskId + ", backupDisk1=" + (backupDisk1 == null ? "null" : backupDisk1.diskId)
+                        + ", backupDisk2=" + (backupDisk2 == null ? "null" : backupDisk2.diskId));
         return candidateDisks;
     }
-    
+
     protected void addReplicaToObj(UserObject obj, Replica replica) {
         log.debug("添加副本到对象: objId=" + obj.objId + ", replicaId=" + replica.replicaId);
         obj.addReplica(replica);

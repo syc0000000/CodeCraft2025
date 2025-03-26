@@ -25,8 +25,8 @@ public interface ReaderStrategy {
             UserObject object = Info.objMap.get(readCommandIn.objId);
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
             object.readTasks.add(readTask);
-            readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
-                    readCommandIn.objId + "当前任务" + object.readTasks);
+            // readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
+            // readCommandIn.objId + "当前任务" + object.readTasks);
         }
     }
 
