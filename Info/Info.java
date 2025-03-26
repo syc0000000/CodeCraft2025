@@ -252,7 +252,8 @@ public class Info {
     /* 对象-块信息 */
     public static class UnitData {
         public int objId; // 对象id
-        public int blockId; // 块id
+        /** 对象的块id，表示是对象的第几块 */
+        public int blockId; 
         public DiskSpace space; // 空间
 
         public UnitData(int objId, int blockId, DiskSpace space) {
@@ -281,9 +282,17 @@ public class Info {
         // 存储单元数据（对象ID, -1表示空）
         public ArrayList<UnitData> unitData;
 
+        // ******** WriteStrategy: Unit FF需要使用的变量 ********
         public TreeSet<DiskSpace> freespaceNotBySize; // 可用单元ID集合
-        // 单元ID到空间的映射
+        
+        // ******** WriteStrategy: Tag需要使用的变量 ********
+        /** 人为限制的读写区域边界，RW Replica写入的范围只能在[0,RWEnd]范围内，在初始化之后不再修改 */
+        public int logicalRWEnd;
+        /** 人为限制的备份区域边界，Backup Replica写入的范围只能在[BackStart, unitNum - 1]范围内，在初始化之后不再修改 */
+        public int logicalBackStart;
+        /** 备份区的剩余空间，需要在删写时维护 */
         public int backSizeLeft;
+        /** 读写区的剩余空间，需要在删写时维护 */
         public int rwSizeLeft;
 
         public static LocalDisk createDisk(int diskId, int unitNum, String type) {
@@ -314,20 +323,22 @@ public class Info {
                         disk.unitData.add(new UnitData(-1, -1, initialSpace));
                     }
                 case "tag":
-                    int rwEnd = unitNum / 3 - 1;
-                    int backUpStart = unitNum / 3;
-                    backSizeLeft = unitNum - backUpStart;
+                    // 初始化rw,backup边界
+                    logicalRWEnd = unitNum / 3 - 1;
+                    logicalBackStart = unitNum / 3;
+                    // 初始化剩余空间
+                    backSizeLeft = unitNum - logicalBackStart;
                     rwSizeLeft = unitNum / 3;
                     // 整个backup区域算作一个space，后续不会再对它进行切分
                     DiskSpace backupDiskSpace =
-                            new DiskSpace(false, backUpStart, unitNum - 1, diskId);
+                            new DiskSpace(false, logicalBackStart, unitNum - 1, diskId);
                     backupDiskSpace.type = DiskSpaceType.BACKUPSPACE;
-                    for (int i = backUpStart; i < unitNum; i++) {
+                    for (int i = logicalBackStart; i < unitNum; i++) {
                         disk.unitData.add(new UnitData(-1, -1, space));
                     }
                     // RW space
-                    int rwSpace = new DiskSpace(true, 0, rwEnd, diskId);
-                    for (int i = 0; i < backUpStart; i++) {
+                    int rwSpace = new DiskSpace(true, 0, logicalRWEnd, diskId);
+                    for (int i = 0; i < logicalBackStart; i++) {
                         disk.unitData.add(new UnitData(-1, -1, rwSpace));
                     }
             }
