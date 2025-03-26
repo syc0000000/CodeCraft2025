@@ -49,24 +49,23 @@ public class TagDeleteStrategy implements DeleteStrategy {
         log.debug("开始释放RW副本所占用的空间，副本信息：" + replica);
         int disk_id = replica.diskId;
         ArrayList<Integer> unit_ids = replica.unitIdList;
-        LocalDisk disk = Info.localDiskTbl.get(disk_id);
-
+        LocalDisk rwDisk = Info.localDiskTbl.get(disk_id);
         for (int unit_id : unit_ids) {
-            DiskSpace space = disk.unitData.get(unit_id).space;
+            DiskSpace space = rwDisk.unitData.get(unit_id).space;
             space.type = DiskSpaceType.UNUSED;
             // 更新rwend
-            if (space.end == disk.RWEnd) {
-                while (disk.RWEnd > 0
-                        && (disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
-                                || disk.unitData.get(
-                                        disk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
-                    disk.RWEnd--;
+            if (space.end == rwDisk.RWEnd) {
+                while (rwDisk.RWEnd > 0
+                        && (rwDisk.unitData.get(rwDisk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
+                                || rwDisk.unitData.get(
+                                        rwDisk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
+                    rwDisk.RWEnd--;
                 }
             }
-            disk.unitData.get(unit_id).space = space;
-            disk.unitData.get(unit_id).objId = -1;
-            disk.unitData.get(unit_id).blockId = -1;
-            disk.rwSizeLeft += space.size;
+            rwDisk.unitData.get(unit_id).space = space;
+            rwDisk.unitData.get(unit_id).objId = -1;
+            rwDisk.unitData.get(unit_id).blockId = -1;
+            rwDisk.rwSizeLeft += 1;
         }
 
         // free backup replica
@@ -75,13 +74,12 @@ public class TagDeleteStrategy implements DeleteStrategy {
             log.debug("开始释放备份副本所占用的空间，副本信息：" + replica);
             disk_id = replica.diskId;
             unit_ids = replica.unitIdList;
-            disk = Info.localDiskTbl.get(disk_id);
+            LocalDisk backupDisk = Info.localDiskTbl.get(disk_id);
 
             for (int unit_id : unit_ids) {
-                disk.unitData.get(unit_id).space = space;
-                disk.unitData.get(unit_id).objId = -1;
-                disk.unitData.get(unit_id).blockId = -1;
-                disk.backupSizeLeft += space.size;
+                backupDisk.unitData.get(unit_id).objId = -1;
+                backupDisk.unitData.get(unit_id).blockId = -1;
+                backupDisk.backSizeLeft += 1;
             }
         }
     }

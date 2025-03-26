@@ -13,7 +13,7 @@ import Info.Info.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
-public class TagWriterStrategy implements WriteStrategy {
+public class TagWriterStrategy extends DefaultWriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 
     @Override
@@ -35,7 +35,7 @@ public class TagWriterStrategy implements WriteStrategy {
             }
 
             // rw disk
-            log.debug("为对象" + writeCommandIn.objId + "选择磁盘: rwDisk=" + disks.get(0).diskId);
+            log.debug("=== 开始为对象" + writeCommandIn.objId + "的rw replica选择磁盘 ===");
             LocalDisk rwDisk = disks.get(0);
             DiskSpace space =
                     rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
@@ -50,7 +50,8 @@ public class TagWriterStrategy implements WriteStrategy {
                 // 分配空间
                 Replica replica = new Replica(writeCommandIn.objId, 0, rwDisk.diskId, unitIdList);
                 addReplicaToObj(obj, replica);
-                saveReplicaToDisk(rwDisk, replica, false);
+                saveReplicaToDisk(rwDisk, replica);
+                rwDisk.rwSizeLeft -= obj.objSize;
                 // 维护RWEnd
                 rwDisk.RWEnd = Math.min(Info.MAX_RW_END, Math.max(rwDisk.RWEnd, space.end));
                 log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
@@ -59,28 +60,29 @@ public class TagWriterStrategy implements WriteStrategy {
 
 
             // 两个备份磁盘
-            ArrayList<Integer> unitIdList1 = getFreeUnitFromEnd(disks.get(1), obj.objSize);
-            ArrayList<Integer> unitIdList2 = getFreeUnitFromEnd(disks.get(2), obj.objSize);
+            for (int i = 1; i < disks.size(); i++) {
+                log.debug("=== 开始为对象" + writeCommandIn.objId + "的backup replica" + i + "选择磁盘 ===");
+                LocalDisk backupDisk = disks.get(i);
+                ArrayList<Integer> unitIdList = getFreeUnitFromEnd(backupDisk, obj.objSize);
 
-            if (unitIdList1 == null || unitIdList2 == null) {
-                log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + disks.get(1).diskId + "或"
-                        + disks.get(2).diskId + "上找到空间");
-                throw new RuntimeException("无法为对象" + writeCommandIn.objId + "在磁盘"
-                        + disks.get(1).diskId + "或" + disks.get(2).diskId + "上找到空间");
+                if (unitIdList == null) {
+                    log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + backupDisk.diskId + "上找到空间");
+                    throw new RuntimeException(
+                            "无法为对象" + writeCommandIn.objId + "在磁盘" + backupDisk.diskId + "上找到空间");
+                }
+
+                Replica replica =
+                        new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
+                addReplicaToObj(obj, replica);
+                saveReplicaToDisk(backupDisk, replica); // BUG 疑似这里设置ObjId没生效
+                backupDisk.backSizeLeft -= obj.objSize;
+
+                if (i == 1) {
+                    writeCommandOut.copy2 = new DiskUnit(backupDisk.diskId, unitIdList);
+                } else {
+                    writeCommandOut.copy3 = new DiskUnit(backupDisk.diskId, unitIdList);
+                }
             }
-
-            Replica replica1 =
-                    new Replica(writeCommandIn.objId, 1, disks.get(1).diskId, unitIdList1);
-            addReplicaToObj(obj, replica1);
-            saveReplicaToDisk(disks.get(1), replica1, true);
-            
-            Replica replica2 =
-                    new Replica(writeCommandIn.objId, 2, disks.get(2).diskId, unitIdList2);
-            addReplicaToObj(obj, replica2);
-            saveReplicaToDisk(disks.get(2), replica2, true);
-            
-            writeCommandOut.copy2 = new DiskUnit(disks.get(1).diskId, unitIdList1);
-            writeCommandOut.copy3 = new DiskUnit(disks.get(2).diskId, unitIdList2);
 
             writeCommandOuts.add(writeCommandOut);
         }
@@ -103,8 +105,14 @@ public class TagWriterStrategy implements WriteStrategy {
         for (int i = disk.unitNum - 1; i >= disk.logicalBackStart && count < objSize; i--) {
             // pick the free unit
             if (disk.unitData.get(i).objId == -1) {
+                log.debug("Found free unit: disk=" + disk.diskId + ", unit=" + i
+                        + ", current objId=" + disk.unitData.get(i).objId);
                 unitIdList.add(i);
                 count++;
+            } else {
+                // Log when we encounter allocated units
+                log.debug("Skipping allocated unit: disk=" + disk.diskId + ", unit=" + i
+                        + ", used by objId=" + disk.unitData.get(i).objId);
             }
         }
 
@@ -125,7 +133,7 @@ public class TagWriterStrategy implements WriteStrategy {
      * @return 一个包含所选 LocalDisk 对象的 ArrayList。 列表中的第一个磁盘是读写磁盘，后跟两个备份磁盘（如果可用）。
      */
     private ArrayList<LocalDisk> selectDiskByTag(int tagId, int objSize) {
-        ArrayList<LocalDisk> candidateDisks = new ArrayList<>();
+        ArrayList<LocalDisk> candidateDisks = new ArrayList<>(3);
 
         // select disks based on tag information
         Tag tag = Info.tags.get(tagId);
@@ -151,47 +159,17 @@ public class TagWriterStrategy implements WriteStrategy {
             }
         }
 
-        candidateDisks.add(rwDisk);
 
-        // 添加两个备份磁盘
-        if (backupDisk1 != null) {
-            candidateDisks.add(backupDisk1);
+        if (rwDisk == null || backupDisk1 == null || backupDisk2 == null) {
+            log.error("没有找到可用的磁盘");
+            throw new RuntimeException("没有找到可用的磁盘");
         }
-        if (backupDisk2 != null) {
-            candidateDisks.add(backupDisk2);
-        }
+        candidateDisks.add(rwDisk);
+        candidateDisks.add(backupDisk1);
+        candidateDisks.add(backupDisk2);
         log.debug("选择磁盘: rwDisk=" + rwDisk.diskId + ", backupDisk1="
                 + (backupDisk1 == null ? "null" : backupDisk1.diskId) + ", backupDisk2="
                 + (backupDisk2 == null ? "null" : backupDisk2.diskId));
         return candidateDisks;
-    }
-
-    protected void addReplicaToObj(UserObject obj, Replica replica) {
-        log.debug("添加副本到对象: objId=" + obj.objId + ", replicaId=" + replica.replicaId);
-        obj.addReplica(replica);
-    }
-
-    /**
-     * 更新磁盘信息
-     * 
-     * 1.新磁盘的unitData, 写入对象ID和blockID; 2. 更新backSizeLeft;
-     * 
-     * @param disk
-     * @param unitIdList
-     * @param objId
-     */
-    protected void saveReplicaToDisk(LocalDisk disk, Replica replica, boolean isBackup) {
-        log.debug("保存副本到磁盘: diskId=" + disk.diskId + ", objId=" + replica.objId);
-        for (int i = 0; i < replica.unitIdList.size(); i++) {
-            disk.unitData.get(replica.unitIdList.get(i)).objId = replica.objId;
-            disk.unitData.get(replica.unitIdList.get(i)).blockId = i;
-            log.debug("写入磁盘: diskId=" + disk.diskId + ", unitId="
-                    + replica.unitIdList.get(i) + ", objId=" + replica.objId);
-        }
-        if (isBackup) {
-            disk.backSizeLeft -= replica.unitIdList.size();
-        } else {
-            disk.rwSizeLeft -= replica.unitIdList.size();
-        }
     }
 }
