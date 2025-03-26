@@ -3,7 +3,6 @@ package Deleter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
-
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
@@ -45,27 +44,44 @@ public class TagDeleteStrategy implements DeleteStrategy {
     private void maintainLocalDiskInfo(int obj_id) {
         ArrayList<Replica> replicas = Info.objMap.get(obj_id).replicas;
         log.debug("准备释放 Obj_ID = " + obj_id + " 所占用的空间");
-        for (Replica replica : replicas) { // 循环3次
-            log.debug("开始释放副本所占用的空间，副本信息：" + replica);
-            int disk_id = replica.diskId;
-            ArrayList<Integer> unit_ids = replica.unitIdList;
-            LocalDisk disk = Info.localDiskTbl.get(disk_id);
+        // free rw replica
+        Replica replica = replicas.get(0);
+        log.debug("开始释放RW副本所占用的空间，副本信息：" + replica);
+        int disk_id = replica.diskId;
+        ArrayList<Integer> unit_ids = replica.unitIdList;
+        LocalDisk disk = Info.localDiskTbl.get(disk_id);
+
+        for (int unit_id : unit_ids) {
+            DiskSpace space = disk.unitData.get(unit_id).space;
+            space.type = DiskSpaceType.UNUSED;
+            // 更新rwend
+            if (space.end == disk.RWEnd) {
+                while (disk.RWEnd > 0
+                        && (disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
+                                || disk.unitData.get(
+                                        disk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
+                    disk.RWEnd--;
+                }
+            }
+            disk.unitData.get(unit_id).space = space;
+            disk.unitData.get(unit_id).objId = -1;
+            disk.unitData.get(unit_id).blockId = -1;
+            disk.rwSizeLeft += space.size;
+        }
+
+        // free backup replica
+        for (int i = 1; i < replicas.size(); i++) {
+            replica = replicas.get(i);
+            log.debug("开始释放备份副本所占用的空间，副本信息：" + replica);
+            disk_id = replica.diskId;
+            unit_ids = replica.unitIdList;
+            disk = Info.localDiskTbl.get(disk_id);
 
             for (int unit_id : unit_ids) {
-                DiskSpace space = disk.unitData.get(unit_id).space;
-                space.type = DiskSpaceType.UNUSED;
-                // 更新rwend
-                if (space.end == disk.RWEnd) {
-                    while (disk.RWEnd > 0
-                            && (disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
-                                    || disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
-                        disk.RWEnd--;
-                    }
-                }
                 disk.unitData.get(unit_id).space = space;
                 disk.unitData.get(unit_id).objId = -1;
                 disk.unitData.get(unit_id).blockId = -1;
-                disk.sizeLeft += space.size;
+                disk.backupSizeLeft += space.size;
             }
         }
     }

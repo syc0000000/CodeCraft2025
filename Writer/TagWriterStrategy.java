@@ -22,7 +22,8 @@ public class TagWriterStrategy implements WriteStrategy {
         for (WriteCommandIn writeCommandIn : writeCommandIns) {
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
-            UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            UserObject obj =
+                    new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
             // Get disks based on tag information
             Tag tag = Info.tags.get(writeCommandIn.tag - 1);
@@ -36,7 +37,8 @@ public class TagWriterStrategy implements WriteStrategy {
             // rw disk
             log.debug("为对象" + writeCommandIn.objId + "选择磁盘: rwDisk=" + disks.get(0).diskId);
             LocalDisk rwDisk = disks.get(0);
-            DiskSpace space = rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
+            DiskSpace space =
+                    rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
             if (space == null) {
                 log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到空间");
             }
@@ -59,20 +61,24 @@ public class TagWriterStrategy implements WriteStrategy {
             // 两个备份磁盘
             ArrayList<Integer> unitIdList1 = getFreeUnitFromEnd(disks.get(1), obj.objSize);
             ArrayList<Integer> unitIdList2 = getFreeUnitFromEnd(disks.get(2), obj.objSize);
-            
+
             if (unitIdList1 == null || unitIdList2 == null) {
-                log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + disks.get(1).diskId + "或" + disks.get(2).diskId + "上找到空间");
-                throw new RuntimeException("无法为对象" + writeCommandIn.objId + "在磁盘" + disks.get(1).diskId + "或" + disks.get(2).diskId + "上找到空间");
+                log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + disks.get(1).diskId + "或"
+                        + disks.get(2).diskId + "上找到空间");
+                throw new RuntimeException("无法为对象" + writeCommandIn.objId + "在磁盘"
+                        + disks.get(1).diskId + "或" + disks.get(2).diskId + "上找到空间");
             }
-            // 更新obj信息
-            Replica replica1 = new Replica(writeCommandIn.objId, 1, disks.get(1).diskId, unitIdList1);
-            Replica replica2 = new Replica(writeCommandIn.objId, 2, disks.get(2).diskId, unitIdList2);
+
+            Replica replica1 =
+                    new Replica(writeCommandIn.objId, 1, disks.get(1).diskId, unitIdList1);
             addReplicaToObj(obj, replica1);
-            addReplicaToObj(obj, replica2);
-            // 保存副本到磁盘
             saveReplicaToDisk(disks.get(1), replica1, true);
+            
+            Replica replica2 =
+                    new Replica(writeCommandIn.objId, 2, disks.get(2).diskId, unitIdList2);
+            addReplicaToObj(obj, replica2);
             saveReplicaToDisk(disks.get(2), replica2, true);
-            // 更新writeCommandOut
+            
             writeCommandOut.copy2 = new DiskUnit(disks.get(1).diskId, unitIdList1);
             writeCommandOut.copy3 = new DiskUnit(disks.get(2).diskId, unitIdList2);
 
@@ -179,6 +185,8 @@ public class TagWriterStrategy implements WriteStrategy {
         for (int i = 0; i < replica.unitIdList.size(); i++) {
             disk.unitData.get(replica.unitIdList.get(i)).objId = replica.objId;
             disk.unitData.get(replica.unitIdList.get(i)).blockId = i;
+            log.debug("写入磁盘: diskId=" + disk.diskId + ", unitId="
+                    + replica.unitIdList.get(i) + ", objId=" + replica.objId);
         }
         if (isBackup) {
             disk.backSizeLeft -= replica.unitIdList.size();
