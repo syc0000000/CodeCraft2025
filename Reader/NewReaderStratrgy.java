@@ -41,6 +41,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
             if (disk.ptr > disk.RWEnd) {
                 readCommandOut.actions.add(Info.Action.JUMP);
                 disk.preoper = Info.Action.JUMP;
+                disk.pretoken = 0;
                 readCommandOut.jumpTarget = 0;
                 disk.ptr = 0;
                 readCommandOuts.put(i, readCommandOut);
@@ -112,6 +113,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
             int pretoken = disk.pretoken; //手动添加序列操作中，上一次的token
             Action preoper = disk.preoper; //手动添加序列操作中，上一次的操作
             int sequenceptr = 0; //手动添加序列操作中，用到的指针
+            int lastReadToken = disk.pretoken; //用于记录上一次的读操作使用的token，用于去掉末尾的pass
             Result result = new Result();
             while(newtoken != pasttoken){
                 //添加未优化路径
@@ -125,6 +127,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
                         sequence.add(Info.Action.READ);
                         tokencpy -= pretoken;
                         preoper = Info.Action.READ;
+                        lastReadToken = pretoken;
                     }
                     else{
                         int tokenIsToUse = calculateToken(Info.Action.PASS, preoper, pretoken);
@@ -139,14 +142,18 @@ public class NewReaderStratrgy implements ReaderStrategy {
                     
                     sequenceptr++;
                 }
-
                 pasttoken = tokenRead + tokenNow - tokencpy;
                 result = SequenceOptimizer.optimizeSequence(sequence);
                 newtoken = result.cost;
                 tokencpy += pasttoken - newtoken;            
             }
+            //readerLogger.debug("tokencpy"+tokencpy);
             //将最优序列添加到输出中
-            for(int temp = k; temp < result.sequence.size(); temp++){
+            while(sequence.size() > 0 && sequence.get(sequence.size() - 1) == Info.Action.PASS){
+                sequence.remove(sequence.size() - 1);
+                sequenceptr--;
+            }
+            for(int temp = k; temp < k + sequenceptr; temp++){
                 readCommandOut.actions.add(result.sequence.get(temp));
             }
             for (int j = 0; j < readCommandOut.actions.size(); j++) {
@@ -185,8 +192,11 @@ public class NewReaderStratrgy implements ReaderStrategy {
                 }
             }
             //更新硬盘信息
-            disk.preoper = preoper;
-            disk.pretoken = pretoken;
+            
+            if(sequenceptr != 0){
+                disk.preoper = result.sequence.get(result.sequence.size() - 1);
+            }
+            disk.pretoken = lastReadToken;
             disk.ptr += sequenceptr;
 
             // 如果检测到需要跳转，则直接跳转
