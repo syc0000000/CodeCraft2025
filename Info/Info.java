@@ -65,7 +65,7 @@ public class Info {
         MAX_RW_END = (int) (unitNum / 2.9); // 最大读写空间
         // 初始化磁盘表
         for (int i = 0; i < diskNum; i++) {
-            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "space"));
+            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "tag"));
         }
         // 清空映射
         objMap.clear();
@@ -253,7 +253,7 @@ public class Info {
     public static class UnitData {
         public int objId; // 对象id
         /** 对象的块id，表示是对象的第几块 */
-        public int blockId; 
+        public int blockId;
         public DiskSpace space; // 空间
 
         public UnitData(int objId, int blockId, DiskSpace space) {
@@ -284,7 +284,7 @@ public class Info {
 
         // ******** WriteStrategy: Unit FF需要使用的变量 ********
         public TreeSet<DiskSpace> freespaceNotBySize; // 可用单元ID集合
-        
+
         // ******** WriteStrategy: Tag需要使用的变量 ********
         /** 人为限制的读写区域边界，RW Replica写入的范围只能在[0,RWEnd]范围内，在初始化之后不再修改 */
         public int logicalRWEnd;
@@ -330,8 +330,7 @@ public class Info {
                     disk.backSizeLeft = unitNum - disk.logicalBackStart;
                     disk.rwSizeLeft = unitNum / 3;
                     // 整个backup区域算作一个space，后续不会再对它进行切分
-                    DiskSpace backupDiskSpace =
-                            new DiskSpace(false, disk.logicalBackStart, unitNum - 1, diskId);
+                    DiskSpace backupDiskSpace = new DiskSpace(false, disk.logicalBackStart, unitNum - 1, diskId);
                     backupDiskSpace.type = DiskSpaceType.BACKUPSPACE;
                     for (int i = disk.logicalBackStart; i < unitNum; i++) {
                         disk.unitData.add(new UnitData(-1, -1, backupDiskSpace));
@@ -699,13 +698,13 @@ public class Info {
          * 获取距离middle最近空闲空间，不维护freespaceBySize
          * 
          * @param obj_size 对象大小，范围1-5
-         * @param middle 中间位置
+         * @param middle   中间位置
          * @return 空闲空间，用于存放对象。优先返回MAX_RW_END之后的空间，如果没有才返回之前的空间
          */
         public DiskSpace getSpaceNearMiddle(int obj_size, int middle) {
             DiskSpace space = findSpaceNearMiddle(obj_size, middle);
             if (space == null) {
-                log.debug("写炸了！！！！！磁盘" + diskId + "没有找到合适的空间");
+                log.error("写炸了！！！！！磁盘" + diskId + "没有找到合适的空间");
                 return null;
             }
             // 判断空间尺寸
@@ -898,8 +897,7 @@ public class Info {
             }
             // 合并前后空间
             DiskSpace prevSpace = space.start > 0 ? unitData.get(space.start - 1).space : null;
-            DiskSpace nextSpace =
-                    space.end < unitNum - 1 ? unitData.get(space.end + 1).space : null;
+            DiskSpace nextSpace = space.end < unitNum - 1 ? unitData.get(space.end + 1).space : null;
             if (prevSpace != null && prevSpace.isFree) {
                 // log.debug("合并前空间: " + prevSpace);
                 space.setStartAndEnd(prevSpace.start, space.end);
