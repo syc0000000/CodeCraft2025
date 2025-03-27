@@ -4,3 +4,4 @@ logs/*
 *.png
 test/sample_practice.in
 env/*
+test/sample_extra.in

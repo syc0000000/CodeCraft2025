@@ -271,16 +271,16 @@ public class GeneticAlgorithm {
 
                     // 检查标签的分割数量
                     if (individual.getTag(tagId).size() < GeneticParameters.MAX_SPLITS_PER_TAG) {
-                        // 添加新的分配
-                        individual.addTagToDisk(tagId, targetDisk, 0.1); // 暂时分配较小比例，稍后会归一化
+                        // 添加新的分配，确保最小比例为10%
+                        individual.addTagToDisk(tagId, targetDisk, GeneticParameters.MIN_TAG_PROPORTION);
                         diskTagsCount.put(targetDisk, diskTagsCount.get(targetDisk) + 1);
                     } else {
                         // 已经达到最大分割数，将比例转移到现有的分配中
-                        redistributeTag(individual, tagId);
+                        redistributeTagWithMinProportion(individual, tagId);
                     }
                 } else {
                     // 没有可用的磁盘，只能重新分配到已有的磁盘
-                    redistributeTag(individual, tagId);
+                    redistributeTagWithMinProportion(individual, tagId);
                 }
 
                 // 更新计数
@@ -311,8 +311,8 @@ public class GeneticAlgorithm {
 
                         // 检查标签的分割数量
                         if (individual.getTag(tagId).size() < GeneticParameters.MAX_SPLITS_PER_TAG) {
-                            // 添加到空磁盘
-                            individual.addTagToDisk(tagId, diskIdx, 0.1); // 暂时分配较小比例，稍后会归一化
+                            // 添加到空磁盘，确保最小比例为10%
+                            individual.addTagToDisk(tagId, diskIdx, GeneticParameters.MIN_TAG_PROPORTION);
 
                             // 更新计数
                             diskTagsCount.put(diskIdx, diskTagsCount.get(diskIdx) + 1);
@@ -323,8 +323,88 @@ public class GeneticAlgorithm {
             }
         }
 
+        // 确保所有标签分配都满足最小比例约束
+        ensureMinProportionConstraint(individual);
+
         // 归一化每个标签的比例
         individual.normalizeTagProportions();
+    }
+
+    /**
+     * 重新分配标签的比例，确保满足最小比例约束
+     * 
+     * @param individual 个体
+     * @param tagId      标签ID
+     */
+    private void redistributeTagWithMinProportion(Individual individual, int tagId) {
+        // 获取标签的所有分配
+        List<Individual.DiskAllocation> tagDisks = individual.getTag(tagId);
+
+        // 如果已经没有分配，随机创建一个
+        if (tagDisks.isEmpty()) {
+            int targetDisk = random.nextInt(GeneticParameters.NUM_DISKS);
+            individual.addTagToDisk(tagId, targetDisk, 1.0);
+            return;
+        }
+
+        // 计算需要重新分配的总比例
+        double totalProportion = tagDisks.stream()
+                .mapToDouble(Individual.DiskAllocation::getProportion)
+                .sum();
+
+        // 确保每个磁盘至少获得最小比例
+        double remainingProportion = totalProportion - (tagDisks.size() * GeneticParameters.MIN_TAG_PROPORTION);
+        if (remainingProportion > 0) {
+            // 平均分配剩余比例
+            double extraPerDisk = remainingProportion / tagDisks.size();
+            for (Individual.DiskAllocation disk : tagDisks) {
+                disk.setProportion(GeneticParameters.MIN_TAG_PROPORTION + extraPerDisk);
+            }
+        } else {
+            // 如果剩余比例不足，则平均分配总比例
+            double proportionPerDisk = totalProportion / tagDisks.size();
+            for (Individual.DiskAllocation disk : tagDisks) {
+                disk.setProportion(proportionPerDisk);
+            }
+        }
+    }
+
+    /**
+     * 确保所有标签分配都满足最小比例约束
+     * 
+     * @param individual 个体
+     */
+    private void ensureMinProportionConstraint(Individual individual) {
+        for (int tagId = 0; tagId < GeneticParameters.TAGS.length; tagId++) {
+            List<Individual.DiskAllocation> tagDisks = individual.getTag(tagId);
+            if (tagDisks.isEmpty())
+                continue;
+
+            // 计算当前总比例
+            double totalProportion = tagDisks.stream()
+                    .mapToDouble(Individual.DiskAllocation::getProportion)
+                    .sum();
+
+            // 计算需要的最小总比例
+            double minTotalProportion = tagDisks.size() * GeneticParameters.MIN_TAG_PROPORTION;
+
+            if (totalProportion < minTotalProportion) {
+                // 如果总比例不足，平均分配最小比例
+                double proportionPerDisk = GeneticParameters.MIN_TAG_PROPORTION;
+                for (Individual.DiskAllocation disk : tagDisks) {
+                    disk.setProportion(proportionPerDisk);
+                }
+            } else {
+                // 确保每个磁盘至少获得最小比例
+                double remainingProportion = totalProportion - minTotalProportion;
+                if (remainingProportion > 0) {
+                    double extraPerDisk = remainingProportion / tagDisks.size();
+                    for (Individual.DiskAllocation disk : tagDisks) {
+                        disk.setProportion(GeneticParameters.MIN_TAG_PROPORTION + extraPerDisk);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -345,33 +425,6 @@ public class GeneticAlgorithm {
                 iterator.remove();
                 break;
             }
-        }
-    }
-
-    /**
-     * 重新分配标签的比例
-     * 
-     * @param individual 个体
-     * @param tagId      标签ID
-     */
-    private void redistributeTag(Individual individual, int tagId) {
-        // 获取标签的所有分配
-        List<Individual.DiskAllocation> tagDisks = individual.getTag(tagId);
-
-        // 如果已经没有分配，随机创建一个
-        if (tagDisks.isEmpty()) {
-            int targetDisk = random.nextInt(GeneticParameters.NUM_DISKS);
-            individual.addTagToDisk(tagId, targetDisk, 1.0);
-            return;
-        }
-
-        // 归一化剩余的分配
-        double totalProportion = tagDisks.stream()
-                .mapToDouble(Individual.DiskAllocation::getProportion)
-                .sum();
-
-        for (Individual.DiskAllocation disk : tagDisks) {
-            disk.setProportion(disk.getProportion() / totalProportion);
         }
     }
 

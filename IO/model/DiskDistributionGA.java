@@ -68,8 +68,8 @@ public class DiskDistributionGA {
 
             // 执行转置
             for (int tag = 0; tag < numTags; tag++) {
-                for (int t = 0; t < numTimePoints && t < originalData.get(tag).size(); t++) {
-                    transposedData.get(t).set(tag, originalData.get(tag).get(t));
+                for (int t = 0; t < numTimePoints - 1 && t < originalData.get(tag).size() - 1; t++) {
+                    transposedData.get(t).set(tag, originalData.get(tag).get(t + 1));
                 }
             }
 

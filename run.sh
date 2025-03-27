@@ -9,7 +9,7 @@ for arg in "$@"; do
     fi
 done
 # 检查是否有-big参数
-INPUT_FILE="./test/sample.in"
+INPUT_FILE="./test/sample_practice.in"
 for arg in "$@"; do
     if [ "$arg" = "-big" ]; then
         INPUT_FILE="./test/sample_extra.in"
