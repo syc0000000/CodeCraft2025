@@ -65,7 +65,7 @@ public class Info {
         MAX_RW_END = (int) (unitNum / 2.9); // 最大读写空间
         // 初始化磁盘表
         for (int i = 0; i < diskNum; i++) {
-            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "space"));
+            localDiskTbl.add(LocalDisk.createDisk(i, unitNum, "tag"));
         }
         // 清空映射
         objMap.clear();
@@ -702,7 +702,7 @@ public class Info {
         public DiskSpace getSpaceNearMiddle(int obj_size, int middle) {
             DiskSpace space = findSpaceNearMiddle(obj_size, middle);
             if (space == null) {
-                log.debug("写炸了！！！！！磁盘" + diskId + "没有找到合适的空间");
+                log.error("写炸了！！！！！磁盘" + diskId + "没有找到合适的空间");
                 return null;
             }
             // 判断空间尺寸

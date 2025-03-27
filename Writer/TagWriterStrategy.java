@@ -22,8 +22,7 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
         for (WriteCommandIn writeCommandIn : writeCommandIns) {
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
-            UserObject obj =
-                    new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
             // Get disks based on tag information
             Tag tag = Info.tags.get(writeCommandIn.tag - 1);
@@ -37,10 +36,11 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
             // rw disk
             log.debug("=== 开始为对象" + writeCommandIn.objId + "的rw replica选择磁盘 ===");
             LocalDisk rwDisk = disks.get(0);
-            DiskSpace space =
-                    rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
+            DiskSpace space = rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
             if (space == null) {
-                log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到空间");
+                log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
+                throw new RuntimeException(
+                        "无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
             }
             if (space != null) {
                 ArrayList<Integer> unitIdList = new ArrayList<>();
@@ -58,7 +58,6 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
             }
 
-
             // 两个备份磁盘
             for (int i = 1; i < disks.size(); i++) {
                 log.debug("=== 开始为对象" + writeCommandIn.objId + "的backup replica" + i + "选择磁盘 ===");
@@ -66,13 +65,12 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 ArrayList<Integer> unitIdList = getFreeUnitFromEnd(backupDisk, obj.objSize);
 
                 if (unitIdList == null) {
-                    log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + backupDisk.diskId + "上找到空间");
+                    log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + backupDisk.diskId + "上找到备份空间");
                     throw new RuntimeException(
-                            "无法为对象" + writeCommandIn.objId + "在磁盘" + backupDisk.diskId + "上找到空间");
+                            "无法为对象" + writeCommandIn.objId + "在磁盘" + backupDisk.diskId + "上找到备份空间");
                 }
 
-                Replica replica =
-                        new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
+                Replica replica = new Replica(writeCommandIn.objId, i, backupDisk.diskId, unitIdList);
                 addReplicaToObj(obj, replica);
                 for (int id : unitIdList) {
                     log.debug("disk中unitid原先的objId: " + backupDisk.unitData.get(id).objId);
@@ -130,11 +128,11 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
         return unitIdList;
     }
 
-
     /**
-     * 基于给定的标签ID和对象大小选择磁盘。 选择一个与标签关联的读写磁盘，以及两个具有最大可用空间的备份磁盘。 <del>1. 函数内部更换tag对应的disk的sizeList</del>
+     * 基于给定的标签ID和对象大小选择磁盘。 选择一个与标签关联的读写磁盘，以及两个具有最大可用空间的备份磁盘。 <del>1.
+     * 函数内部更换tag对应的disk的sizeList</del>
      *
-     * @param tagId 标签的ID。
+     * @param tagId   标签的ID。
      * @param objSize 要写入的对象的大小。
      * @return 一个包含所选 LocalDisk 对象的 ArrayList。 列表中的第一个磁盘是读写磁盘，后跟两个备份磁盘（如果可用）。
      */
@@ -164,7 +162,6 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 backupDisk2 = disk;
             }
         }
-
 
         if (rwDisk == null || backupDisk1 == null || backupDisk2 == null) {
             log.error("没有找到可用的磁盘");

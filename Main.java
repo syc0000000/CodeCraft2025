@@ -32,7 +32,7 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.DEBUG);
+        logger.setLevel(Logger.Level.ERROR);
         logger.enableModule("Main");
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
