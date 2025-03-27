@@ -18,10 +18,9 @@ import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
 import Info.Info.UserObject;
 
-public class DefaultReaderStrategy implements ReaderStrategy {
-    @Override
+public class GreedReaderStategy implements ReaderStrategy {
+     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
-        // TODO: 实现默认的读取策略
         ReadRetrun readRetrun = new ReadRetrun();
         // 添加所有的任务
         addReadTask(readCommandIns);
@@ -64,17 +63,13 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         int objId = disk.unitData.get(disk.ptr).objId;
                         int blockId = disk.unitData.get(disk.ptr).blockId;
                         UserObject object = Info.objMap.get(objId);
-                        // 有任务就直接处理
-                        readerLogger.debug("objid为"+objId+"blockid为"+blockId);
-                        
+                        // 有任务就直接处理                        
                         Iterator<ReadTask> iterator = object.readTasks.iterator();
                         while (iterator.hasNext()) {
                             ReadTask readTask = iterator.next();
                             if (readTask.blockNotFinished.contains(blockId)) {
                                 // 检测任务的完成
                                 // 检测过期
-                                readerLogger.debug("任务ID"+readTask.taskId);
-                                //readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
                                 if (readTask.isTimeout()) {
                                     readerLogger.debug("任务过期: " + readTask.taskId);
                                     object.timeoutTasks.add(readTask.taskId);
@@ -84,9 +79,8 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                                 // 处理块
                                 readTask.blockNotFinished.remove(blockId);
                                 readTask.blockFinished.add(blockId);
-                                //readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
+
                                 if (readTask.blockNotFinished.isEmpty()) {
-                                    readerLogger.debug("上报任务id"+readTask.taskId);
                                     completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
                                     iterator.remove();
                                 }
@@ -95,7 +89,6 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         // 设为没有任务
                         disk.unitData.get(disk.ptr).isInTask = false;
                         // 输出
-                        readerLogger.debug("输出READ，ptr位置为"+disk.ptr+"块id为"+disk.unitData.get(disk.ptr).blockId);
                         processAction(Info.Action.READ, disk, readCommandOut);
                         // 减少token
                         tokenNow -= disk.pretoken;
@@ -106,49 +99,10 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         break;
                     }
                 }
-                // 如果是发现已经跑出范围，则直接退出
-                int k;
-                // 找任务，找到就直接退出，尝试处理任务
-                if(tokenNow - calculateToken(Info.Action.READ, disk) < 0) break;
-                for (k = 1; k < tokenNow - 64; k++) {
-                    if (disk.unitData.get(disk.ptr + k).isInTask) {
-                        readerLogger.debug("向后寻找到任务");
-                        break;
-                    }
-                }
-                // 寻找出了RWEnd的范围
-                // 没找到
-                
-                // 判某几种情况
-                if (k == 1) {
-                    if (disk.pretoken < 52 && tokenNow > calculateToken(Info.Action.READ, disk)) {
-                        processAction(Info.Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                    } else {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                    }
-                } else if (k == 2 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
-                    if (disk.pretoken < 34) {
-                        processAction(Info.Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Info.Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                    } else {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Info.Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                    }
-                }
-                // 任务离得很远
+                // 如果没有任务，则直接跳过
                 else {
-                    readerLogger.debug("向后寻找不到任务");
-                    while (k > 0) {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        k--;
-                    }
+                    processAction(Info.Action.PASS, disk, readCommandOut);
+                    tokenNow -= disk.pretoken;
                 }
             }
 

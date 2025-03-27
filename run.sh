@@ -12,7 +12,7 @@ done
 INPUT_FILE="./test/sample.in"
 for arg in "$@"; do
     if [ "$arg" = "-big" ]; then
-        INPUT_FILE="./test/sample_practice.in"
+        INPUT_FILE="./test/sample_extra.in"
         break
     fi
 done

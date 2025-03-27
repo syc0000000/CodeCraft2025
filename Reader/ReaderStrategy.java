@@ -2,13 +2,16 @@ package Reader;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info;
+import Info.Info.Action;
 import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
+import Info.Info.Replica;
 import Info.Info.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -25,8 +28,19 @@ public interface ReaderStrategy {
             UserObject object = Info.objMap.get(readCommandIn.objId);
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
             object.readTasks.add(readTask);
+            for (int i = 0; i < 3; i++) {
+                // 找到对应的副本
+                Replica replica = object.replicas.get(i);
+                int diskId = replica.diskId;
+                ArrayList<Integer> unitIDList = replica.unitIdList;
+                for (int j = 0; j < object.objSize; j++) {
+                    // 设置单元中的isInTask为true
+                    Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(j)).isInTask = true;
+                }
+
+            }
             // readerLogger.debug("加入objTaskMap: " + readCommandIn.commandId + " " +
-            // readCommandIn.objId + "当前任务" + object.readTasks);
+            // readCommandIn.objId + "当前任务");
         }
     }
 
@@ -60,6 +74,69 @@ public interface ReaderStrategy {
                 return 1;
             default:
                 return -1;// 异常
+        }
+    }
+
+    /**
+     * @brief 根据硬盘和action，执行操作，将操作记录在readCmmandout中。只允许read和pass操作
+     * @param action
+     * @param disk
+     * @param readCommandOut
+     */
+    public default void processAction(Info.Action action, LocalDisk disk, ReadCommandOut readCommandOut) {
+        readCommandOut.actions.add(action);
+        disk.pretoken = calculateToken(action, disk);
+        disk.preoper = action;
+        disk.ptrDoAction(action);
+    }
+
+    public default ArrayList<Action> findStrategy(LocalDisk disk, int ptr, int tokenleft, ArrayList<Action> actionLast,
+            int pretoken) {
+        int tokenneed;
+        // 如果上一次是READ，那么这次读取所需要的token是
+        if (actionLast.get(actionLast.size() - 1) == Info.Action.READ) {
+            tokenneed = 16 > (int) Math.ceil(pretoken) ? 16 : (int) Math.ceil(pretoken);
+        } else {
+            tokenneed = 64;
+        }
+        // if(disk.diskId == 8)
+        // readerLogger.debug("tokenneed"+tokenneed+"tokenleft"+tokenleft);
+        // 判断是否允许进行一次read
+        if (tokenneed < tokenleft) {
+            // 有任务则一定进行read
+            if (disk.unitData.get(ptr).isInTask) {
+                if (disk.diskId == 8)
+                    readerLogger.debug("找到任务，在" + ptr);
+                ArrayList<Action> action = new ArrayList<>(actionLast);
+                // 加入读取的动作
+                action.add(Info.Action.READ);
+                // ptr移动，tokenleft减少，pretoken改变
+                if (disk.diskId == 8) {
+                    readerLogger.debug("指令长度为" + actionLast.size() + "剩余的token数量" + tokenleft);
+                    // for(int i = 0; i < actionLast.size();i++){
+                    // readerLogger.debug("第"+i+"条指令为"+actionLast.get(i));
+                    // }
+                }
+                return findStrategy(disk, ptr + 1, tokenleft - tokenneed, action, tokenneed);
+            }
+            // 可选read或者pass
+            else {
+                if (disk.diskId == 8)
+                    readerLogger.debug("指令长度为" + actionLast.size() + "剩余的token数量" + tokenleft + "  " + ptr);
+                ArrayList<Action> actionRead = new ArrayList<>(actionLast);
+                actionRead.add(Info.Action.READ);
+                ArrayList<Action> actionReadReturn = new ArrayList<>(
+                        findStrategy(disk, ptr + 1, tokenleft - tokenneed, actionRead, tokenneed));
+
+                ArrayList<Action> actionPass = new ArrayList<>(actionLast);
+                actionPass.add(Info.Action.PASS);
+                ArrayList<Action> actionPassReturn = new ArrayList<>(
+                        findStrategy(disk, ptr + 1, tokenleft - 1, actionPass, 64));
+                // 看在这一步抉择时，哪一种走的更远
+                return actionPassReturn.size() > actionReadReturn.size() ? actionPassReturn : actionReadReturn;
+            }
+        } else {
+            return actionLast;
         }
     }
 }

@@ -1,5 +1,6 @@
 package IO.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import Info.Info.Action;
@@ -13,6 +14,8 @@ public class ReadCommandOut {
 
     public ReadCommandOut() {
         this.jumpTarget = -1;
+        this.actions = new ArrayList<>();
+
     }
 
     public ReadCommandOut(List<Action> actions) {
