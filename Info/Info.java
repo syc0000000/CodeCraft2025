@@ -214,7 +214,12 @@ public class Info {
         // public Replica replica; // 所属副本
 
         // 定义Comparator，按start升序排序
-        public static Comparator<DiskSpace> comparator=new Comparator<DiskSpace>(){@Override public int compare(DiskSpace o1,DiskSpace o2){return o1.start-o2.start;}};
+        public static Comparator<DiskSpace> comparator = new Comparator<DiskSpace>() {
+            @Override
+            public int compare(DiskSpace o1, DiskSpace o2) {
+                return o1.start - o2.start;
+            }
+        };
 
         public DiskSpace(boolean isFree, int start, int end, int diskId) {
             this.isFree = isFree;
@@ -531,9 +536,6 @@ public class Info {
                     log.debug("获取空闲空间失败，i = " + i);
                     // Restore already polled spaces
                     for (DiskSpace polledSpace : unitIdList.stream().map(id -> unitData.get(id).space)
-                            .collect(java.util.stream.Collectors.toList())) {
-                    for (DiskSpace polledSpace : unitIdList.stream()
-                            .map(id -> unitData.get(id).space)
                             .collect(java.util.stream.Collectors.toList())) {
                         polledSpace.isFree = true;
                         freespaceNotBySize.add(polledSpace);
