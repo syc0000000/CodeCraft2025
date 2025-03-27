@@ -107,7 +107,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("GreedReader");
+        Reader reader = new Reader("default");
         // 设置在特定时间片范围内启用详细日志
         logger.enableTimeRange(0, 0);
 
