@@ -17,6 +17,8 @@ public class Reader {
             this.readerStrategy = new NewReaderStratrgy();
         } else if (readerStrategy.equals("GreedReader")){
             this.readerStrategy = new GreedReaderStategy();
+        } else if (readerStrategy.equals("GreedReaderWithoutJump")){
+            this.readerStrategy = new GreedReaderWithoutJumpStrategy();
         } else {
             throw new IllegalArgumentException("Invalid reader strategy: " + readerStrategy);
         }
