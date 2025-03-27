@@ -256,6 +256,7 @@ public class Info {
         public int blockId;
         public DiskSpace space; // 空间
         public boolean isInTask;
+
         public UnitData(int objId, int blockId, DiskSpace space) {
             this.objId = objId;
             this.blockId = blockId;

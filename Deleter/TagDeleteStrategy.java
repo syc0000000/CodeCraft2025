@@ -65,6 +65,7 @@ public class TagDeleteStrategy implements DeleteStrategy {
             rwDisk.unitData.get(unit_id).space = space;
             rwDisk.unitData.get(unit_id).objId = -1;
             rwDisk.unitData.get(unit_id).blockId = -1;
+            rwDisk.unitData.get(unit_id).isInTask = false;
             rwDisk.rwSizeLeft += 1;
             releaseSpace(space);
         }
@@ -81,6 +82,7 @@ public class TagDeleteStrategy implements DeleteStrategy {
                 backupDisk.unitData.get(unit_id).objId = -1;
                 backupDisk.unitData.get(unit_id).blockId = -1;
                 backupDisk.backSizeLeft += 1;
+                backupDisk.unitData.get(unit_id).isInTask = false;
             }
         }
     }

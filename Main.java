@@ -32,15 +32,16 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.DEBUG);
-        //logger.enableModule("Main");
-        // logger.enableModule("Writer");
+        logger.setLevel(Logger.Level.ERROR);
+        logger.enableModule("Main");
+        logger.enableModule("Writer");
         logger.enableModule("Deleter");
         logger.enableModule("Info");
         logger.enableModule("DiskGA");
         logger.enableModule("IO");
         // logger.enableModule("Reader");
         // 启用文件日志
+        logger.enableFileLogging("logs/app.log");
         logger.enableFileLogging("logs/app.log");
 
         mainLogger.info("程序启动");
@@ -95,7 +96,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("ReadOnly");
+        Reader reader = new Reader("newReader");
         // 设置在特定时间片范围内启用详细日志
         logger.enableTimeRange(0, 1);
 
@@ -153,6 +154,7 @@ public class Main {
         mainLogger.info("程序执行完毕");
 
         // 程序结束前关闭文件日志
+        logger.disableFileLogging();
         logger.disableFileLogging();
     }
 }

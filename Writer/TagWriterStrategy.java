@@ -60,7 +60,7 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 saveReplicaToDisk(rwDisk, replica);
                 rwDisk.rwSizeLeft -= obj.objSize;
                 // 维护RWEnd
-                rwDisk.RWEnd = Math.min(Info.MAX_RW_END, Math.max(rwDisk.RWEnd, space.end));
+                rwDisk.RWEnd = Math.min(rwDisk.logicalRWEnd, Math.max(rwDisk.RWEnd, space.end));
                 log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
                 writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
             }
