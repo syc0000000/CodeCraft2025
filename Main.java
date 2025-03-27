@@ -42,6 +42,7 @@ public class Main {
         // logger.enableModule("Reader");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
+        logger.enableFileLogging("logs/app.log");
 
         mainLogger.info("程序启动");
 
@@ -153,6 +154,7 @@ public class Main {
         mainLogger.info("程序执行完毕");
 
         // 程序结束前关闭文件日志
+        logger.disableFileLogging();
         logger.disableFileLogging();
     }
 }

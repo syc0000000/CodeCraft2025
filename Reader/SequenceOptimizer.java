@@ -100,22 +100,23 @@ public class SequenceOptimizer {
         }
 
         // 重建最优解
-        ArrayList<Action> result = new ArrayList<>();
+        Action[] result = new Action[n];
+        
         int i = n - 1;
         int j = endState;
 
         while (i >= 0) {
             if (j == 0) { // 当前是p
-                result.add(i, Action.JUMP);
-                j = choice[i][j];
+            result[i] = Action.PASS;
+            j = choice[i][j];
             } else { // 当前是r
-                result.add(i, Action.READ);
-                j = choice[i][j];
+            result[i] = Action.READ;
+            j = choice[i][j];
             }
             i--;
         }
 
-        return new Result(result, (int) minCost);
+        return new Result(new ArrayList<>(Arrays.asList(result)), (int) minCost);
     }
 
     /**
@@ -152,6 +153,10 @@ public class SequenceOptimizer {
         public Result(ArrayList<Action> sequence, int cost) {
             this.sequence = sequence;
             this.cost = cost;
+        }
+        public Result() {
+            this.sequence = new ArrayList<>();
+            this.cost = 0;
         }
     }
 }
