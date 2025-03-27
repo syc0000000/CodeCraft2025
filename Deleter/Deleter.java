@@ -13,6 +13,8 @@ public class Deleter {
             this.deleteStrategy = new DefaultDeleteStrategy();
         } else if (deleteStrategy.equals("ff")) {
             this.deleteStrategy = new UnitFFDeleteStrategy();
+        } else if (deleteStrategy.equals("tag")) {
+            this.deleteStrategy = new TagDeleteStrategy();
         } else {
             throw new IllegalArgumentException("Invalid delete strategy: " + deleteStrategy);
         }

@@ -57,14 +57,15 @@ public class UnitFFDeleteStrategy implements DeleteStrategy {
                 // 更新rwend
                 if (space.end == disk.RWEnd) {
                     while (disk.RWEnd > 0
-                            && disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED) {
+                            && (disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
+                                    || disk.unitData.get(disk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
                         disk.RWEnd--;
                     }
                 }
                 disk.unitData.get(unit_id).space = space;
                 disk.unitData.get(unit_id).objId = -1;
                 disk.unitData.get(unit_id).blockId = -1;
-                disk.freeUnitIdSet.add(space);
+                disk.freespaceNotBySize.add(space);
                 disk.sizeLeft += space.size;
             }
         }

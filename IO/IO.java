@@ -20,6 +20,8 @@ public class IO {
     private static final int FRE_PER_SLICING = 1800;
     private static Scanner scanner = new Scanner(System.in);
     private static final ModuleLogger log = LoggerFactory.getLogger("IO");
+    public static ArrayList<Integer> tagsUnitUsage = new ArrayList<>(); // 硬盘使用率数据
+    public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>(); // 各时间段累计差值数据
 
     /**
      * 预处理
@@ -39,23 +41,51 @@ public class IO {
         V = scanner.nextInt();
         G = scanner.nextInt();
 
-        // 暂时不存标签数据，跳过
+        // 保存删除频率数据
+        ArrayList<ArrayList<Integer>> fre_del = new ArrayList<>();
+        for (int i = 0; i < M; i++) {
+            ArrayList<Integer> tagData = new ArrayList<>();
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                tagData.add(scanner.nextInt());
+            }
+            fre_del.add(tagData);
+        }
+
+        // 保存写入频率数据
+        ArrayList<ArrayList<Integer>> fre_write = new ArrayList<>();
+        for (int i = 0; i < M; i++) {
+            ArrayList<Integer> tagData = new ArrayList<>();
+            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
+                tagData.add(scanner.nextInt());
+            }
+            fre_write.add(tagData);
+        }
+
+        // 读取读取频率数据，暂时用不到
         for (int i = 0; i < M; i++) {
             for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
                 scanner.nextInt();
             }
         }
 
+        // 计算写入-删除的累计差值
         for (int i = 0; i < M; i++) {
-            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
-                scanner.nextInt();
+            ArrayList<Integer> diffData = new ArrayList<>();
+            for (int j = 0; j < fre_write.get(i).size(); j++) {
+                diffData.add(fre_write.get(i).get(j) - fre_del.get(i).get(j));
             }
+            cumulative_write_minus_del.add(calculateCumulative(diffData));
+            // tagsUnitUsage中添加cumulative_write_minus_del[i]中的最大的数据
+            int max = 0;
+            for (int j = 0; j < cumulative_write_minus_del.get(i).size(); j++) {
+                if (cumulative_write_minus_del.get(i).get(j) > max) {
+                    max = cumulative_write_minus_del.get(i).get(j);
+                }
+            }
+            IO.tagsUnitUsage.add(max);
         }
-
-        for (int i = 0; i < M; i++) {
-            for (int j = 0; j < (T - 1) / FRE_PER_SLICING + 1; j++) {
-                scanner.nextInt();
-            }
+        for (int i = 0; i < cumulative_write_minus_del.size(); i++) {
+            log.info(cumulative_write_minus_del.get(i).toString());
         }
 
         System.out.println("OK");
@@ -68,6 +98,17 @@ public class IO {
         out.V = V;
         out.G = G;
         return out;
+    }
+
+    private static ArrayList<Integer> calculateCumulative(ArrayList<Integer> data) {
+        ArrayList<Integer> cumulative = new ArrayList<>();
+        cumulative.add(0); // 初始值为0
+        int sum = 0;
+        for (int value : data) {
+            sum += value;
+            cumulative.add(sum);
+        }
+        return cumulative;
     }
 
     /**
