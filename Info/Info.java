@@ -324,8 +324,8 @@ public class Info {
                     }
                 case "tag":
                     // 初始化rw,backup边界
-                    disk.logicalRWEnd = unitNum / 3 - 1;
-                    disk.logicalBackStart = unitNum / 3;
+                    disk.logicalRWEnd = (int) (unitNum / 2.7) - 1;
+                    disk.logicalBackStart = disk.logicalRWEnd + 1;
                     // 初始化剩余空间
                     disk.backSizeLeft = unitNum - disk.logicalBackStart;
                     disk.rwSizeLeft = unitNum / 3;
@@ -668,11 +668,12 @@ public class Info {
                 if (i < 0 && j >= unitNum) {
                     break;
                 }
-                log.debug("i=" + i + ", j=" + j);
-                if (i >= 0 && i < unitNum) {
-                    log.debug("位置" + i + "的space=" + unitData.get(i).space + ", 位置" + j + "的space="
-                            + unitData.get(j).space);
-                }
+                // log.debug("i=" + i + ", j=" + j);
+                // if (i >= 0 && i < unitNum) {
+                // log.debug("位置" + i + "的space=" + unitData.get(i).space + ", 位置" + j +
+                // "的space="
+                // + unitData.get(j).space);
+                // }
                 if (i >= 0 && unitData.get(i).space.isFree
                         && unitData.get(i).space.size >= obj_size) {
                     log.debug("找到距离middle最近的空闲空间: space_size=" + unitData.get(i).space.size

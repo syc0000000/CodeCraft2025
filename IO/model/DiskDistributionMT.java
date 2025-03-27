@@ -173,7 +173,7 @@ public class DiskDistributionMT {
 
     // 模拟退火算法的温度函数
     public static double temperature(int iteration, int maxIterations) {
-        return Math.pow(0.99, iteration * (double) maxIterations / 1000000.0);
+        return Math.pow(0.99, iteration * (double) maxIterations / 50000000.0);
     }
 
     // 初始化一个基本的分配方案
@@ -236,7 +236,7 @@ public class DiskDistributionMT {
         Map<Integer, List<Split>> localBestDist = copyDistribution(currentDist);
 
         int stagnationCount = 0;
-        int iterationsPerThread = 100000;
+        int iterationsPerThread = 5000000;
         int tagsSize = tags.length;
 
         for (int iter = 0; iter < iterationsPerThread; iter++) {

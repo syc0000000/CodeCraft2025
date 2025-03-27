@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
+import Info.Info.UnitData;
 import Info.Info;
 import Info.Info.DiskSpace;
 import Info.Info.LocalDisk;
@@ -39,6 +40,12 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
             DiskSpace space = rwDisk.getSpaceNearMiddle(obj.objSize, tag.middleList.get(rwDisk.diskId));
             if (space == null) {
                 log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
+                // 输出整个磁盘unitData
+                StringBuilder sb = new StringBuilder();
+                for (UnitData unit : rwDisk.unitData) {
+                    sb.append(unit.objId).append(" ");
+                }
+                log.error("磁盘" + rwDisk.diskId + "的unitData: " + sb.toString());
                 throw new RuntimeException(
                         "无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
             }
@@ -141,14 +148,13 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
 
         // select disks based on tag information
         Tag tag = Info.tags.get(tagId);
-        int rwDiskId = tag.getDiskId();
-        LocalDisk rwDisk = Info.localDiskTbl.get(rwDiskId);
+        LocalDisk rwDisk = getMaxSpaceDisk(tag);
 
         // 选两个磁盘放对象的backup replica，优先选择sizeLeft最大的2个磁盘
         LocalDisk backupDisk1 = null, backupDisk2 = null;
         int size1 = Integer.MIN_VALUE, size2 = Integer.MIN_VALUE;
         for (LocalDisk disk : Info.localDiskTbl) {
-            if (disk.diskId == rwDiskId) {
+            if (disk.diskId == rwDisk.diskId) {
                 continue;
             }
             int sizeLeft = disk.backSizeLeft;
@@ -174,5 +180,31 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 + (backupDisk1 == null ? "null" : backupDisk1.diskId) + ", backupDisk2="
                 + (backupDisk2 == null ? "null" : backupDisk2.diskId));
         return candidateDisks;
+    }
+
+    /**
+     * 根据tag获取读写区剩余最大空间的磁盘
+     * 
+     * @param tag
+     * @return 剩余空间最大的磁盘
+     */
+    private LocalDisk getMaxSpaceDisk(Tag tag) {
+        // 找到有tag区域的所有磁盘
+        ArrayList<LocalDisk> candidateDisks = new ArrayList<>();
+        for (int i = 0; i < tag.middleList.size(); i++) {
+            if (tag.middleList.get(i) != 0) {
+                candidateDisks.add(Info.localDiskTbl.get(i));
+            }
+        }
+        // 找到剩余空间最大的磁盘
+        LocalDisk maxSpaceDisk = null;
+        int maxSpace = Integer.MIN_VALUE;
+        for (LocalDisk disk : candidateDisks) {
+            if (disk.rwSizeLeft > maxSpace) {
+                maxSpace = disk.rwSizeLeft;
+                maxSpaceDisk = disk;
+            }
+        }
+        return maxSpaceDisk;
     }
 }

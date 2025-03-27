@@ -66,6 +66,7 @@ public class TagDeleteStrategy implements DeleteStrategy {
             rwDisk.unitData.get(unit_id).objId = -1;
             rwDisk.unitData.get(unit_id).blockId = -1;
             rwDisk.rwSizeLeft += 1;
+            releaseSpace(space);
         }
 
         // free backup replica
@@ -108,5 +109,43 @@ public class TagDeleteStrategy implements DeleteStrategy {
             tasks_awaiting_deletion.add(task_id);
         }
         return tasks_awaiting_deletion;
+    }
+
+    /**
+     * 释放空间
+     * 
+     * @param space
+     */
+    private void releaseSpace(DiskSpace space) {
+        log.debug("释放空间: " + space);
+        LocalDisk disk = Info.localDiskTbl.get(space.diskId);
+        int diskId = disk.diskId;
+        if (space.diskId != diskId) {
+            log.error("释放空间: " + space + " 不是本磁盘，异常");
+            return;// 不是本磁盘，异常报错
+        }
+
+        // isFree = true
+        space.isFree = true;
+        space.type = DiskSpaceType.UNUSED;
+        // 合并前后空间
+        DiskSpace prevSpace = space.start > 0 ? disk.unitData.get(space.start - 1).space : null;
+        DiskSpace nextSpace = space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
+        if (prevSpace != null && prevSpace.isFree) {
+            // log.debug("合并前空间: " + prevSpace);
+            space.setStartAndEnd(prevSpace.start, space.end);
+        }
+        if (nextSpace != null && nextSpace.isFree) {
+            // log.debug("合并后空间: " + nextSpace);
+            space.setStartAndEnd(space.start, nextSpace.end);
+        }
+        // 更新单元到空间的映射
+        for (int i = space.start; i <= space.end; i++) {
+            disk.unitData.get(i).space = space;
+            disk.unitData.get(i).objId = -1;
+            disk.unitData.get(i).blockId = -1;
+        }
+        // 更新按大小组织的集合
+        log.debug("释放完成: " + space.toString());
     }
 }
