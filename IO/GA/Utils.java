@@ -160,8 +160,8 @@ public class Utils {
 
         // 总分 (越小越好) - 增加了最大负载差异和方差差异的惩罚
         return loadCv * 0.4 +
-                readVarianceMean * 0.3 +
-                loadRangeNormalized * 0.2 +
-                varianceRange * 0.1;
+                readVarianceMean * 0.2 +
+                loadRangeNormalized * 0.4 +
+                varianceRange * 0.0;
     }
 }

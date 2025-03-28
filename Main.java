@@ -119,7 +119,7 @@ public class Main {
             distribution = loadDistribution(loadPath);
         } else {
             // 重新计算并保存到带时间戳的文件
-            distribution = computeDistribution(tagValues, false);
+            distribution = computeDistribution(tagValues, true);
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             String savePath = "distributions/distribution_" + timestamp + ".ser";
             saveDistribution(distribution, savePath);

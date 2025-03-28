@@ -28,7 +28,7 @@ public class GeneticParameters {
     /**
      * 每个磁盘上最多允许的标签数量
      */
-    public static final int MAX_TAGS_PER_DISK = 4;
+    public static final int MAX_TAGS_PER_DISK = 16;
 
     /**
      * 每个磁盘上最少需要的标签数量
@@ -38,7 +38,7 @@ public class GeneticParameters {
     /**
      * 每个标签最多可以分成的份数
      */
-    public static final int MAX_SPLITS_PER_TAG = 6;
+    public static final int MAX_SPLITS_PER_TAG = 10;
 
     // 遗传算法参数
     /**
@@ -64,12 +64,12 @@ public class GeneticParameters {
     /**
      * 精英数量，每代保留的最优个体数
      */
-    public static final int ELITE_SIZE = 1000;
+    public static final int ELITE_SIZE = 2000;
 
     /**
      * 锦标赛选择的大小
      */
-    public static final int TOURNAMENT_SIZE = 8;
+    public static final int TOURNAMENT_SIZE = 16;
 
     /**
      * 收敛阈值：连续多少代没有改善则提前停止
