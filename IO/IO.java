@@ -33,6 +33,8 @@ public class IO {
     public static ArrayList<HashSet<Integer>> periodToTagSet = new ArrayList<>();
     /** 每个period读取的tag的size 一级是tag，二级是period */
     public static ArrayList<ArrayList<Integer>> fre_read = new ArrayList<>();
+    /** 每个period读取的tag的size 一级是period，二级是tag */
+    public static ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
 
     /**
      * 预处理
@@ -84,18 +86,17 @@ public class IO {
 
         // 处理读取频率，转换一下，一级key为period，二级key为tag
         int periodCount = (T - 1) / FRE_PER_SLICING + 1;
-        ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
         for (int j = 0; j < periodCount; j++) {
-            readSizeByPeriod.add(new ArrayList<>());
+            IO.readSizeByPeriod.add(new ArrayList<>());
         }
         for (int j = 0; j < periodCount; j++) {
             for (int i = 0; i < M; i++) {
                 // 从fre_read中获取tag i在period j的数据
-                readSizeByPeriod.get(j).add(fre_read.get(i).get(j));
+                IO.readSizeByPeriod.get(j).add(fre_read.get(i).get(j));
             }
         }
         IO.fre_read = fre_read; // 保存fre_read
-        IO.periodToTagSet = pickTagsForPeriods(readSizeByPeriod);
+        IO.periodToTagSet = pickTagsForPeriods(IO.readSizeByPeriod);
         // for (int i = 0; i < periodToTagSet.size(); i++) {
         // log.info("Period " + i + " 选择的Tag: " + periodToTagSet.get(i));
         // }
