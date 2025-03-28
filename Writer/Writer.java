@@ -13,6 +13,10 @@ public class Writer {
             this.writeStrategy = new DefaultWriteStrategy();
         } else if (writeStrategy.equals("rw")) {
             this.writeStrategy = new RWWriteStrategy();
+        } else if (writeStrategy.equals("ff")) {
+            this.writeStrategy = new UnitFFWriteStrategy();
+        } else if (writeStrategy.equals("tag")) {
+            this.writeStrategy = new TagWriterStrategy();
         } else {
             throw new IllegalArgumentException("Invalid write strategy: " + writeStrategy);
         }

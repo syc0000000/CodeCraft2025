@@ -1,4 +1,9 @@
 logs/*
 *.class
 *.txt
+*.png
 test/sample_practice.in
+env/*
+test/sample_official.in
+test/practice.in
+distributions/*

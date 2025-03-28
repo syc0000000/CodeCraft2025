@@ -9,10 +9,10 @@ for arg in "$@"; do
     fi
 done
 # 检查是否有-big参数
-INPUT_FILE="./test/sample.in"
+INPUT_FILE="./test/sample_official.in"
 for arg in "$@"; do
     if [ "$arg" = "-big" ]; then
-        INPUT_FILE="./test/sample_practice.in"
+        INPUT_FILE="./test/sample_extra.in"
         break
     fi
 done
@@ -21,8 +21,8 @@ done
 # 检测操作系统类型
 if [ "$(uname -s)" = "Darwin" ]; then
     # Mac系统
-    python3 ./test/run.py ./test/interactor_mac $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION
+    python3 ./test/run.py ./test/interactor_mac $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION -r 25000 40000 60000 80000
 else
     # 其他系统
-    python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION
+    python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main -load distributions/distribution_20250328_130637.ser" $DEBUG_OPTION -r 25000 40000 60000 80000
 fi

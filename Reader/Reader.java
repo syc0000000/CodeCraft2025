@@ -15,6 +15,12 @@ public class Reader {
             this.readerStrategy = new DefaultReaderStrategy();
         } else if (readerStrategy.equals("newReader")) {
             this.readerStrategy = new NewReaderStratrgy();
+        } else if (readerStrategy.equals("GreedReader")) {
+            this.readerStrategy = new GreedReaderStategy();
+        } else if (readerStrategy.equals("GreedReaderWithoutJump")) {
+            this.readerStrategy = new GreedReaderWithoutJumpStrategy();
+        } else if (readerStrategy.equals("TagReader")) {
+            this.readerStrategy = new TagReaderStrategy();
         } else if (readerStrategy.equals("Begin")) {
             this.readerStrategy = new BeginStrategy();
         } else {
