@@ -85,12 +85,72 @@ public class Main {
     }
 
     /**
+     * 从文件加载标签排序结果
+     * 
+     * @param path 文件路径
+     * @return 磁盘ID到排序后标签列表的映射
+     */
+    private static Map<Integer, ArrayList<Integer>> loadSortedTags(String path) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path))) {
+            return (Map<Integer, ArrayList<Integer>>) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            mainLogger.error("加载标签排序失败: " + e.getMessage());
+            System.exit(1);
+            return null;
+        }
+    }
+
+    /**
+     * 保存标签排序结果到文件
+     * 
+     * @param sortedTags 磁盘ID到排序后标签列表的映射
+     * @param path       保存路径
+     */
+    private static void saveSortedTags(Map<Integer, ArrayList<Integer>> sortedTags, String path) {
+        File file = new File(path);
+        try {
+            file.getParentFile().mkdirs();
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+                oos.writeObject(sortedTags);
+                mainLogger.info("标签排序已保存到: " + path);
+            }
+        } catch (IOException e) {
+            mainLogger.error("保存标签排序失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 将排序后的标签结果应用到Tag中间位置
+     * 
+     * @param sortedTags 磁盘ID到排序后标签列表的映射
+     */
+    private static void applySortedTags(Map<Integer, ArrayList<Integer>> sortedTags) {
+        for (Map.Entry<Integer, ArrayList<Integer>> entry : sortedTags.entrySet()) {
+            int diskId = entry.getKey();
+            ArrayList<Integer> sortedTagIds = entry.getValue();
+
+            mainLogger.info("应用磁盘 " + diskId + " 的标签排序，共 " + sortedTagIds.size() + " 个标签");
+
+            // 记录排序结果到Tag的middle位置
+            int currentPosition = 0;
+            for (Integer tagId : sortedTagIds) {
+                Info.Tag tag = Info.tags.get(tagId);
+                int tagSize = tag.lenthList.get(diskId);
+
+                // 记录标签在磁盘上的中间位置
+                tag.middleList.set(diskId, currentPosition + tagSize / 2);
+                currentPosition += tagSize;
+            }
+        }
+    }
+
+    /**
      * 并行处理每个磁盘的标签排序
      * 
      * @param diskToTag 每个磁盘的标签集合
-     * @return 所有磁盘的标签排序耗时(毫秒)
+     * @return 磁盘ID到排序后标签列表的映射
      */
-    private static long parallelSortTagsForDisks(ArrayList<HashSet<Integer>> diskToTag) {
+    private static Map<Integer, ArrayList<Integer>> parallelSortTagsForDisks(ArrayList<HashSet<Integer>> diskToTag) {
         // 创建线程池，使用可用处理器数量
         int processors = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(processors);
@@ -104,8 +164,8 @@ public class Main {
         // 提交所有任务到线程池
         submitSortTasks(diskToTag, executor, futures);
 
-        // 处理所有任务结果
-        processTaskResults(futures);
+        // 处理所有任务结果并返回排序结果
+        Map<Integer, ArrayList<Integer>> sortedTags = processTaskResults(futures);
 
         long overallEndTime = System.currentTimeMillis();
         long totalTime = overallEndTime - overallStartTime;
@@ -115,7 +175,7 @@ public class Main {
         // 关闭线程池
         executor.shutdown();
 
-        return totalTime;
+        return sortedTags;
     }
 
     /**
@@ -149,8 +209,13 @@ public class Main {
 
     /**
      * 处理所有排序任务的结果
+     * 
+     * @param futures 任务Future列表
+     * @return 磁盘ID到排序后标签列表的映射
      */
-    private static void processTaskResults(List<Future<DiskSortResult>> futures) {
+    private static Map<Integer, ArrayList<Integer>> processTaskResults(List<Future<DiskSortResult>> futures) {
+        Map<Integer, ArrayList<Integer>> sortedTags = new HashMap<>();
+
         for (Future<DiskSortResult> future : futures) {
             try {
                 DiskSortResult result = future.get();
@@ -159,6 +224,9 @@ public class Main {
                 long timeSpent = result.timeSpent;
 
                 mainLogger.info("磁盘 " + diskId + " 标签排序完成，耗时:" + timeSpent + "ms");
+
+                // 保存排序结果
+                sortedTags.put(diskId, sortedTagIds);
 
                 // 记录排序结果到Tag的middle位置
                 int currentPosition = 0;
@@ -174,6 +242,8 @@ public class Main {
                 mainLogger.error("处理磁盘标签排序时出错: " + e.getMessage());
             }
         }
+
+        return sortedTags;
     }
 
     public static void main(String[] args) {
@@ -201,23 +271,26 @@ public class Main {
         // 初始化系统
         Info.initFromPreprocessOut(preprocessOut);
         // 默认每次生成新文件，格式：distributions/distribution_yyyyMMdd_HHmmss.ser
-        String loadPath = null; // 如果指定 -load 参数，则从此文件读取
+        String loadDistributionPath = null; // 如果指定 -load 参数，则从此文件读取
+        String loadTagsPath = null; // 如果指定 -loadTags 参数，则从此文件读取标签排序
 
         // 解析命令行参数
-        if (args.length > 0 && args[0].equals("-load")) {
-            if (args.length < 2) {
-                mainLogger.error("请指定要加载的文件路径，例如: -load distributions/latest.ser");
-                return;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-load") && i + 1 < args.length) {
+                loadDistributionPath = args[i + 1];
+                i++;
+            } else if (args[i].equals("-loadTags") && i + 1 < args.length) {
+                loadTagsPath = args[i + 1];
+                i++;
             }
-            loadPath = args[1];
         }
 
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
         Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
 
-        if (loadPath != null) {
+        if (loadDistributionPath != null) {
             // 从指定文件加载
-            distribution = loadDistribution(loadPath);
+            distribution = loadDistribution(loadDistributionPath);
         } else {
             // 重新计算并保存到带时间戳的文件
             distribution = computeDistribution(tagValues, true);
@@ -251,8 +324,21 @@ public class Main {
             Info.tags.add(tag);
         }
 
-        // 使用遗传算法对每个磁盘的tag进行排序
-        parallelSortTagsForDisks(diskToTag);
+        // 处理标签排序
+        if (loadTagsPath != null) {
+            // 从文件加载标签排序结果
+            mainLogger.info("从文件加载标签排序: " + loadTagsPath);
+            Map<Integer, ArrayList<Integer>> sortedTags = loadSortedTags(loadTagsPath);
+            applySortedTags(sortedTags);
+        } else {
+            // 使用遗传算法对每个磁盘的tag进行排序
+            Map<Integer, ArrayList<Integer>> sortedTags = parallelSortTagsForDisks(diskToTag);
+
+            // 保存排序结果到文件
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String savePath = "tags/sortedTags_" + timestamp + ".ser";
+            saveSortedTags(sortedTags, savePath);
+        }
 
         // 初始化策略
         Deleter deleter = new Deleter("tag");

@@ -8,3 +8,4 @@ env/*
 test/sample_official.in
 test/practice.in
 distributions/*
+tags/*
