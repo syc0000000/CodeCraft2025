@@ -61,6 +61,7 @@ public class Main {
         return distribution;
     }
 
+    @SuppressWarnings("unchecked")
     private static Map<Integer, List<DiskDistributionGA.Split>> loadDistribution(String path) {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path))) {
             return (Map<Integer, List<DiskDistributionGA.Split>>) ois.readObject();
@@ -90,6 +91,7 @@ public class Main {
      * @param path 文件路径
      * @return 磁盘ID到排序后标签列表的映射
      */
+    @SuppressWarnings("unchecked")
     private static Map<Integer, ArrayList<Integer>> loadSortedTags(String path) {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path))) {
             return (Map<Integer, ArrayList<Integer>>) ois.readObject();
@@ -251,17 +253,17 @@ public class Main {
         logger.setLevel(Logger.Level.DEBUG);
         // logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
-        // logger.enableModule("Writer");
-        // logger.enableModule("Deleter");
+        logger.enableModule("Writer");
+        logger.enableModule("Deleter");
         logger.enableModule("Info");
         logger.enableModule("DiskGA");
         logger.enableModule("IO");
-        logger.enableModule("Reader");
+        // logger.enableModule("Reader");
         logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 0);
+        logger.enableTimeRange(51552, 60500);
 
         mainLogger.info("程序启动");
 
