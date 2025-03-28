@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import Deleter.Deleter;
 import IO.IO;
+import IO.GAForRank.Entry;
 import IO.model.DiskDistributionGA;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
@@ -80,14 +82,15 @@ public class Main {
     public static void main(String[] args) {
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
-        logger.setLevel(Logger.Level.DEBUG);
+        // logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
         // logger.enableModule("Writer");
         // logger.enableModule("Deleter");
         logger.enableModule("Info");
-        // logger.enableModule("DiskGA");
+        logger.enableModule("DiskGA");
         logger.enableModule("IO");
         logger.enableModule("Reader");
+        logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
@@ -113,7 +116,7 @@ public class Main {
         }
 
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
-        Map<Integer, List<DiskDistributionGA.Split>> distribution;
+        Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
 
         if (loadPath != null) {
             // 从指定文件加载
@@ -132,6 +135,11 @@ public class Main {
         for (int i = 0; i < Info.diskNum; i++) {
             startPositionForDisk.add(0);
         }
+        // 每个磁盘有哪些tag
+        ArrayList<HashSet<Integer>> diskToTag = new ArrayList<>();
+        for (int i = 0; i < Info.diskNum; i++) {
+            diskToTag.add(new HashSet<>());
+        }
 
         for (int i = 0; i < tagValues.length; i++) {
             Tag tag = new Info.Tag(i, tagValues[i], Info.diskNum);
@@ -139,24 +147,40 @@ public class Main {
             for (DiskDistributionGA.Split split : distribution.get(i)) {
                 int diskId = split.diskIdx;
                 int sizeInThisDisk = (int) Math.ceil(tagValues[i] * split.portion / 100.0);
-                // sizeList的diskId位置，写入sizeInThisDisk
-                tag.sizeList.set(diskId, sizeInThisDisk);
-                int middle = startPositionForDisk.get(diskId) + sizeInThisDisk / 2;
-                tag.middleList.set(diskId, middle);
-                startPositionForDisk.set(diskId, startPositionForDisk.get(diskId) + sizeInThisDisk);
+                // lenthList的diskId位置，写入sizeInThisDisk
+                tag.lenthList.set(diskId, sizeInThisDisk);
+                diskToTag.get(diskId).add(i);
             }
             Info.tags.add(tag);
         }
+        // 使用遗传算法对每个磁盘的tag进行排序
+        mainLogger.info("开始为各磁盘优化标签排序...");
+        for (int i = 0; i < Info.diskNum; i++) {
+            if (diskToTag.get(i).isEmpty()) {
+                mainLogger.info("磁盘 " + i + " 没有分配标签，跳过排序");
+                continue;
+            }
 
-        // 输出每个Tag在每个Disk上的middle位置
-        // for (int i = 0; i < 16; i++) {
-        // mainLogger.info(
-        // "Tag " + i + " 在每个Disk上的middle位置: " +
-        // Info.tags.get(i).middleList.toString());
-        // mainLogger.info(
-        // "Tag " + i + " 在每个Disk上的size: " + Info.tags.get(i).sizeList.toString());
+            mainLogger.info("开始磁盘 " + i + " 标签排序，标签数量:" + diskToTag.get(i).size());
+            long startTime = System.currentTimeMillis();
 
-        // }
+            ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(i), i);
+
+            long endTime = System.currentTimeMillis();
+            mainLogger.info("磁盘 " + i + " 标签排序完成，耗时:" + (endTime - startTime) + "ms");
+
+            // 记录排序结果到Tag的middle位置
+            int currentPosition = 0;
+            for (Integer tagId : sortedTagIds) {
+                Info.Tag tag = Info.tags.get(tagId);
+                int tagSize = tag.lenthList.get(i);
+
+                // 记录标签在磁盘上的中间位置
+                tag.middleList.set(i, currentPosition + tagSize / 2);
+                currentPosition += tagSize;
+            }
+        }
+        mainLogger.info("所有磁盘标签排序完成");
 
         mainLogger.info("每种Tag的分配结果: " + distribution.toString());
         // 转化tag结果为middle位置，写入Tag中

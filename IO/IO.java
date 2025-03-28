@@ -31,6 +31,8 @@ public class IO {
     public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>(); // 各时间段累计差值数据
     /** 每个period要读取的Tag Id，period范围[0, periodNum-1] */
     public static ArrayList<HashSet<Integer>> periodToTagSet = new ArrayList<>();
+    /** 每个period读取的tag的size 一级是tag，二级是period */
+    public static ArrayList<ArrayList<Integer>> fre_read = new ArrayList<>();
 
     /**
      * 预处理
@@ -92,6 +94,7 @@ public class IO {
                 readSizeByPeriod.get(j).add(fre_read.get(i).get(j));
             }
         }
+        IO.fre_read = fre_read; // 保存fre_read
         IO.periodToTagSet = pickTagsForPeriods(readSizeByPeriod);
         // for (int i = 0; i < periodToTagSet.size(); i++) {
         // log.info("Period " + i + " 选择的Tag: " + periodToTagSet.get(i));
