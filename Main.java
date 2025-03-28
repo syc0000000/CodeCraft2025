@@ -80,13 +80,14 @@ public class Main {
     public static void main(String[] args) {
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
+        logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
-        logger.enableModule("Writer");
-        logger.enableModule("Deleter");
+        // logger.enableModule("Writer");
+        // logger.enableModule("Deleter");
         logger.enableModule("Info");
-        logger.enableModule("DiskGA");
+        // logger.enableModule("DiskGA");
         logger.enableModule("IO");
-        // logger.enableModule("Reader");
+        logger.enableModule("Reader");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志

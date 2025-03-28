@@ -88,33 +88,6 @@ public class Info {
                 this.middleList.add(0);
             }
         }
-
-        /**
-         * 权重随机选disk
-         * 
-         * @return
-         */
-        public int getDiskId() {
-            // 计算总权重
-            int totalWeight = 0;
-            for (int size : sizeList) {
-                totalWeight += size;
-            }
-            if (totalWeight <= 0) {
-                return 0; // 或者抛出异常
-            }
-
-            // 使用 [0, totalWeight) 范围内的随机数
-            int random = (int) (Math.random() * totalWeight);
-            int sum = 0;
-            for (int i = 0; i < sizeList.size(); i++) {
-                sum += sizeList.get(i);
-                if (random < sum) {
-                    return i;
-                }
-            }
-            return 0; // 如果所有条件都不满足，返回第一个索引
-        }
     }
 
     // 副本类
@@ -276,6 +249,10 @@ public class Info {
 
         public Action preoper; // 上一次操作
         public int pretoken; // 上一次令牌数量
+
+        // 一级索引，存储每个period的信息
+        // Set用来检查tag是否在值得读取的tag范围内
+        // 每一个diskTagInfo存储这个磁盘内的tag的信息
 
         // 优化: 按大小组织空闲空间的集合
         // key: 空间大小1-5, value: 该大小的空闲空间列表

@@ -61,6 +61,8 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
                 rwDisk.rwSizeLeft -= obj.objSize;
                 // 维护RWEnd
                 rwDisk.RWEnd = Math.min(rwDisk.logicalRWEnd, Math.max(rwDisk.RWEnd, space.end));
+                // 维护sizeList
+                tag.sizeList.set(rwDisk.diskId, tag.sizeList.get(rwDisk.diskId) + obj.objSize);
                 log.debug("成功写入副本0到磁盘" + rwDisk.diskId);
                 writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
             }

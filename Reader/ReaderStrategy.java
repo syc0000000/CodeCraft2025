@@ -21,7 +21,7 @@ public interface ReaderStrategy {
     public static final ModuleLogger readerLogger = LoggerFactory.getLogger("Reader");
 
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns);
-
+    
     // 添加任务
     public default void addReadTask(ArrayList<ReadCommandIn> readCommandIns) {
         for (ReadCommandIn readCommandIn : readCommandIns) {
