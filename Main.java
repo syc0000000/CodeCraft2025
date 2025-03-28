@@ -34,10 +34,10 @@ public class Main {
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
-        //logger.enableModule("Writer");
-        //logger.enableModule("Deleter");
+        // logger.enableModule("Writer");
+        // logger.enableModule("Deleter");
         logger.enableModule("Info");
-        //logger.enableModule("DiskGA");
+        // logger.enableModule("DiskGA");
         logger.enableModule("IO");
         logger.enableModule("Reader");
         // 启用文件日志
@@ -71,8 +71,6 @@ public class Main {
             for (DiskDistributionGA.Split split : distribution.get(i)) {
                 int diskId = split.diskIdx;
                 int sizeInThisDisk = (int) Math.ceil(tagValues[i] * split.portion / 100.0 * 0.9);
-                // sizeList的diskId位置，写入sizeInThisDisk
-                tag.sizeList.set(diskId, sizeInThisDisk);
                 int middle = startPositionForDisk.get(diskId) + sizeInThisDisk / 2;
                 tag.middleList.set(diskId, middle);
                 startPositionForDisk.set(diskId, startPositionForDisk.get(diskId) + sizeInThisDisk);
