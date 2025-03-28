@@ -22,6 +22,7 @@ import java.util.concurrent.Future;
 import Deleter.Deleter;
 import IO.IO;
 import IO.GAForRank.Entry;
+import IO.TimeWeightForRank.TimeEntry;
 import IO.model.DiskDistributionGA;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
@@ -198,7 +199,8 @@ public class Main {
                 public DiskSortResult call() throws Exception {
                     long startTime = System.currentTimeMillis();
 
-                    ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId), diskId);
+                    // ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId), diskId);
+                    ArrayList<Integer> sortedTagIds = TimeEntry.entrypoint(diskToTag.get(diskId), diskId);
 
                     long endTime = System.currentTimeMillis();
                     long timeSpent = endTime - startTime;
@@ -289,6 +291,8 @@ public class Main {
 
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
         Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
+        // Map<Integer, List<DiskDistributionGA.Split>> distribution =
+        //         dist1.createHardcodedDistribution(); // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
 
         if (loadDistributionPath != null) {
             // 从指定文件加载
