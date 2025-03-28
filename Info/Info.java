@@ -246,7 +246,8 @@ public class Info {
         public int diskId; // 磁盘id
         public int unitNum; // 存储单元数量
         public int ptr; // 当前磁头指针位置
-
+        
+        public boolean isInEfficientTag;
         public int RWEnd; // 读写空间结束位置
         public int sizeLeft; // 剩余空间大小
 
@@ -335,7 +336,7 @@ public class Info {
             this.sizeLeft = unitNum;
             this.preoper = Action.PASS;
             this.pretoken = 64;
-
+            this.isInEfficientTag = false;
             // 初始化集合
             // 1-5大小的空闲空间列表
             this.freespaceBySize = new HashMap<>(5);

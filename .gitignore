@@ -3,6 +3,7 @@ logs/*
 *.txt
 *.png
 test/sample_practice.in
+test/*.in
 env/*
 test/sample_official.in
 test/practice.in

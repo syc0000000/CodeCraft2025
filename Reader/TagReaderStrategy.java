@@ -9,6 +9,7 @@ import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info.UserObject;
 
+import IO.IO;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +44,8 @@ public class TagReaderStrategy implements ReaderStrategy {
             // 基础准备
             //本磁盘的tag从前到后分布
             ArrayList<TagInfo> tagInfos = tagInfo.get(i);
+            //初始化每一个tag在此硬盘中的位置信息
+
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
@@ -59,23 +62,91 @@ public class TagReaderStrategy implements ReaderStrategy {
                 readCommandOuts.put(i, readCommandOut);
                 continue;
             }
+            //假设现在不在Efficienttag的区域
+            disk.isInEfficientTag = false;
+            //初始化每一个tag在此硬盘中的位置信息，同时检查是不是在Efficienttag区域
+            for(int temp = 0; temp < tagInfos.size(); temp++){
+                TagInfo taginfo = tagInfos.get(temp);
+                taginfo.left = taginfo.middle - Info.tags.get(taginfo.tagid).sizeList.get(i) / 2;
+                taginfo.end = taginfo.middle + Info.tags.get(taginfo.tagid).sizeList.get(i) / 2;
+                //检查现在是不是在Efficient区域
+                if(IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
+                    if(disk.ptr >= taginfo.left && disk.ptr <= taginfo.end){
+                        disk.isInEfficientTag = true;
+                    }
+                }
+            }
+            //如果不在Efficient区域，则进行寻找Efficient区域
+            if(!disk.isInEfficientTag){
+                 
+                for(int temp = 0; temp < tagInfos.size(); temp++){
+                    //如果上一个tick已经跳转过了，则不能继续进行jump
+                    if(disk.preoper == Info.Action.JUMP) break;
+
+                    TagInfo taginfo = tagInfos.get(temp);
+                    //如果磁盘指针在这个tag区域的左侧，并且这个区域是Efficienttag
+                    if(disk.ptr < taginfo.left && IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
+                         //判断是进行跳跃还是进行pass
+                        if(taginfo.left - disk.ptr >= tokenNow){
+                            readCommandOut.actions.add(Info.Action.JUMP);
+                            readCommandOut.jumpTarget = 1 > taginfo.left ? 1 : taginfo.left;
+                            disk.ptrDoAction(Info.Action.JUMP, taginfo.left);
+                            disk.preoper = Info.Action.JUMP;
+                            disk.pretoken = Info.tokenPerTick;
+                            readCommandOuts.put(i, readCommandOut);
+                            tokenNow -= tokenNow; 
+                        }
+                        else{
+                            //进行pass，直到和left相等
+                            while(disk.ptr < taginfo.left){
+                                processAction(Info.Action.PASS, disk, readCommandOut);
+                                tokenNow -= disk.pretoken;
+                            }
+                        }
+                        //进行移动ptr操作后进行退出
+                        disk.isInEfficientTag = true;
+                        break;
+                    }
+                }
+                //如果在ptr所在位置向后找不到，就从最前面找
+                if(!disk.isInEfficientTag){
+                    for(int temp = 0; temp < tagInfos.size(); temp++){
+                        //如果上一个tick已经跳转过了，则不能继续进行jump
+                        if(disk.preoper == Info.Action.JUMP) break;
+    
+                        TagInfo taginfo = tagInfos.get(temp);
+                        //如果磁盘指针在这个tag区域的左侧，并且这个区域是Efficienttag
+                        if(IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
+                            //直接跳跃到寻找到的第一个EfficientTag区域
+                            readCommandOut.actions.add(Info.Action.JUMP);
+                            readCommandOut.jumpTarget = 1 > taginfo.left ? 1 : taginfo.left;
+                            disk.ptrDoAction(Info.Action.JUMP, taginfo.left);
+                            disk.preoper = Info.Action.JUMP;
+                            disk.pretoken = Info.tokenPerTick;
+                            readCommandOuts.put(i, readCommandOut);
+                            tokenNow -= tokenNow; 
+                            //进行移动ptr操作后进行退出
+                            disk.isInEfficientTag = true;
+                            break;
+                        }
+                    }
+                }
+                
+            }
+            
+
             // 准备消耗token
             readerLogger.debug("token剩余"+tokenNow);
             while (tokenNow > 0) {
                 if (disk.ptr > disk.RWEnd)
                     break;
-                boolean isInTask = disk.unitData.get(disk.ptr).isInTask;
-                
-                if (isInTask) {
-                    readerLogger.debug("寻找到任务");
-                    // 如果token足够，则直接进行操作
-                    
-                    if (tokenNow > calculateToken(Info.Action.READ, disk)) {
-                        readerLogger.debug("token足够");
-                        int objId = disk.unitData.get(disk.ptr).objId;
-                        int blockId = disk.unitData.get(disk.ptr).blockId;
-                        UserObject object = Info.objMap.get(objId);
-                        // 有任务就直接处理                        
+                if (tokenNow > calculateToken(Info.Action.READ, disk)) {
+                    readerLogger.debug("ptr位置在"+disk.ptr);
+                    int objId = disk.unitData.get(disk.ptr).objId;
+                    int blockId = disk.unitData.get(disk.ptr).blockId;
+                    UserObject object = Info.objMap.get(objId);
+                    // 有任务就直接处理
+                    if (disk.unitData.get(disk.ptr).isInTask){
                         Iterator<ReadTask> iterator = object.readTasks.iterator();
                         while (iterator.hasNext()) {
                             ReadTask readTask = iterator.next();
@@ -98,24 +169,17 @@ public class TagReaderStrategy implements ReaderStrategy {
                                 }
                             }
                         }
-                        // 设为没有任务
-                        disk.unitData.get(disk.ptr).isInTask = false;
-                        // 输出
-                        processAction(Info.Action.READ, disk, readCommandOut);
-                        // 减少token
-                        tokenNow -= disk.pretoken;
-                        continue;
-                    }
-                    // 如果token不足，则直接退出，等待下一个tick进行处理
-                    else {
-                        break;
-                    }
-                }
-                // 如果没有任务，则直接跳过
-                else {
-                    processAction(Info.Action.PASS, disk, readCommandOut);
+                    } 
+                    // 设为没有任务
+                    disk.unitData.get(disk.ptr).isInTask = false;
+                    // 输出
+                    processAction(Info.Action.READ, disk, readCommandOut);
+                    // 减少token
                     tokenNow -= disk.pretoken;
+                    continue;
                 }
+                // 如果token不足，则直接退出，等待下一个tick进行处理
+                break;
             }
 
             readCommandOuts.put(i, readCommandOut);
@@ -138,6 +202,9 @@ public class TagReaderStrategy implements ReaderStrategy {
                 TagInfo taginfo = new TagInfo();
                 taginfo.tagid = j;
                 taginfo.middle = Info.tags.get(j).middleList.get(i);
+                if(taginfo.middle == 0){
+                    continue;
+                }
                 tagInfos.add(taginfo);
             }
             tagInfos.sort(new middleComparator());
