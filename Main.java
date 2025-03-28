@@ -154,14 +154,10 @@ public class Main {
             Info.tags.add(tag);
         }
         // 使用遗传算法对每个磁盘的tag进行排序
-        mainLogger.info("开始为各磁盘优化标签排序...");
         for (int i = 0; i < Info.diskNum; i++) {
             if (diskToTag.get(i).isEmpty()) {
-                mainLogger.info("磁盘 " + i + " 没有分配标签，跳过排序");
                 continue;
             }
-
-            mainLogger.info("开始磁盘 " + i + " 标签排序，标签数量:" + diskToTag.get(i).size());
             long startTime = System.currentTimeMillis();
 
             ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(i), i);
@@ -180,9 +176,6 @@ public class Main {
                 currentPosition += tagSize;
             }
         }
-        mainLogger.info("所有磁盘标签排序完成");
-
-        mainLogger.info("每种Tag的分配结果: " + distribution.toString());
         // 转化tag结果为middle位置，写入Tag中
 
         // 初始化策略
