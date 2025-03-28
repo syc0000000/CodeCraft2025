@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import IO.IO;
 
-public class Entry {
+public class TimeEntry {
     /**
      * 入口点，输入一个tagSet和diskId，返回一个tagSet的排序
      * 
