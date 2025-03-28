@@ -34,6 +34,8 @@ public class TagReaderStrategy implements ReaderStrategy {
     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
+        int period = Info.timestamp / 1800;
+        if(period > 47) period = 47;
         // 添加所有的任务
         addReadTask(readCommandIns);
         int tickToken = Info.tokenPerTick;
@@ -70,7 +72,8 @@ public class TagReaderStrategy implements ReaderStrategy {
                 taginfo.left = taginfo.middle - Info.tags.get(taginfo.tagid).sizeList.get(i) / 2;
                 taginfo.end = taginfo.middle + Info.tags.get(taginfo.tagid).sizeList.get(i) / 2;
                 //检查现在是不是在Efficient区域
-                if(IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
+                
+                if(IO.periodToTagSet.get(period).contains(taginfo.tagid)){
                     if(disk.ptr >= taginfo.left && disk.ptr <= taginfo.end){
                         disk.isInEfficientTag = true;
                     }
@@ -85,16 +88,18 @@ public class TagReaderStrategy implements ReaderStrategy {
 
                     TagInfo taginfo = tagInfos.get(temp);
                     //如果磁盘指针在这个tag区域的左侧，并且这个区域是Efficienttag
-                    if(disk.ptr < taginfo.left && IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
+                    if(disk.ptr < taginfo.left && IO.periodToTagSet.get(period).contains(taginfo.tagid)){
                          //判断是进行跳跃还是进行pass
+                       
                         if(taginfo.left - disk.ptr >= tokenNow){
                             readCommandOut.actions.add(Info.Action.JUMP);
                             readCommandOut.jumpTarget = 0 > taginfo.left ? 0 : taginfo.left;
-                            disk.ptrDoAction(Info.Action.JUMP, taginfo.left);
+                            disk.ptrDoAction(Info.Action.JUMP, readCommandOut.jumpTarget);
                             disk.preoper = Info.Action.JUMP;
                             disk.pretoken = Info.tokenPerTick;
                             readCommandOuts.put(i, readCommandOut);
-                            tokenNow -= tokenNow; 
+                            tokenNow -= tokenNow;
+                            readerLogger.debug("指针跳转"+disk.ptr);
                         }
                         else{
                             //进行pass，直到和left相等
@@ -102,6 +107,7 @@ public class TagReaderStrategy implements ReaderStrategy {
                                 processAction(Info.Action.PASS, disk, readCommandOut);
                                 tokenNow -= disk.pretoken;
                             }
+                            readerLogger.debug("指针跳转"+disk.ptr);
                         }
                         //进行移动ptr操作后进行退出
                         disk.isInEfficientTag = true;
@@ -113,20 +119,22 @@ public class TagReaderStrategy implements ReaderStrategy {
                     for(int temp = 0; temp < tagInfos.size(); temp++){
                         //如果上一个tick已经跳转过了，则不能继续进行jump
                         if(disk.preoper == Info.Action.JUMP) break;
-    
+                        
                         TagInfo taginfo = tagInfos.get(temp);
+                        readerLogger.debug("找到left为"+taginfo.left+"tagid"+taginfo.tagid);
                         //如果磁盘指针在这个tag区域的左侧，并且这个区域是Efficienttag
-                        if(IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
+                        if(IO.periodToTagSet.get(period).contains(taginfo.tagid)){
                             //直接跳跃到寻找到的第一个EfficientTag区域
                             readCommandOut.actions.add(Info.Action.JUMP);
                             readCommandOut.jumpTarget = 0 > taginfo.left ? 0 : taginfo.left;
-                            disk.ptrDoAction(Info.Action.JUMP, taginfo.left);
+                            disk.ptrDoAction(Info.Action.JUMP, readCommandOut.jumpTarget);
                             disk.preoper = Info.Action.JUMP;
                             disk.pretoken = Info.tokenPerTick;
                             readCommandOuts.put(i, readCommandOut);
                             tokenNow -= tokenNow; 
                             //进行移动ptr操作后进行退出
                             disk.isInEfficientTag = true;
+                            readerLogger.debug("指针跳转"+disk.ptr);
                             break;
                         }
                     }
