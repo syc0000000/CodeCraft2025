@@ -289,6 +289,8 @@ public class Main {
 
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
         Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
+        // Map<Integer, List<DiskDistributionGA.Split>> distribution =
+        //         dist1.createHardcodedDistribution(); // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
 
         if (loadDistributionPath != null) {
             // 从指定文件加载
