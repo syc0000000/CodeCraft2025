@@ -14,6 +14,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import Deleter.Deleter;
 import IO.IO;
 import IO.GAForRank.Entry;
@@ -76,6 +81,98 @@ public class Main {
             }
         } catch (IOException e) {
             mainLogger.error("保存失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 并行处理每个磁盘的标签排序
+     * 
+     * @param diskToTag 每个磁盘的标签集合
+     * @return 所有磁盘的标签排序耗时(毫秒)
+     */
+    private static long parallelSortTagsForDisks(ArrayList<HashSet<Integer>> diskToTag) {
+        // 创建线程池，使用可用处理器数量
+        int processors = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(processors);
+        mainLogger.info("创建线程池，使用 " + processors + " 个线程进行标签排序");
+
+        // 为每个磁盘创建一个任务
+        List<Future<DiskSortResult>> futures = new ArrayList<>();
+
+        long overallStartTime = System.currentTimeMillis();
+
+        // 提交所有任务到线程池
+        submitSortTasks(diskToTag, executor, futures);
+
+        // 处理所有任务结果
+        processTaskResults(futures);
+
+        long overallEndTime = System.currentTimeMillis();
+        long totalTime = overallEndTime - overallStartTime;
+
+        mainLogger.info("所有磁盘的标签排序已完成，总耗时: " + totalTime + "ms");
+
+        // 关闭线程池
+        executor.shutdown();
+
+        return totalTime;
+    }
+
+    /**
+     * 提交所有磁盘的排序任务到线程池
+     */
+    private static void submitSortTasks(ArrayList<HashSet<Integer>> diskToTag,
+            ExecutorService executor,
+            List<Future<DiskSortResult>> futures) {
+        for (int i = 0; i < Info.diskNum; i++) {
+            if (diskToTag.get(i).isEmpty()) {
+                continue;
+            }
+            final int diskId = i;
+
+            // 提交任务到线程池
+            futures.add(executor.submit(new Callable<DiskSortResult>() {
+                @Override
+                public DiskSortResult call() throws Exception {
+                    long startTime = System.currentTimeMillis();
+
+                    ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId), diskId);
+
+                    long endTime = System.currentTimeMillis();
+                    long timeSpent = endTime - startTime;
+
+                    return new DiskSortResult(diskId, sortedTagIds, timeSpent);
+                }
+            }));
+        }
+    }
+
+    /**
+     * 处理所有排序任务的结果
+     */
+    private static void processTaskResults(List<Future<DiskSortResult>> futures) {
+        for (Future<DiskSortResult> future : futures) {
+            try {
+                DiskSortResult result = future.get();
+                int diskId = result.diskId;
+                ArrayList<Integer> sortedTagIds = result.sortedTagIds;
+                long timeSpent = result.timeSpent;
+
+                mainLogger.info("磁盘 " + diskId + " 标签排序完成，耗时:" + timeSpent + "ms");
+
+                // 记录排序结果到Tag的middle位置
+                int currentPosition = 0;
+                for (Integer tagId : sortedTagIds) {
+                    Info.Tag tag = Info.tags.get(tagId);
+                    int tagSize = tag.lenthList.get(diskId);
+
+                    // 记录标签在磁盘上的中间位置
+                    tag.middleList.set(diskId, currentPosition + tagSize / 2);
+                    currentPosition += tagSize;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                mainLogger.error("处理磁盘标签排序时出错: " + e.getMessage());
+            }
         }
     }
 
@@ -153,30 +250,9 @@ public class Main {
             }
             Info.tags.add(tag);
         }
+
         // 使用遗传算法对每个磁盘的tag进行排序
-        for (int i = 0; i < Info.diskNum; i++) {
-            if (diskToTag.get(i).isEmpty()) {
-                continue;
-            }
-            long startTime = System.currentTimeMillis();
-
-            ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(i), i);
-
-            long endTime = System.currentTimeMillis();
-            mainLogger.info("磁盘 " + i + " 标签排序完成，耗时:" + (endTime - startTime) + "ms");
-
-            // 记录排序结果到Tag的middle位置
-            int currentPosition = 0;
-            for (Integer tagId : sortedTagIds) {
-                Info.Tag tag = Info.tags.get(tagId);
-                int tagSize = tag.lenthList.get(i);
-
-                // 记录标签在磁盘上的中间位置
-                tag.middleList.set(i, currentPosition + tagSize / 2);
-                currentPosition += tagSize;
-            }
-        }
-        // 转化tag结果为middle位置，写入Tag中
+        parallelSortTagsForDisks(diskToTag);
 
         // 初始化策略
         Deleter deleter = new Deleter("tag");
@@ -239,5 +315,18 @@ public class Main {
         // 程序结束前关闭文件日志
         logger.disableFileLogging();
         logger.disableFileLogging();
+    }
+
+    // 磁盘排序结果类
+    private static class DiskSortResult {
+        int diskId;
+        ArrayList<Integer> sortedTagIds;
+        long timeSpent;
+
+        public DiskSortResult(int diskId, ArrayList<Integer> sortedTagIds, long timeSpent) {
+            this.diskId = diskId;
+            this.sortedTagIds = sortedTagIds;
+            this.timeSpent = timeSpent;
+        }
     }
 }
