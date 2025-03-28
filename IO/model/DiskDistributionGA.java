@@ -1,5 +1,6 @@
 package IO.model;
 
+import java.io.Serializable;
 import java.util.*;
 import IO.GA.*;
 import Logger.LoggerFactory;
@@ -15,7 +16,7 @@ public class DiskDistributionGA {
     /**
      * 表示标签在磁盘上的一个分片
      */
-    public static class Split {
+    public static class Split implements Serializable {
         public int diskIdx; // 磁盘索引
         public double portion; // 分配比例（百分比）
 

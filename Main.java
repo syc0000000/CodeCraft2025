@@ -1,11 +1,18 @@
 // main.java
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import Deleter.Deleter;
 import IO.IO;
 import IO.model.DiskDistributionGA;
@@ -31,6 +38,45 @@ public class Main {
     private static final Logger logger = LoggerFactory.getLogger();
     private static final ModuleLogger mainLogger = LoggerFactory.getLogger("Main");
 
+    private static Map<Integer, List<DiskDistributionGA.Split>> computeDistribution(int[] tagValues, boolean isGA) {
+        Map<Integer, List<DiskDistributionGA.Split>> distribution = new HashMap<>();
+        if (isGA) {
+            distribution = DiskDistributionGA.entrypoint(tagValues);
+        } else {
+            ArrayList<DiskDistributionGA.Split> splits = new ArrayList<>();
+            for (int i = 0; i < Info.diskNum; i++) {
+                splits.add(new DiskDistributionGA.Split(i, 10));
+            }
+            for (int i = 0; i < tagValues.length; i++) {
+                distribution.put(i, splits);
+            }
+        }
+        return distribution;
+    }
+
+    private static Map<Integer, List<DiskDistributionGA.Split>> loadDistribution(String path) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path))) {
+            return (Map<Integer, List<DiskDistributionGA.Split>>) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            mainLogger.error("加载失败: " + e.getMessage());
+            System.exit(1);
+            return null;
+        }
+    }
+
+    private static void saveDistribution(Map<Integer, List<DiskDistributionGA.Split>> distribution, String path) {
+        File file = new File(path);
+        try {
+            file.getParentFile().mkdirs();
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+                oos.writeObject(distribution);
+                mainLogger.info("已保存到: " + path);
+            }
+        } catch (IOException e) {
+            mainLogger.error("保存失败: " + e.getMessage());
+        }
+    }
+
     public static void main(String[] args) {
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
@@ -53,21 +99,30 @@ public class Main {
 
         // 初始化系统
         Info.initFromPreprocessOut(preprocessOut);
-        mainLogger.info(String.format("系统初始化: 硬盘数=%d, 单元数=%d, 时间片数=%d",
-                Info.diskNum, Info.unitNum, Info.tickNums));
+        // 默认每次生成新文件，格式：distributions/distribution_yyyyMMdd_HHmmss.ser
+        String loadPath = null; // 如果指定 -load 参数，则从此文件读取
 
-        mainLogger.info("每种Tag的Write-Delete的最大值" + IO.tagsUnitUsage.toString());
-        int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
-        // Map<Integer, List<DiskDistributionGA.Split>> distribution =
-        // DiskDistributionGA.entrypoint(tagValues);
-        Map<Integer, List<DiskDistributionGA.Split>> distribution = new HashMap<>();
-        // 直接写死
-        ArrayList<DiskDistributionGA.Split> splits = new ArrayList<>();
-        for (int i = 0; i < Info.diskNum; i++) {
-            splits.add(new DiskDistributionGA.Split(i, 10));
+        // 解析命令行参数
+        if (args.length > 0 && args[0].equals("-load")) {
+            if (args.length < 2) {
+                mainLogger.error("请指定要加载的文件路径，例如: -load distributions/latest.ser");
+                return;
+            }
+            loadPath = args[1];
         }
-        for (int i = 0; i < tagValues.length; i++) {
-            distribution.put(i, splits);
+
+        int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
+        Map<Integer, List<DiskDistributionGA.Split>> distribution;
+
+        if (loadPath != null) {
+            // 从指定文件加载
+            distribution = loadDistribution(loadPath);
+        } else {
+            // 重新计算并保存到带时间戳的文件
+            distribution = computeDistribution(tagValues, false);
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String savePath = "distributions/distribution_" + timestamp + ".ser";
+            saveDistribution(distribution, savePath);
         }
         mainLogger.info("遗传算法分配结果: " + distribution.toString());
 
