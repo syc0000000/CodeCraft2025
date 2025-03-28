@@ -1,6 +1,7 @@
 package Reader;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import IO.model.CompleteCommandOut;
 import IO.model.ReadCommandIn;
@@ -19,6 +20,16 @@ import Info.Info.ReadTask;
 import Info.Info.UserObject;
 
 public class TagReaderStrategy implements ReaderStrategy {
+    public class TagInfo {
+        int tagid;
+        int middle;
+        int left;
+        int end;
+        public int getMiddle(){
+            return middle;
+        }
+    }
+    public ArrayList<ArrayList<TagInfo>> tagInfo = new ArrayList<>();
     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
@@ -30,7 +41,8 @@ public class TagReaderStrategy implements ReaderStrategy {
         // 遍历磁盘
         for (int i = 0; i < Info.diskNum; i++) {
             // 基础准备
-            
+            //本磁盘的tag从前到后分布
+            ArrayList<TagInfo> tagInfos = tagInfo.get(i);
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
@@ -111,5 +123,25 @@ public class TagReaderStrategy implements ReaderStrategy {
         readRetrun.readCommandOuts = readCommandOuts;
         readRetrun.completeCommandOuts = completeCommandOuts;
         return readRetrun;
+    }
+    public static class middleComparator implements Comparator<TagInfo> {
+        @Override
+        public int compare(TagInfo a, TagInfo b) {
+            return a.middle - b.middle;
+        }
+    }
+    public TagReaderStrategy(){
+
+        for(int i = 0; i < Info.diskNum;i++){
+            ArrayList<TagInfo> tagInfos = new ArrayList<>();
+            for(int j = 0; j < Info.tagNums;j++){
+                TagInfo taginfo = new TagInfo();
+                taginfo.tagid = j;
+                taginfo.middle = Info.tags.get(j).middleList.get(i);
+                tagInfos.add(taginfo);
+            }
+            tagInfos.sort(new middleComparator());
+            tagInfo.add(tagInfos);
+        }
     }
 }

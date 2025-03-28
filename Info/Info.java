@@ -248,12 +248,6 @@ public class Info {
     public enum Action {
         READ, PASS, JUMP
     }
-    public static class DiskTagInfo {
-        public int tagId;
-        public int middle;
-        public int left;
-        public int right;
-    }
     /* 对象-块信息 */
     public static class UnitData {
         public int objId; // 对象id
@@ -285,7 +279,6 @@ public class Info {
         //一级索引，存储每个period的信息
         //Set用来检查tag是否在值得读取的tag范围内
         //每一个diskTagInfo存储这个磁盘内的tag的信息
-        public ArrayList<Set<DiskTagInfo>> diskTagInfos = new ArrayList<>();
 
         // 优化: 按大小组织空闲空间的集合
         // key: 空间大小1-5, value: 该大小的空闲空间列表
