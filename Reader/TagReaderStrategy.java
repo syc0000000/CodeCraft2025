@@ -89,7 +89,7 @@ public class TagReaderStrategy implements ReaderStrategy {
                          //判断是进行跳跃还是进行pass
                         if(taginfo.left - disk.ptr >= tokenNow){
                             readCommandOut.actions.add(Info.Action.JUMP);
-                            readCommandOut.jumpTarget = 1 > taginfo.left ? 1 : taginfo.left;
+                            readCommandOut.jumpTarget = 0 > taginfo.left ? 0 : taginfo.left;
                             disk.ptrDoAction(Info.Action.JUMP, taginfo.left);
                             disk.preoper = Info.Action.JUMP;
                             disk.pretoken = Info.tokenPerTick;
@@ -119,7 +119,7 @@ public class TagReaderStrategy implements ReaderStrategy {
                         if(IO.periodToTagSet.get(Info.timestamp / 1800).contains(taginfo.tagid)){
                             //直接跳跃到寻找到的第一个EfficientTag区域
                             readCommandOut.actions.add(Info.Action.JUMP);
-                            readCommandOut.jumpTarget = 1 > taginfo.left ? 1 : taginfo.left;
+                            readCommandOut.jumpTarget = 0 > taginfo.left ? 0 : taginfo.left;
                             disk.ptrDoAction(Info.Action.JUMP, taginfo.left);
                             disk.preoper = Info.Action.JUMP;
                             disk.pretoken = Info.tokenPerTick;
