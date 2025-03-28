@@ -22,6 +22,7 @@ import java.util.concurrent.Future;
 import Deleter.Deleter;
 import IO.IO;
 import IO.GAForRank.Entry;
+import IO.TimeWeightForRank.TimeEntry;
 import IO.model.DiskDistributionGA;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
@@ -196,7 +197,8 @@ public class Main {
                 public DiskSortResult call() throws Exception {
                     long startTime = System.currentTimeMillis();
 
-                    ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId), diskId);
+                    // ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId), diskId);
+                    ArrayList<Integer> sortedTagIds = TimeEntry.entrypoint(diskToTag.get(diskId), diskId);
 
                     long endTime = System.currentTimeMillis();
                     long timeSpent = endTime - startTime;
