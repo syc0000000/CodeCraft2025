@@ -199,8 +199,10 @@ public class Main {
                 public DiskSortResult call() throws Exception {
                     long startTime = System.currentTimeMillis();
 
-                    // ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId), diskId);
-                    ArrayList<Integer> sortedTagIds = TimeEntry.entrypoint(diskToTag.get(diskId), diskId);
+                    ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId),
+                            diskId);
+                    // ArrayList<Integer> sortedTagIds = TimeEntry.entrypoint(diskToTag.get(diskId),
+                    // diskId);
 
                     long endTime = System.currentTimeMillis();
                     long timeSpent = endTime - startTime;
@@ -265,7 +267,7 @@ public class Main {
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(51552, 60500);
+        logger.enableTimeRange(0, 0);
 
         mainLogger.info("程序启动");
 
@@ -292,7 +294,8 @@ public class Main {
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
         Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
         // Map<Integer, List<DiskDistributionGA.Split>> distribution =
-        //         dist1.createHardcodedDistribution(); // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
+        // dist1.createHardcodedDistribution(); //
+        // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
 
         if (loadDistributionPath != null) {
             // 从指定文件加载
@@ -344,12 +347,13 @@ public class Main {
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             String savePath = "tags/sortedTags_" + timestamp + ".ser";
             saveSortedTags(sortedTags, savePath);
+            applySortedTags(sortedTags);
         }
 
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("default");
+        Reader reader = new Reader("newReader");
 
         // 主循环 - 处理每个时间片
         try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {

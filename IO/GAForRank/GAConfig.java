@@ -5,10 +5,10 @@ package IO.GAForRank;
  */
 public class GAConfig {
     // 默认配置
-    public static final int DEFAULT_POPULATION_SIZE = 3000; // 默认种群大小
-    public static final double DEFAULT_CROSSOVER_RATE = 0.5; // 默认交叉率
-    public static final double DEFAULT_MUTATION_RATE = 0.95; // 默认变异率
-    public static final int DEFAULT_MAX_GENERATION = 300; // 默认最大代数
+    public static final int DEFAULT_POPULATION_SIZE = 10000; // 默认种群大小
+    public static final double DEFAULT_CROSSOVER_RATE = 0.85; // 默认交叉率
+    public static final double DEFAULT_MUTATION_RATE = 0.8; // 默认变异率
+    public static final int DEFAULT_MAX_GENERATION = 100; // 默认最大代数
 
     // 收敛配置
     public static final int DEFAULT_MAX_NON_IMPROVE = 50; // 默认连续无改进代数

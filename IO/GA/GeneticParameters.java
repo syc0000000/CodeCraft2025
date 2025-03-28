@@ -64,12 +64,12 @@ public class GeneticParameters {
     /**
      * 精英数量，每代保留的最优个体数
      */
-    public static final int ELITE_SIZE = 2000;
+    public static final int ELITE_SIZE = 3000;
 
     /**
      * 锦标赛选择的大小
      */
-    public static final int TOURNAMENT_SIZE = 16;
+    public static final int TOURNAMENT_SIZE = 30;
 
     /**
      * 收敛阈值：连续多少代没有改善则提前停止

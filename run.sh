@@ -23,5 +23,5 @@ if [ "$(uname -s)" = "Darwin" ]; then
   python3 ./test/run.py ./test/interactor_mac $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION -r 25000 40000 60000 80000
 else
     # 其他系统
-    python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main -load distributions/distribution_20250328_190853.ser -loadTags tags/sortedTags_20250328_190856.ser" $DEBUG_OPTION -r 25000 40000 60000 80000
+    python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main -load distributions/distribution_20250329_001431.ser -loadTags tags/sortedTags_20250329_004242.ser" $DEBUG_OPTION -r 25000 40000 60000 80000
 fi
