@@ -40,6 +40,12 @@ public class GeneticParameters {
      */
     public static final int MAX_SPLITS_PER_TAG = 10;
 
+    /**
+     * 每个磁盘上标签的最小比例阈值
+     * 比例小于此值的分配将被丢弃
+     */
+    public static final double MIN_TAG_PROPORTION = 0.1;
+
     // 遗传算法参数
     /**
      * 种群大小
