@@ -33,7 +33,7 @@ public class NewNewReader implements ReaderStrategy {
             readCommandOut.actions = new ArrayList<>();
 
             // 如果指针超出了磁盘范围，跳转到0
-            if (disk.ptr > disk.RWEnd) {
+            if (disk.ptr > disk.logicalRWEnd) {
                 readerLogger.debug("指针超出范围，跳转到0");
                 readCommandOut.actions.add(Action.JUMP);
                 readCommandOut.jumpTarget = 0;
@@ -44,89 +44,112 @@ public class NewNewReader implements ReaderStrategy {
                 continue;
             }
 
+            boolean hasReadOrPass = false;
             // 根据策略执行操作
             while (tokenNow > 0) {
                 if (disk.ptr > disk.RWEnd)
                     break;
                 // 找到离磁头最近的任务
                 int closestTaskPosition = findClosestTask(disk);
+                // 如果找不到任务,pass一下
+                if (closestTaskPosition == -1) {
+                    break;
+                }
+
                 readerLogger
                         .debug("磁盘" + i + "当前位置:" + disk.ptr + " 最近任务位置:" + closestTaskPosition);
 
                 int distance = closestTaskPosition - disk.ptr;
 
-                // 距离大于G，直接跳转
-                if (distance > Info.tokenPerTick) {
-                    // 如果距离 > G，就跳转
+                // 如果距离小于0或者大于G，跳转到最近任务位置
+                if ((distance < 0 || distance > Info.tokenPerTick) && !hasReadOrPass) {
                     readerLogger.debug("距离 > G，执行跳转到" + closestTaskPosition);
                     readCommandOut.actions.add(Info.Action.JUMP);
-                    readCommandOut.jumpTarget = 0;
-                    disk.ptrDoAction(Info.Action.JUMP, 0);
+                    readCommandOut.jumpTarget = closestTaskPosition;
+                    disk.ptrDoAction(Info.Action.JUMP, closestTaskPosition);
                     disk.preoper = Info.Action.JUMP;
                     disk.pretoken = Info.tokenPerTick;
                     readCommandOuts.put(i, readCommandOut);
                     break;
                 }
 
-                // 根据距离不同，选择pass过去还是read过去
+                // 根据距离不同，选择pass/read到有任务的位置
                 if (distance > (2.0 / 3.0) * Info.tokenPerTick) {
                     // 如果距离 > 2/3 G，就PASS
-                    readerLogger.debug("距离 > 2/3 G，执行PASS");
-                    while (tokenNow > 0 && disk.ptr < closestTaskPosition) {
+                    readerLogger.debug("距离 > 2/3 G");
+                    int tokenNeeded = calculateToken(Action.PASS, disk);
+                    if (tokenNow <= tokenNeeded) {
+                        readerLogger.debug("token不足，跳过当前磁盘处理: tokenNow=" + tokenNow + ", needed="
+                                + tokenNeeded);
+                        break;
+                    }
+                    while (disk.ptr < closestTaskPosition && tokenNow > tokenNeeded) {
+                        readerLogger.debug("token剩余" + tokenNow + " 距离任务位置"
+                                + (closestTaskPosition - disk.ptr));
                         processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
+                        tokenNeeded = calculateToken(Action.PASS, disk);
+                        hasReadOrPass = true;
                     }
                 } else {
-                    readerLogger.debug("距离 <= 2/3 G，执行READ操作");
-                    while (tokenNow > 0 && disk.ptr < closestTaskPosition) {
-                        // 计算读取操作消耗的token
-                        processAction(Info.Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                    readerLogger.debug("距离 <= 2/3 G");
+                    int tokenNeeded = calculateToken(Info.Action.READ, disk);
+                    if (tokenNow <= tokenNeeded) {
+                        readerLogger.debug("token不足，跳过当前磁盘处理: tokenNow=" + tokenNow + ", needed="
+                                + tokenNeeded);
+                        break;
                     }
-                }
-
-                // 如果磁头到达了任务位置
-                if (disk.ptr == closestTaskPosition
-                        && tokenNow > calculateToken(Info.Action.READ, disk)) {
-                    // 到达任务位置，执行READ操作
-                    readerLogger.debug("到达任务位置，执行READ操作");
-                    tokenNow -= disk.pretoken;
-                    int objId = disk.unitData.get(disk.ptr).objId;
-                    int blockId = disk.unitData.get(disk.ptr).blockId;
-                    UserObject object = Info.objMap.get(objId);
-                    readerLogger.debug("objid为" + objId + "blockid为" + blockId);
-
-                    Iterator<ReadTask> iterator = object.readTasks.iterator();
-                    while (iterator.hasNext()) {
-                        ReadTask readTask = iterator.next();
-                        if (readTask.blockNotFinished.contains(blockId)) {
-                            // 检测任务的完成
-                            // 检测过期
-                            readerLogger.debug("任务ID" + readTask.taskId);
-                            // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
-                            if (readTask.isTimeout()) {
-                                readerLogger.debug("任务过期: " + readTask.taskId);
-                                object.timeoutTasks.add(readTask.taskId);
-                                iterator.remove();
-                                continue;
-                            }
-                            // 处理块
-                            readTask.blockNotFinished.remove(blockId);
-                            readTask.blockFinished.add(blockId);
-                            // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
-                            if (readTask.blockNotFinished.isEmpty()) {
-                                readerLogger.debug("上报任务id" + readTask.taskId);
-                                completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
-                                iterator.remove();
+                    while (disk.ptr <= closestTaskPosition && tokenNow > tokenNeeded) {
+                        readerLogger.debug("token剩余" + tokenNow + " 距离任务位置"
+                                + (closestTaskPosition - disk.ptr));
+                        int objId = disk.unitData.get(disk.ptr).objId;
+                        int blockId = disk.unitData.get(disk.ptr).blockId;
+                        if (objId == -1) {
+                            readerLogger.debug("输出READ，ptr位置为" + disk.ptr + "块id为"
+                                    + disk.unitData.get(disk.ptr).blockId + "浪费token" + disk.pretoken);
+                            processAction(Info.Action.READ, disk, readCommandOut);
+                            tokenNow -= disk.pretoken;
+                            hasReadOrPass = true;
+                            continue;
+                        }
+                        UserObject object = Info.objMap.get(objId);
+                        readerLogger.debug("objid为" + objId + "blockid为" + blockId + "objsize为 "
+                                + object.objSize);
+                        Iterator<ReadTask> iterator = object.readTasks.iterator();
+                        while (iterator.hasNext()) {
+                            ReadTask readTask = iterator.next();
+                            if (readTask.blockNotFinished.contains(blockId)) {
+                                // 检测任务的完成
+                                // 检测过期
+                                readerLogger.debug("任务ID" + readTask.taskId);
+                                // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
+                                if (readTask.isTimeout()) {
+                                    readerLogger.debug("任务过期: " + readTask.taskId);
+                                    object.timeoutTasks.add(readTask.taskId);
+                                    iterator.remove();
+                                    continue;
+                                }
+                                // 处理块
+                                readTask.blockNotFinished.remove(blockId);
+                                readTask.blockFinished.add(blockId);
+                                // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
+                                if (readTask.blockNotFinished.isEmpty()) {
+                                    readerLogger.debug("上报任务id" + readTask.taskId);
+                                    completeCommandOuts
+                                            .add(new CompleteCommandOut(readTask.taskId));
+                                    iterator.remove();
+                                }
                             }
                         }
+                        disk.unitData.get(disk.ptr).isInTask = false;
+                        // 输出
+                        readerLogger.debug("输出READ，ptr位置为" + disk.ptr + "块id为"
+                                + disk.unitData.get(disk.ptr).blockId + "对象id为" + object.objId);
+                        processAction(Info.Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        hasReadOrPass = true;
+
                     }
-                    disk.unitData.get(disk.ptr).isInTask = false;
-                    // 输出
-                    readerLogger.debug("输出READ，ptr位置为" + disk.ptr + "块id为"
-                            + disk.unitData.get(disk.ptr).blockId);
-                    processAction(Info.Action.READ, disk, readCommandOut);
-                    tokenNow -= disk.pretoken;
                 }
             }
             readCommandOuts.put(i, readCommandOut);
@@ -141,7 +164,14 @@ public class NewNewReader implements ReaderStrategy {
     private int findClosestTask(LocalDisk disk) {
         int closestPosition = -1;
 
-        for (int pos = disk.ptr; pos <= disk.RWEnd; pos++) {
+        for (int pos = disk.ptr; pos <= disk.logicalRWEnd; pos++) {
+            if (disk.unitData.get(pos).isInTask) {
+                closestPosition = pos;
+                break;
+            }
+        }
+
+        for (int pos = 0; pos < disk.ptr; pos++) {
             if (disk.unitData.get(pos).isInTask) {
                 closestPosition = pos;
                 break;
