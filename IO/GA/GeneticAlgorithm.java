@@ -240,6 +240,43 @@ public class GeneticAlgorithm {
         // 检查每个磁盘上的标签数量
         Map<Integer, Integer> diskTagsCount = checkDiskTagsCount(individual);
 
+        // 检查每个标签的比例，移除低于最小阈值的分配
+        for (int tagId = 0; tagId < GeneticParameters.TAGS.length; tagId++) {
+            List<Individual.DiskAllocation> tagDisks = individual.getTag(tagId);
+            boolean hasRemoved = false;
+
+            // 移除比例过低的分配
+            Iterator<Individual.DiskAllocation> iterator = tagDisks.iterator();
+            while (iterator.hasNext()) {
+                Individual.DiskAllocation disk = iterator.next();
+                if (disk.getProportion() < GeneticParameters.MIN_TAG_PROPORTION) {
+                    iterator.remove();
+                    hasRemoved = true;
+
+                    // 更新磁盘标签计数
+                    int diskIdx = disk.getDiskIdx();
+                    diskTagsCount.put(diskIdx, diskTagsCount.get(diskIdx) - 1);
+                }
+            }
+
+            // 如果标签所有分配都被移除，创建一个新的随机分配
+            if (tagDisks.isEmpty()) {
+                int diskIdx = random.nextInt(GeneticParameters.NUM_DISKS);
+                individual.addTagToDisk(tagId, diskIdx, 1.0);
+                diskTagsCount.put(diskIdx, diskTagsCount.get(diskIdx) + 1);
+            }
+            // 如果有分配被移除，需要归一化剩余分配的比例
+            else if (hasRemoved) {
+                double totalProportion = tagDisks.stream()
+                        .mapToDouble(Individual.DiskAllocation::getProportion)
+                        .sum();
+
+                for (Individual.DiskAllocation disk : tagDisks) {
+                    disk.setProportion(disk.getProportion() / totalProportion);
+                }
+            }
+        }
+
         // 修复超过上限的磁盘
         for (int diskIdx = 0; diskIdx < GeneticParameters.NUM_DISKS; diskIdx++) {
             int tagsCount = diskTagsCount.get(diskIdx);
@@ -548,7 +585,8 @@ public class GeneticAlgorithm {
                 int newDiskIdx = availableDisks.get(random.nextInt(availableDisks.size()));
 
                 // 从现有分配中取出一些比例
-                double newProportion = 0.2; // 取20%的比例给新磁盘
+                // 确保新分配的比例不小于最小阈值
+                double newProportion = Math.max(GeneticParameters.MIN_TAG_PROPORTION, 0.2);
 
                 // 减少其他磁盘的比例
                 for (Individual.DiskAllocation disk : tagDisks) {
@@ -577,11 +615,16 @@ public class GeneticAlgorithm {
                 double prop1 = disk1.getProportion();
                 double prop2 = disk2.getProportion();
 
-                // 确保比例不会变为负数
-                if (shift > prop1)
-                    shift = prop1 * 0.9;
-                if (shift > prop2)
-                    shift = prop2 * 0.9;
+                // 确保调整后的比例不会小于最小阈值
+                double minShift = Math.min(
+                        prop1 - GeneticParameters.MIN_TAG_PROPORTION,
+                        prop2 - GeneticParameters.MIN_TAG_PROPORTION);
+                shift = Math.min(shift, minShift);
+
+                // 如果可调整空间太小，就跳过这次变异
+                if (shift <= 0.01) {
+                    return;
+                }
 
                 // 随机决定调整方向
                 if (random.nextBoolean()) {

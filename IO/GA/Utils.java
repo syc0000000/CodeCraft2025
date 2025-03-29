@@ -159,9 +159,9 @@ public class Utils {
                 Arrays.stream(diskReadVariances).min().getAsDouble();
 
         // 总分 (越小越好) - 增加了最大负载差异和方差差异的惩罚
-        return loadCv * 0.4 +
-                readVarianceMean * 0.2 +
-                loadRangeNormalized * 0.4 +
-                varianceRange * 0.0;
+        return loadCv * 0 +
+                readVarianceMean * 10 +
+                loadRangeNormalized * 0 +
+                varianceRange * 2;
     }
 }
