@@ -13,14 +13,16 @@ public class Reader {
             this.readerStrategy = new ReadOnlyStrategy();
         } else if (readerStrategy.equals("default")) {
             this.readerStrategy = new DefaultReaderStrategy();
-        } else if (readerStrategy.equals("newReader")){
+        } else if (readerStrategy.equals("newReader")) {
             this.readerStrategy = new NewReaderStratrgy();
-        } else if (readerStrategy.equals("GreedReader")){
+        } else if (readerStrategy.equals("GreedReader")) {
             this.readerStrategy = new GreedReaderStategy();
-        } else if (readerStrategy.equals("GreedReaderWithoutJump")){
+        } else if (readerStrategy.equals("GreedReaderWithoutJump")) {
             this.readerStrategy = new GreedReaderWithoutJumpStrategy();
-        } else if (readerStrategy.equals("TagReader")){
+        } else if (readerStrategy.equals("TagReader")) {
             this.readerStrategy = new TagReaderStrategy();
+        } else if (readerStrategy.equals("Begin")) {
+            this.readerStrategy = new BeginStrategy();
         } else {
             throw new IllegalArgumentException("Invalid reader strategy: " + readerStrategy);
         }
