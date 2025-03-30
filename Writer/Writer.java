@@ -17,6 +17,8 @@ public class Writer {
             this.writeStrategy = new UnitFFWriteStrategy();
         } else if (writeStrategy.equals("tag")) {
             this.writeStrategy = new TagWriterStrategy();
+        } else if (writeStrategy.equals("nt")) {
+            this.writeStrategy = new NewTagWriterStrategy();
         } else {
             throw new IllegalArgumentException("Invalid write strategy: " + writeStrategy);
         }
