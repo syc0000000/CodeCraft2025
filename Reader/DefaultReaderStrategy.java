@@ -140,6 +140,22 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
+                } else if (k == 3 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
+                    if (disk.pretoken < 28) {
+                        processAction(Info.Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Info.Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Info.Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    } else {
+                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    }
                 }
                 // 任务离得很远
                 else {
