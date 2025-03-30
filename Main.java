@@ -23,6 +23,7 @@ import Deleter.Deleter;
 import IO.IO;
 import IO.GAForRank.Entry;
 import IO.TimeWeightForRank.TimeEntry;
+import IO.hardcode.dist2;
 import IO.model.DiskDistributionGA;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
@@ -32,6 +33,7 @@ import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info;
+import Info.Info.LocalDisk;
 import Info.Info.Tag;
 import Logger.Logger;
 import Logger.LoggerFactory;
@@ -133,12 +135,21 @@ public class Main {
             ArrayList<Integer> sortedTagIds = entry.getValue();
 
             mainLogger.info("应用磁盘 " + diskId + " 的标签排序，共 " + sortedTagIds.size() + " 个标签");
+            int tagTotalSize = 0;
+            for (Integer tagId : sortedTagIds) {
+                Info.Tag tag = Info.tags.get(tagId);
+                tagTotalSize += tag.lenthList.get(diskId);
+            }
 
+            LocalDisk disk = Info.localDiskTbl.get(diskId);
+            double portion = (double) disk.logicalRWEnd / tagTotalSize;
+            mainLogger.info("portion" + portion
+                    + "; tagTotalSize" + tagTotalSize + " disk.logicalRWEnd" + disk.logicalRWEnd);
             // 记录排序结果到Tag的middle位置
             int currentPosition = 0;
             for (Integer tagId : sortedTagIds) {
-                Info.Tag tag = Info.tags.get(tagId);
-                int tagSize = tag.lenthList.get(diskId);
+                Info.Tag tag = Info.tags.get(tagId);                
+                int tagSize = (int)(tag.lenthList.get(diskId) * portion);
 
                 // 记录标签在磁盘上的中间位置
                 tag.middleList.set(diskId, currentPosition + tagSize / 2);
@@ -260,14 +271,14 @@ public class Main {
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
         logger.enableModule("Info");
-        logger.enableModule("DiskGA");
-        logger.enableModule("IO");
+        // logger.enableModule("DiskGA");
+        // logger.enableModule("IO");
         // logger.enableModule("Reader");
         logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 0);
+        logger.enableTimeRange(0, 1);
 
         mainLogger.info("程序启动");
 
@@ -292,22 +303,21 @@ public class Main {
         }
 
         int[] tagValues = IO.tagsUnitUsage.stream().mapToInt(Integer::intValue).toArray();
-        Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
-        // Map<Integer, List<DiskDistributionGA.Split>> distribution =
-        // dist1.createHardcodedDistribution(); //
+        // Map<Integer, List<DiskDistributionGA.Split>> distribution; // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
+        Map<Integer, List<DiskDistributionGA.Split>> distribution = dist2.createHardcodedDistribution(); //
         // 一级Map的key是tagId，二级Map的key无意义，value是某磁盘分配百分比
 
-        if (loadDistributionPath != null) {
-            // 从指定文件加载
-            distribution = loadDistribution(loadDistributionPath);
-        } else {
-            // 重新计算并保存到带时间戳的文件
-            distribution = computeDistribution(tagValues, true);
-            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String savePath = "distributions/distribution_" + timestamp + ".ser";
-            saveDistribution(distribution, savePath);
-        }
-        mainLogger.info("遗传算法分配结果: " + distribution.toString());
+        // if (loadDistributionPath != null) {
+        //     // 从指定文件加载
+        //     distribution = loadDistribution(loadDistributionPath);
+        // } else {
+        //     // 重新计算并保存到带时间戳的文件
+        //     distribution = computeDistribution(tagValues, true);
+        //     String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        //     String savePath = "distributions/distribution_" + timestamp + ".ser";
+        //     saveDistribution(distribution, savePath);
+        // }
+        // mainLogger.info("遗传算法分配结果: " + distribution.toString());
 
         // 临时变量，帮助记录每个Tag在每个Disk上的middle位置
         ArrayList<Integer> startPositionForDisk = new ArrayList<>();

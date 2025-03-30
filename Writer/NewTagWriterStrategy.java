@@ -88,10 +88,13 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
                     log.error("磁盘的RWEnd位置为" + backupDisk.logicalRWEnd + ", 总size为"
                             + backupDisk.unitNum);
                     StringBuilder sb = new StringBuilder();
+                    sb.append("From 0 to " + backupDisk.logicalRWEnd + "\n");
                     for (int j = 0; j < backupDisk.logicalRWEnd; j++) {
                         sb.append(backupDisk.unitData.get(j).objId + " ");
                     }
                     sb.append("\n");
+                    sb.append("From " + backupDisk.logicalBackStart + " to " + backupDisk.unitNum
+                            + "\n");
                     for (int j = backupDisk.logicalBackStart; j < backupDisk.unitNum; j++) {
                         sb.append(backupDisk.unitData.get(j).objId + " ");
                     }
@@ -101,8 +104,8 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
                         log.error("磁盘" + i + "的信息: ");
                         log.error("磁盘ID: " + disk.diskId);
                         log.error("磁盘单元数: " + disk.unitNum);
-                        log.error("磁盘剩余rw空间: " + disk.rwSizeLeft);
-                        log.error("磁盘剩余backup空间: " + disk.backSizeLeft);
+                        log.error("磁盘剩余rw空间: " + disk.rwSizeLeft + " 磁盘LogicalRWEnd: " + disk.logicalRWEnd);
+                        log.error("磁盘剩余backup空间: " + disk.backSizeLeft + " 磁盘LogicalBackStart: " + disk.logicalBackStart);
                         log.error("磁盘RWEnd: " + disk.RWEnd);
                     }
                     throw new RuntimeException(
@@ -172,7 +175,7 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
             ArrayList<Integer> rightUnits = new ArrayList<>();
             int rightNeeded = obj_size;
 
-            while (rightIdx < disk.logicalRWEnd && rightNeeded > 0) {
+            while (rightIdx <= disk.logicalRWEnd && rightNeeded > 0) {
                 if (disk.unitData.get(rightIdx).objId == -1) {
                     rightUnits.add(rightIdx);
                     rightNeeded--;
