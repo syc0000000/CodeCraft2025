@@ -199,10 +199,10 @@ public class Main {
                 public DiskSortResult call() throws Exception {
                     long startTime = System.currentTimeMillis();
 
-                    // ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId),
-                    // diskId);
-                    ArrayList<Integer> sortedTagIds = TimeEntry.entrypoint(diskToTag.get(diskId),
+                    ArrayList<Integer> sortedTagIds = Entry.entrypoint(diskToTag.get(diskId),
                             diskId);
+                    // ArrayList<Integer> sortedTagIds = TimeEntry.entrypoint(diskToTag.get(diskId),
+                    // diskId);
 
                     long endTime = System.currentTimeMillis();
                     long timeSpent = endTime - startTime;
@@ -353,7 +353,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("NewNewReader");
+        Reader reader = new Reader("default");
 
         // 主循环 - 处理每个时间片
         try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {

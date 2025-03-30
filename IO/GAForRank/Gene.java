@@ -58,10 +58,14 @@ public class Gene {
             // 现在知道minPos和maxPos，就可以计算这个period的区间长度，lenth=min到max之间所有tag的size相加
             int currentPeriodLength = 0;
             for (int i = minPos + 1; i < maxPos; i++) {
-                currentPeriodLength += Info.tags.get(tagRank.get(i)).lenthList.get(diskId);
+                // 再乘以总read请求数
+                currentPeriodLength += Info.tags.get(tagRank.get(i)).lenthList.get(diskId)
+                        * IO.readSizeByPeriod.get(i).get(tagRank.get(i));
             }
-            currentPeriodLength += Info.tags.get(tagRank.get(minPos)).lenthList.get(diskId) / 2;
-            currentPeriodLength += Info.tags.get(tagRank.get(maxPos)).lenthList.get(diskId) / 2;
+            currentPeriodLength += Info.tags.get(tagRank.get(minPos)).lenthList.get(diskId) / 2
+                    * IO.readSizeByPeriod.get(minPos).get(tagRank.get(minPos));
+            currentPeriodLength += Info.tags.get(tagRank.get(maxPos)).lenthList.get(diskId) / 2
+                    * IO.readSizeByPeriod.get(maxPos).get(tagRank.get(maxPos));
 
             this.periodLength.add(currentPeriodLength);
             totalFitness += currentPeriodLength;

@@ -23,7 +23,7 @@ import Logger.LoggerFactory.ModuleLogger;
  * IO模块的主要接口 只负责输入输出的解析和格式化，不负责业务逻辑处理
  */
 public class IO {
-    private static final double TAG_THRESHOLD = 0.95; // 每个period，readSize从高到低，选择95%的标签
+    private static final double TAG_THRESHOLD = 0.8; // 每个period，readSize从高到低，选择95%的标签
     private static final int FRE_PER_SLICING = 1800;
     private static Scanner scanner = new Scanner(System.in);
     private static final ModuleLogger log = LoggerFactory.getLogger("IO");
