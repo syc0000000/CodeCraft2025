@@ -44,7 +44,7 @@ public class GeneticParameters {
      * 每个磁盘上标签的最小比例阈值
      * 比例小于此值的分配将被丢弃
      */
-    public static final double MIN_TAG_PROPORTION = 0.1;
+    public static final double MIN_TAG_PROPORTION = 0.08;
 
     // 遗传算法参数
     /**

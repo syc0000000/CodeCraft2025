@@ -27,6 +27,7 @@ public class NewNewReader implements ReaderStrategy {
 
         // 遍历磁盘
         for (int i = 0; i < Info.diskNum; i++) {
+            readerLogger.debug("磁盘" + i + "开始处理");
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
@@ -71,6 +72,8 @@ public class NewNewReader implements ReaderStrategy {
                     disk.pretoken = Info.tokenPerTick;
                     readCommandOuts.put(i, readCommandOut);
                     break;
+                } else if (distance < 0 || distance > Info.tokenPerTick) {
+                    break;
                 }
 
                 // 根据距离不同，选择pass/read到有任务的位置
@@ -78,12 +81,12 @@ public class NewNewReader implements ReaderStrategy {
                     // 如果距离 > 2/3 G，就PASS
                     readerLogger.debug("距离 > 2/3 G");
                     int tokenNeeded = calculateToken(Action.PASS, disk);
-                    if (tokenNow <= tokenNeeded) {
+                    if (tokenNow < tokenNeeded) {
                         readerLogger.debug("token不足，跳过当前磁盘处理: tokenNow=" + tokenNow + ", needed="
                                 + tokenNeeded);
                         break;
                     }
-                    while (disk.ptr < closestTaskPosition && tokenNow > tokenNeeded) {
+                    while (disk.ptr < closestTaskPosition && tokenNow >= tokenNeeded) {
                         readerLogger.debug("token剩余" + tokenNow + " 距离任务位置"
                                 + (closestTaskPosition - disk.ptr));
                         processAction(Action.PASS, disk, readCommandOut);
@@ -94,12 +97,12 @@ public class NewNewReader implements ReaderStrategy {
                 } else {
                     readerLogger.debug("距离 <= 2/3 G");
                     int tokenNeeded = calculateToken(Info.Action.READ, disk);
-                    if (tokenNow <= tokenNeeded) {
+                    if (tokenNow < tokenNeeded) {
                         readerLogger.debug("token不足，跳过当前磁盘处理: tokenNow=" + tokenNow + ", needed="
                                 + tokenNeeded);
                         break;
                     }
-                    while (disk.ptr <= closestTaskPosition && tokenNow > tokenNeeded) {
+                    while (disk.ptr <= closestTaskPosition && tokenNow >= tokenNeeded) {
                         readerLogger.debug("token剩余" + tokenNow + " 距离任务位置"
                                 + (closestTaskPosition - disk.ptr));
                         int objId = disk.unitData.get(disk.ptr).objId;
@@ -159,7 +162,6 @@ public class NewNewReader implements ReaderStrategy {
         return readRetrun;
     }
 
-
     // 辅助方法：找到离当前磁头最近的任务位置
     private int findClosestTask(LocalDisk disk) {
         int closestPosition = -1;
@@ -169,6 +171,9 @@ public class NewNewReader implements ReaderStrategy {
                 closestPosition = pos;
                 break;
             }
+        }
+        if (closestPosition != -1) {
+            return closestPosition;
         }
 
         for (int pos = 0; pos < disk.ptr; pos++) {

@@ -23,5 +23,6 @@ if [ "$(uname -s)" = "Darwin" ]; then
   python3 ./test/run.py ./test/interactor_mac $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION
 else
     # 其他系统
+    # python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main -load distributions/distribution_20250330_013040.ser -loadTags tags/sortedTags_20250330_013040.ser" $DEBUG_OPTION
     python3 ./test/run.py ./test/interactor $INPUT_FILE "java -cp ./build Main" $DEBUG_OPTION
 fi

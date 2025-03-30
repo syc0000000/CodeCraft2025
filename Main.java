@@ -271,14 +271,14 @@ public class Main {
         logger.enableModule("Writer");
         logger.enableModule("Deleter");
         logger.enableModule("Info");
-        // logger.enableModule("DiskGA");
-        // logger.enableModule("IO");
+        logger.enableModule("DiskGA");
+        logger.enableModule("IO");
         // logger.enableModule("Reader");
         logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 1);
+        logger.enableTimeRange(0, 0);
 
         mainLogger.info("程序启动");
 
@@ -363,7 +363,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("default");
+        Reader reader = new Reader("NewNewReader");
 
         // 主循环 - 处理每个时间片
         try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {
