@@ -363,7 +363,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("NewNewReader");
+        Reader reader = new Reader("default");
 
         // 主循环 - 处理每个时间片
         try (FileWriter fileWriter = new FileWriter("disk0RWEnd.txt", false)) {

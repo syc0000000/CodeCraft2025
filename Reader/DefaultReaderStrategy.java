@@ -32,6 +32,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
         for (int i = 0; i < Info.diskNum; i++) {
             // 基础准备
             
+            boolean hasPassOrRead = false;
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
@@ -97,6 +98,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         // 输出
                         readerLogger.debug("输出READ，ptr位置为"+disk.ptr+"块id为"+disk.unitData.get(disk.ptr).blockId);
                         processAction(Info.Action.READ, disk, readCommandOut);
+                        hasPassOrRead = true;
                         // 减少token
                         tokenNow -= disk.pretoken;
                         continue;
@@ -108,6 +110,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                 }
                 // 如果是发现已经跑出范围，则直接退出
                 int k;
+                int closestTaskPosition = findClosestTask(disk);
                 // 找任务，找到就直接退出，尝试处理任务
                 if(tokenNow - calculateToken(Info.Action.READ, disk) < 0) break;
                 for (k = 1; k < tokenNow - 64; k++) {
@@ -128,6 +131,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
+                    hasPassOrRead = true;
                 } else if (k == 2 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
                     if (disk.pretoken < 34) {
                         processAction(Info.Action.READ, disk, readCommandOut);
@@ -140,6 +144,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
+                    hasPassOrRead = true;
                 } else if (k == 3 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
                     if (disk.pretoken < 28) {
                         processAction(Info.Action.READ, disk, readCommandOut);
@@ -156,14 +161,27 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         processAction(Info.Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
+                    hasPassOrRead = true;
                 }
                 // 任务离得很远
                 else {
                     readerLogger.debug("向后寻找不到任务");
-                    while (k > 0) {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        k--;
+                    int distance = Math.abs(closestTaskPosition - disk.ptr);
+                    if (closestTaskPosition != -1 && !hasPassOrRead && distance > Info.tokenPerTick) {
+                        readerLogger.debug("距离 > G，执行跳转到" + closestTaskPosition);
+                        readCommandOut.actions.add(Info.Action.JUMP);
+                        readCommandOut.jumpTarget = closestTaskPosition;
+                        disk.ptrDoAction(Info.Action.JUMP, closestTaskPosition);
+                        disk.preoper = Info.Action.JUMP;
+                        disk.pretoken = Info.tokenPerTick;
+                        readCommandOuts.put(i, readCommandOut);
+                        break;
+                    } else {
+                        while (k > 0) {
+                            processAction(Info.Action.PASS, disk, readCommandOut);
+                            tokenNow -= disk.pretoken;
+                            k--;
+                        }
                     }
                 }
             }
@@ -173,5 +191,28 @@ public class DefaultReaderStrategy implements ReaderStrategy {
         readRetrun.readCommandOuts = readCommandOuts;
         readRetrun.completeCommandOuts = completeCommandOuts;
         return readRetrun;
+    }
+    
+    private int findClosestTask(LocalDisk disk) {
+        int closestPosition = -1;
+
+        for (int pos = disk.ptr; pos <= disk.logicalRWEnd; pos++) {
+            if (disk.unitData.get(pos).isInTask) {
+                closestPosition = pos;
+                break;
+            }
+        }
+        if (closestPosition != -1) {
+            return closestPosition;
+        }
+
+        for (int pos = 0; pos < disk.ptr; pos++) {
+            if (disk.unitData.get(pos).isInTask) {
+                closestPosition = pos;
+                break;
+            }
+        }
+
+        return closestPosition;
     }
 }
