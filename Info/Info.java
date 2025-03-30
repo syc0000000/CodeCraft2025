@@ -311,7 +311,7 @@ public class Info {
                     disk.logicalBackStart = disk.logicalRWEnd + 1;
                     // 初始化剩余空间
                     disk.backSizeLeft = unitNum - disk.logicalBackStart;
-                    disk.rwSizeLeft = unitNum / 3;
+                    disk.rwSizeLeft = disk.logicalRWEnd + 1;
                     // 整个backup区域算作一个space，后续不会再对它进行切分
                     DiskSpace backupDiskSpace = new DiskSpace(false, disk.logicalBackStart, unitNum - 1, diskId);
                     backupDiskSpace.type = DiskSpaceType.BACKUPSPACE;
