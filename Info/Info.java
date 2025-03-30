@@ -307,7 +307,7 @@ public class Info {
                     break;
                 case "tag":
                     // 初始化rw,backup边界
-                    disk.logicalRWEnd = (int) (unitNum / 2.7) - 1;
+                    disk.logicalRWEnd = (int) (unitNum / 2.91) - 1;
                     disk.logicalBackStart = disk.logicalRWEnd + 1;
                     // 初始化剩余空间
                     disk.backSizeLeft = unitNum - disk.logicalBackStart;
