@@ -14,6 +14,31 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 默认的删除策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#freespaceBySize} - 跟踪每个磁盘上的可用空间</li>
+ * </ul>
+ *
+ * 主要功能:
+ * <ul>
+ * <li>清理对象占用的磁盘空间</li>
+ * <li>维护磁盘的空闲空间信息</li>
+ * <li>终止对象相关的读任务</li>
+ * <li>更新磁盘单元的任务状态</li>
+ * </ul>
+ */
 public class DefaultDeleteStrategy implements DeleteStrategy {
     ModuleLogger log = LoggerFactory.getLogger("Deleter");
 

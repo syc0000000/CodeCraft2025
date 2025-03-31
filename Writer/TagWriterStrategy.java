@@ -14,6 +14,43 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 基于标签和中间点策略的写入策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * <li>{@link Info#tags} - 存储所有标签信息的列表</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#rwSizeLeft} - 磁盘剩余读写区域大小</li>
+ * <li>{@link LocalDisk#backSizeLeft} - 磁盘剩余备份区域大小</li>
+ * <li>{@link LocalDisk#logicalRWEnd} - 读写区域的逻辑结束位置</li>
+ * <li>{@link LocalDisk#logicalBackStart} - 备份区域的逻辑起始位置</li>
+ * <li>{@link LocalDisk#RWEnd} - 读写区域的当前结束位置</li>
+ * </ul>
+ *
+ * 标签相关结构:
+ * <ul>
+ * <li>{@link Tag#middleList} - 每个磁盘上标签对应的中间点位置列表</li>
+ * <li>{@link Tag#sizeList} - 每个磁盘上标签已使用的空间大小列表</li>
+ * </ul>
+ *
+ * 与DefaultWriteStrategy的主要区别:
+ * <ul>
+ * <li>根据标签信息选择合适的磁盘进行写入</li>
+ * <li>读写副本优先写入靠近标签中间点的位置</li>
+ * <li>备份副本从磁盘末尾开始写入</li>
+ * <li>维护标签相关的使用统计信息</li>
+ * <li>严格区分读写区域和备份区域</li>
+ * </ul>
+ */
 public class TagWriterStrategy extends DefaultWriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 

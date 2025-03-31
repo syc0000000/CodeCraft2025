@@ -15,6 +15,41 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 基于标签和空间类型的删除策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * <li>{@link Info#tags} - 存储所有标签信息的列表</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#rwSizeLeft} - 磁盘剩余读写区域大小</li>
+ * <li>{@link LocalDisk#backSizeLeft} - 磁盘剩余备份区域大小</li>
+ * <li>{@link LocalDisk#RWEnd} - 读写区域的当前结束位置</li>
+ * </ul>
+ *
+ * 空间管理结构:
+ * <ul>
+ * <li>{@link DiskSpace#type} - 空间类型(未使用/读写/备份)</li>
+ * <li>{@link DiskSpace#isFree} - 空间是否空闲</li>
+ * </ul>
+ *
+ * 与DefaultDeleteStrategy的主要区别:
+ * <ul>
+ * <li>维护空间类型信息</li>
+ * <li>支持空间合并操作</li>
+ * <li>区分读写和备份空间的释放过程</li>
+ * <li>更新标签使用统计信息</li>
+ * <li>对读写区域边界进行特殊处理</li>
+ * </ul>
+ */
 public class TagDeleteStrategy implements DeleteStrategy {
     ModuleLogger log = LoggerFactory.getLogger("Deleter");
 

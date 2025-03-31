@@ -12,6 +12,35 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 基于标签信息的写入策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * <li>{@link Info#tags} - 存储所有标签信息的列表</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#rwSizeLeft} - 磁盘剩余读写区域大小</li>
+ * <li>{@link LocalDisk#backSizeLeft} - 磁盘剩余备份区域大小</li>
+ * <li>{@link LocalDisk#logicalRWEnd} - 读写区域的逻辑结束位置</li>
+ * <li>{@link LocalDisk#logicalBackStart} - 备份区域的逻辑起始位置</li>
+ * </ul>
+ *
+ * 与DefaultWriteStrategy的主要区别:
+ * <ul>
+ * <li>根据对象的标签信息选择合适的磁盘进行写入</li>
+ * <li>将读写副本放置在接近标签指定中间位置的区域</li>
+ * <li>备份副本从磁盘末尾开始放置</li>
+ * <li>更新标签相关的磁盘使用统计信息</li>
+ * </ul>
+ */
 public class NewTagWriterStrategy extends DefaultWriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 

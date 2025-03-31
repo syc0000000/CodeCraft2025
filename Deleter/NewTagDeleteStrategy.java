@@ -13,6 +13,34 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 基于标签信息的删除策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * <li>{@link Info#tags} - 存储所有标签信息的列表</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#rwSizeLeft} - 磁盘剩余读写区域大小</li>
+ * <li>{@link LocalDisk#backSizeLeft} - 磁盘剩余备份区域大小</li>
+ * <li>{@link LocalDisk#RWEnd} - 读写区域的当前结束位置</li>
+ * </ul>
+ *
+ * 与DefaultDeleteStrategy的主要区别:
+ * <ul>
+ * <li>区分读写副本和备份副本的删除处理</li>
+ * <li>维护标签使用空间统计信息</li>
+ * <li>更新读写区域边界位置</li>
+ * <li>不使用freespaceBySize结构,直接操作单元数组</li>
+ * </ul>
+ */
 public class NewTagDeleteStrategy implements DeleteStrategy {
     ModuleLogger log = LoggerFactory.getLogger("Deleter");
 

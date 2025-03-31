@@ -12,6 +12,35 @@ import IO.model.WriteCommandOut;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 基于读写区域和备份区域分离的写入策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * <li>{@link Info#MAX_RW_END} - 读写区域的最大结束位置</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#freespaceBySize} - 磁盘空闲空间表</li>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#sizeLeft} - 磁盘剩余总空间</li>
+ * <li>{@link LocalDisk#RWEnd} - 读写区域的当前结束位置</li>
+ * </ul>
+ *
+ * 与DefaultWriteStrategy的主要区别:
+ * <ul>
+ * <li>基于磁盘剩余空间大小选择写入磁盘</li>
+ * <li>严格区分读写区域和备份区域</li>
+ * <li>读写副本写入读写区域前部</li>
+ * <li>备份副本从磁盘末尾开始写入</li>
+ * <li>维护RWEnd以标记读写区域边界</li>
+ * </ul>
+ */
 public class RWWriteStrategy extends DefaultWriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 

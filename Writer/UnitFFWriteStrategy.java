@@ -12,6 +12,34 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 基于单元级别优先适配的写入策略实现类
+ *
+ * 数据结构:
+ *
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * <li>{@link Info#MAX_RW_END} - 读写区域的最大结束位置</li>
+ * </ul>
+ *
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息</li>
+ * <li>{@link LocalDisk#sizeLeft} - 磁盘剩余总空间大小</li>
+ * <li>{@link LocalDisk#RWEnd} - 读写区域的当前结束位置</li>
+ * </ul>
+ *
+ * 与DefaultWriteStrategy的主要区别:
+ * <ul>
+ * <li>采用单元级别的优先适配算法选择存储位置</li>
+ * <li>基于磁盘剩余空间大小选择目标磁盘</li>
+ * <li>读写区域采用从前向后扫描的方式寻找空闲单元</li>
+ * <li>备份区域从磁盘末尾开始查找连续空闲单元</li>
+ * <li>不使用freespaceBySize结构,直接操作单元数组</li>
+ * </ul>
+ */
 public class UnitFFWriteStrategy extends DefaultWriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 
