@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import IO.model.PreprocessOut;
-import Logger.LoggerFactory;
-import Logger.LoggerFactory.ModuleLogger;
 import Info.model.*;
 
 // Info模块 - 管理全局信息和数据结构
 public class Info {
-    private static final ModuleLogger log = LoggerFactory.getLogger("Info");
     /** 硬盘数量 */
     public static int diskNum;
     /** 存储单元数量 */
