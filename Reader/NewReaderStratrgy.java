@@ -6,17 +6,17 @@ import IO.model.CompleteCommandOut;
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
-import Info.Info.UserObject;
+import Info.Info;
+import Info.model.Action;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.UserObject;
 import Reader.SequenceOptimizer.Result;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import Info.Info;
-import Info.Info.Action;
-import Info.Info.LocalDisk;
-import Info.Info.ReadTask;
 
 public class NewReaderStratrgy implements ReaderStrategy {
     private static final int[] R_COSTS = { 64, 52, 42, 34, 28, 23, 19, 16 };
@@ -38,8 +38,8 @@ public class NewReaderStratrgy implements ReaderStrategy {
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
             if (disk.ptr > disk.RWEnd) {
-                readCommandOut.actions.add(Info.Action.JUMP);
-                disk.preoper = Info.Action.JUMP;
+                readCommandOut.actions.add(Action.JUMP);
+                disk.preoper = Action.JUMP;
                 disk.pretoken = 0;
                 readCommandOut.jumpTarget = 0;
                 disk.ptr = 0;
@@ -57,48 +57,48 @@ public class NewReaderStratrgy implements ReaderStrategy {
             switch (disk.pretoken) {
                 case 64:
                     k = 1;
-                    sequence.add(Info.Action.READ);
+                    sequence.add(Action.READ);
                     break;
                 case 52:
                     k = 2;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 case 42:
                     k = 3;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 case 34:
                     k = 4;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 case 28:
                     k = 5;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 case 23:
                     k = 6;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 case 19:
                     k = 7;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 case 16:
                     k = 8;
                     for (int temp = 0; temp < k; temp++) {
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                     }
                     break;
                 default:
@@ -118,24 +118,24 @@ public class NewReaderStratrgy implements ReaderStrategy {
                 // 添加未优化路径
                 while (tokencpy > 0) {
                     if (disk.unitData.get(disk.ptr + sequenceptr).isInTask) {
-                        int tokenIsToUse = calculateToken(Info.Action.READ, preoper, pretoken);
+                        int tokenIsToUse = calculateToken(Action.READ, preoper, pretoken);
                         if (tokencpy - tokenIsToUse < 0) {
                             break;
                         }
                         pretoken = tokenIsToUse;
-                        sequence.add(Info.Action.READ);
+                        sequence.add(Action.READ);
                         tokencpy -= pretoken;
-                        preoper = Info.Action.READ;
+                        preoper = Action.READ;
                         lastReadToken = pretoken;
                     } else {
-                        int tokenIsToUse = calculateToken(Info.Action.PASS, preoper, pretoken);
+                        int tokenIsToUse = calculateToken(Action.PASS, preoper, pretoken);
                         if (tokencpy - tokenIsToUse < 0) {
                             break;
                         }
                         pretoken = tokenIsToUse;
-                        sequence.add(Info.Action.PASS);
+                        sequence.add(Action.PASS);
                         tokencpy -= pretoken;
-                        preoper = Info.Action.PASS;
+                        preoper = Action.PASS;
                     }
 
                     sequenceptr++;
@@ -147,7 +147,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
             }
             // readerLogger.debug("tokencpy"+tokencpy);
             // 将最优序列添加到输出中
-            while (sequence.size() > 0 && sequence.get(sequence.size() - 1) == Info.Action.PASS) {
+            while (sequence.size() > 0 && sequence.get(sequence.size() - 1) == Action.PASS) {
                 sequence.remove(sequence.size() - 1);
                 sequenceptr--;
             }
@@ -209,7 +209,7 @@ public class NewReaderStratrgy implements ReaderStrategy {
         return readRetrun;
     }
 
-    public int calculateToken(Info.Action action, Action preoper, int pretoken) {
+    public int calculateToken(Action action, Action preoper, int pretoken) {
         switch (action) {
             case READ:
                 // 向上取整

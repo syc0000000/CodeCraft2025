@@ -3,7 +3,7 @@ package IO.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import Info.Info.Action;
+import Info.model.Action;
 
 /**
  * 读命令输出-选手

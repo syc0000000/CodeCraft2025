@@ -5,10 +5,10 @@ import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.Replica;
-import Info.Info.Tag;
-import Info.Info.UserObject;
+import Info.model.LocalDisk;
+import Info.model.Replica;
+import Info.model.Tag;
+import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -21,8 +21,7 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
         for (WriteCommandIn writeCommandIn : writeCommandIns) {
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
-            UserObject obj =
-                    new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
             // Get disks based on tag information
             Tag tag = Info.tags.get(writeCommandIn.tag - 1);
@@ -37,8 +36,8 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
             log.debug("=== 开始为对象" + writeCommandIn.objId + "的rw replica选择磁盘 ===");
 
             LocalDisk rwDisk = disks.get(0);
-            ArrayList<Integer> rwUnitIdList =
-                    getUnitsNearMiddle(rwDisk, obj.objSize, tag.middleList.get(rwDisk.diskId));
+            ArrayList<Integer> rwUnitIdList = getUnitsNearMiddle(rwDisk, obj.objSize,
+                    tag.middleList.get(rwDisk.diskId));
 
             if (rwUnitIdList == null) {
                 log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId
@@ -74,7 +73,6 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
             tag.sizeList.set(rwDisk.diskId, tag.sizeList.get(rwDisk.diskId) + obj.objSize);
             writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, rwUnitIdList);
 
-
             // 两个备份磁盘
             for (int backReplicaIdx = 1; backReplicaIdx < disks.size(); backReplicaIdx++) {
                 log.debug("=== 开始为对象" + writeCommandIn.objId + "的backup replica" + backReplicaIdx
@@ -105,7 +103,8 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
                         log.error("磁盘ID: " + disk.diskId);
                         log.error("磁盘单元数: " + disk.unitNum);
                         log.error("磁盘剩余rw空间: " + disk.rwSizeLeft + " 磁盘LogicalRWEnd: " + disk.logicalRWEnd);
-                        log.error("磁盘剩余backup空间: " + disk.backSizeLeft + " 磁盘LogicalBackStart: " + disk.logicalBackStart);
+                        log.error(
+                                "磁盘剩余backup空间: " + disk.backSizeLeft + " 磁盘LogicalBackStart: " + disk.logicalBackStart);
                         log.error("磁盘RWEnd: " + disk.RWEnd);
                     }
                     throw new RuntimeException(
@@ -140,7 +139,7 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
      * 获取距离middle最近空闲空间，不维护freespaceBySize
      * 
      * @param obj_size 对象大小，范围1-5
-     * @param middle 中间位置
+     * @param middle   中间位置
      * @return 空闲空间，用于存放对象。优先返回MAX_RW_END之后的空间，如果没有才返回之前的空间
      */
     private ArrayList<Integer> getUnitsNearMiddle(LocalDisk disk, int obj_size, int middle) {
@@ -190,7 +189,6 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
         }
     }
 
-
     /**
      * 负责挑选unit来存放对象，不负责信息的更新，这样如果没有挑选到unit，不必回退信息。
      * 
@@ -223,9 +221,10 @@ public class NewTagWriterStrategy extends DefaultWriteStrategy {
     }
 
     /**
-     * 基于给定的标签ID和对象大小选择磁盘。 选择一个与标签关联的读写磁盘，以及两个具有最大可用空间的备份磁盘。 <del>1. 函数内部更换tag对应的disk的sizeList</del>
+     * 基于给定的标签ID和对象大小选择磁盘。 选择一个与标签关联的读写磁盘，以及两个具有最大可用空间的备份磁盘。 <del>1.
+     * 函数内部更换tag对应的disk的sizeList</del>
      *
-     * @param tagId 标签的ID。
+     * @param tagId   标签的ID。
      * @param objSize 要写入的对象的大小。
      * @return 一个包含所选 LocalDisk 对象的 ArrayList。 列表中的第一个磁盘是读写磁盘，后跟两个备份磁盘（如果可用）。
      */

@@ -6,9 +6,9 @@ import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.Replica;
-import Info.Info.UserObject;
+import Info.model.LocalDisk;
+import Info.model.Replica;
+import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 

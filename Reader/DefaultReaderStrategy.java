@@ -6,15 +6,16 @@ import IO.model.CompleteCommandOut;
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
-import Info.Info.UserObject;
+import Info.model.UserObject;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.ReadTask;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.Action;
 
 public class DefaultReaderStrategy implements ReaderStrategy {
     @Override
@@ -39,10 +40,10 @@ public class DefaultReaderStrategy implements ReaderStrategy {
             readerLogger.debug("磁盘编号" + i + "目前ptr位置为" + disk.ptr + "RWEnd位置为" + disk.RWEnd);
             if (disk.ptr > disk.RWEnd) {
                 readerLogger.debug("指针跳转");
-                readCommandOut.actions.add(Info.Action.JUMP);
+                readCommandOut.actions.add(Action.JUMP);
                 readCommandOut.jumpTarget = 0;
-                disk.ptrDoAction(Info.Action.JUMP, 0);
-                disk.preoper = Info.Action.JUMP;
+                disk.ptrDoAction(Action.JUMP, 0);
+                disk.preoper = Action.JUMP;
                 disk.pretoken = Info.tokenPerTick;
                 readCommandOuts.put(i, readCommandOut);
                 continue;
@@ -58,7 +59,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                     readerLogger.debug("寻找到任务");
                     // 如果token足够，则直接进行操作
 
-                    if (tokenNow > calculateToken(Info.Action.READ, disk)) {
+                    if (tokenNow > calculateToken(Action.READ, disk)) {
                         readerLogger.debug("token足够");
                         int objId = disk.unitData.get(disk.ptr).objId;
                         int blockId = disk.unitData.get(disk.ptr).blockId;
@@ -95,7 +96,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                         disk.unitData.get(disk.ptr).isInTask = false;
                         // 输出
                         readerLogger.debug("输出READ，ptr位置为" + disk.ptr + "块id为" + disk.unitData.get(disk.ptr).blockId);
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         hasPassOrRead = true;
                         // 减少token
                         tokenNow -= disk.pretoken;
@@ -110,7 +111,7 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                 int k;
                 int closestTaskPosition = findClosestTask(disk);
                 // 找任务，找到就直接退出，尝试处理任务
-                if (tokenNow - calculateToken(Info.Action.READ, disk) < 0)
+                if (tokenNow - calculateToken(Action.READ, disk) < 0)
                     break;
                 for (k = 1; k < tokenNow - 64; k++) {
                     if (disk.unitData.get(disk.ptr + k).isInTask) {
@@ -123,41 +124,41 @@ public class DefaultReaderStrategy implements ReaderStrategy {
 
                 // 判某几种情况
                 if (k == 1) {
-                    if (disk.pretoken < 52 && tokenNow > calculateToken(Info.Action.READ, disk)) {
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                    if (disk.pretoken < 52 && tokenNow > calculateToken(Action.READ, disk)) {
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     } else {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
                     hasPassOrRead = true;
-                } else if (k == 2 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
+                } else if (k == 2 && tokenNow > calculateToken(Action.PASS, disk)) {
                     if (disk.pretoken < 34) {
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     } else {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
                     hasPassOrRead = true;
-                } else if (k == 3 && tokenNow > calculateToken(Info.Action.PASS, disk)) {
+                } else if (k == 3 && tokenNow > calculateToken(Action.PASS, disk)) {
                     if (disk.pretoken < 28) {
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     } else {
-                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
-                        processAction(Info.Action.PASS, disk, readCommandOut);
+                        processAction(Action.PASS, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                     }
                     hasPassOrRead = true;
@@ -168,16 +169,16 @@ public class DefaultReaderStrategy implements ReaderStrategy {
                     int distance = Math.abs(closestTaskPosition - disk.ptr);
                     if (closestTaskPosition != -1 && !hasPassOrRead && distance > Info.tokenPerTick) {
                         readerLogger.debug("距离 > G，执行跳转到" + closestTaskPosition);
-                        readCommandOut.actions.add(Info.Action.JUMP);
+                        readCommandOut.actions.add(Action.JUMP);
                         readCommandOut.jumpTarget = closestTaskPosition;
-                        disk.ptrDoAction(Info.Action.JUMP, closestTaskPosition);
-                        disk.preoper = Info.Action.JUMP;
+                        disk.ptrDoAction(Action.JUMP, closestTaskPosition);
+                        disk.preoper = Action.JUMP;
                         disk.pretoken = Info.tokenPerTick;
                         readCommandOuts.put(i, readCommandOut);
                         break;
                     } else {
                         while (k > 0) {
-                            processAction(Info.Action.PASS, disk, readCommandOut);
+                            processAction(Action.PASS, disk, readCommandOut);
                             tokenNow -= disk.pretoken;
                             k--;
                         }

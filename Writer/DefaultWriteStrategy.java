@@ -6,10 +6,10 @@ import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import Info.Info;
-import Info.Info.DiskSpace;
-import Info.Info.LocalDisk;
-import Info.Info.Replica;
-import Info.Info.UserObject;
+import Info.model.DiskSpace;
+import Info.model.LocalDisk;
+import Info.model.Replica;
+import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -25,8 +25,7 @@ public class DefaultWriteStrategy implements WriteStrategy {
 
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
-            UserObject obj =
-                    new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
 
             // 选3块磁盘

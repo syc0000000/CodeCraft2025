@@ -10,10 +10,10 @@ import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info;
-import Info.Info.Action;
-import Info.Info.LocalDisk;
-import Info.Info.ReadTask;
-import Info.Info.UserObject;
+import Info.model.Action;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.UserObject;
 
 public class NewNewReader implements ReaderStrategy {
     @Override
@@ -65,10 +65,10 @@ public class NewNewReader implements ReaderStrategy {
                 // 如果距离小于0或者大于G，跳转到最近任务位置
                 if ((distance < 0 || distance > Info.tokenPerTick) && !hasReadOrPass) {
                     readerLogger.debug("距离 > G，执行跳转到" + closestTaskPosition);
-                    readCommandOut.actions.add(Info.Action.JUMP);
+                    readCommandOut.actions.add(Action.JUMP);
                     readCommandOut.jumpTarget = closestTaskPosition;
-                    disk.ptrDoAction(Info.Action.JUMP, closestTaskPosition);
-                    disk.preoper = Info.Action.JUMP;
+                    disk.ptrDoAction(Action.JUMP, closestTaskPosition);
+                    disk.preoper = Action.JUMP;
                     disk.pretoken = Info.tokenPerTick;
                     readCommandOuts.put(i, readCommandOut);
                     break;
@@ -96,7 +96,7 @@ public class NewNewReader implements ReaderStrategy {
                     }
                 } else {
                     readerLogger.debug("距离 <= 2/3 G");
-                    int tokenNeeded = calculateToken(Info.Action.READ, disk);
+                    int tokenNeeded = calculateToken(Action.READ, disk);
                     if (tokenNow < tokenNeeded) {
                         readerLogger.debug("token不足，跳过当前磁盘处理: tokenNow=" + tokenNow + ", needed="
                                 + tokenNeeded);
@@ -110,7 +110,7 @@ public class NewNewReader implements ReaderStrategy {
                         if (objId == -1) {
                             readerLogger.debug("输出READ，ptr位置为" + disk.ptr + "块id为"
                                     + disk.unitData.get(disk.ptr).blockId + "浪费token" + disk.pretoken);
-                            processAction(Info.Action.READ, disk, readCommandOut);
+                            processAction(Action.READ, disk, readCommandOut);
                             tokenNow -= disk.pretoken;
                             hasReadOrPass = true;
                             continue;
@@ -148,7 +148,7 @@ public class NewNewReader implements ReaderStrategy {
                         // 输出
                         readerLogger.debug("输出READ，ptr位置为" + disk.ptr + "块id为"
                                 + disk.unitData.get(disk.ptr).blockId + "对象id为" + object.objId);
-                        processAction(Info.Action.READ, disk, readCommandOut);
+                        processAction(Action.READ, disk, readCommandOut);
                         tokenNow -= disk.pretoken;
                         hasReadOrPass = true;
 

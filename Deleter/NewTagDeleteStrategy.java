@@ -6,10 +6,10 @@ import java.util.Set;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.ReadTask;
-import Info.Info.Replica;
-import Info.Info.UserObject;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.Replica;
+import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 

@@ -2,10 +2,10 @@ package Writer;
 
 import java.util.ArrayList;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.UserObject;
-import Info.Info.DiskSpace;
-import Info.Info.Replica;
+import Info.model.LocalDisk;
+import Info.model.UserObject;
+import Info.model.DiskSpace;
+import Info.model.Replica;
 import IO.model.DiskUnit;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;

@@ -6,11 +6,11 @@ import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info;
-import Info.Info.Action;
-import Info.Info.LocalDisk;
-import Info.Info.ReadTask;
-import Info.Info.Replica;
-import Info.Info.UserObject;
+import Info.model.Action;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.Replica;
+import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -46,15 +46,15 @@ public interface ReaderStrategy {
     public default void restrictRangeInDisk(LocalDisk disk, int start, int end, ReadCommandOut readCommandOut) {
         if (disk.ptr > end) {
             disk.ptr = start;
-            readCommandOut.actions.add(Info.Action.JUMP);
+            readCommandOut.actions.add(Action.JUMP);
             readCommandOut.jumpTarget = start;
             disk.pretoken = 64;
-            disk.preoper = Info.Action.JUMP;
+            disk.preoper = Action.JUMP;
         }
     }
 
     // 计算操作消耗的token，提供默认实现
-    public default int calculateToken(Info.Action action, LocalDisk disk) {
+    public default int calculateToken(Action action, LocalDisk disk) {
         switch (action) {
             case READ:
                 // 向上取整
@@ -81,7 +81,7 @@ public interface ReaderStrategy {
      * @param disk
      * @param readCommandOut
      */
-    public default void processAction(Info.Action action, LocalDisk disk, ReadCommandOut readCommandOut) {
+    public default void processAction(Action action, LocalDisk disk, ReadCommandOut readCommandOut) {
         readCommandOut.actions.add(action);
         disk.pretoken = calculateToken(action, disk);
         disk.preoper = action;
@@ -92,7 +92,7 @@ public interface ReaderStrategy {
             int pretoken) {
         int tokenneed;
         // 如果上一次是READ，那么这次读取所需要的token是
-        if (actionLast.get(actionLast.size() - 1) == Info.Action.READ) {
+        if (actionLast.get(actionLast.size() - 1) == Action.READ) {
             tokenneed = 16 > (int) Math.ceil(pretoken) ? 16 : (int) Math.ceil(pretoken);
         } else {
             tokenneed = 64;
@@ -107,7 +107,7 @@ public interface ReaderStrategy {
                     readerLogger.debug("找到任务，在" + ptr);
                 ArrayList<Action> action = new ArrayList<>(actionLast);
                 // 加入读取的动作
-                action.add(Info.Action.READ);
+                action.add(Action.READ);
                 // ptr移动，tokenleft减少，pretoken改变
                 if (disk.diskId == 8) {
                     readerLogger.debug("指令长度为" + actionLast.size() + "剩余的token数量" + tokenleft);
@@ -122,12 +122,12 @@ public interface ReaderStrategy {
                 if (disk.diskId == 8)
                     readerLogger.debug("指令长度为" + actionLast.size() + "剩余的token数量" + tokenleft + "  " + ptr);
                 ArrayList<Action> actionRead = new ArrayList<>(actionLast);
-                actionRead.add(Info.Action.READ);
+                actionRead.add(Action.READ);
                 ArrayList<Action> actionReadReturn = new ArrayList<>(
                         findStrategy(disk, ptr + 1, tokenleft - tokenneed, actionRead, tokenneed));
 
                 ArrayList<Action> actionPass = new ArrayList<>(actionLast);
-                actionPass.add(Info.Action.PASS);
+                actionPass.add(Action.PASS);
                 ArrayList<Action> actionPassReturn = new ArrayList<>(
                         findStrategy(disk, ptr + 1, tokenleft - 1, actionPass, 64));
                 // 看在这一步抉择时，哪一种走的更远

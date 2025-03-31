@@ -13,7 +13,7 @@ import IO.model.ReadCommandOut;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import Info.Info;
-import Info.Info.Action;
+import Info.model.Action;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 

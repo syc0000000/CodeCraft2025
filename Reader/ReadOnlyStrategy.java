@@ -11,9 +11,10 @@ import IO.model.ReadCommandOut;
 import IO.model.CompleteCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.ReadTask;
-import Info.Info.UserObject;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.UserObject;
+import Info.model.Action;
 
 public class ReadOnlyStrategy implements ReaderStrategy {
 
@@ -36,10 +37,10 @@ public class ReadOnlyStrategy implements ReaderStrategy {
             if (disk != null) {
                 boolean ifJump = false;
                 if (disk.ptr > disk.RWEnd) {
-                    readCommandOut.actions.add(Info.Action.JUMP);
+                    readCommandOut.actions.add(Action.JUMP);
                     readCommandOut.jumpTarget = 0;
-                    disk.ptrDoAction(Info.Action.JUMP, 0);
-                    disk.preoper = Info.Action.JUMP;
+                    disk.ptrDoAction(Action.JUMP, 0);
+                    disk.preoper = Action.JUMP;
                     disk.pretoken = Info.tokenPerTick;
                     ifJump = true;
                 }
@@ -49,17 +50,17 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                         break;
                     }
                     // 计算读取操作消耗的token
-                    int token = calculateToken(Info.Action.READ, disk);
+                    int token = calculateToken(Action.READ, disk);
                     tokenNow -= token;
                     // readerLogger.debug("token_spend: " + token + ", token_now: " + tokenNow);
                     if (tokenNow < 0) {
                         break;
                     }
-                    readCommandOut.actions.add(Info.Action.READ);
+                    readCommandOut.actions.add(Action.READ);
                     disk.pretoken = token;
-                    disk.preoper = Info.Action.READ;
+                    disk.preoper = Action.READ;
                     int ptr = disk.ptr;
-                    int objId = disk.ptrDoAction(Info.Action.READ);
+                    int objId = disk.ptrDoAction(Action.READ);
                     UserObject obj = Info.objMap.get(objId);
                     // readerLogger.debug("space: " + space);
 

@@ -17,8 +17,8 @@ import java.util.Map;
 import IO.Preprocess.Preprocess;
 import IO.Preprocess.hardcode.dist2;
 import Info.Info;
-import Info.Info.LocalDisk;
-import Info.Info.Tag;
+import Info.model.LocalDisk;
+import Info.model.Tag;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -130,7 +130,7 @@ public class TagDistributionManager {
             log.info("应用磁盘 " + diskId + " 的标签排序，共 " + sortedTagIds.size() + " 个标签");
             int tagTotalSize = 0;
             for (Integer tagId : sortedTagIds) {
-                Info.Tag tag = Info.tags.get(tagId);
+                Tag tag = Info.tags.get(tagId);
                 tagTotalSize += tag.lenthList.get(diskId);
             }
 
@@ -141,7 +141,7 @@ public class TagDistributionManager {
             // 记录排序结果到Tag的middle位置
             int currentPosition = 0;
             for (Integer tagId : sortedTagIds) {
-                Info.Tag tag = Info.tags.get(tagId);
+                Tag tag = Info.tags.get(tagId);
                 int tagSize = (int) (tag.lenthList.get(diskId) * portion);
 
                 // 记录标签在磁盘上的中间位置
@@ -183,7 +183,7 @@ public class TagDistributionManager {
             // 设置标签在磁盘上的位置
             int currentPosition = 0;
             for (Integer tagId : sortedTagIds) {
-                Info.Tag tag = Info.tags.get(tagId);
+                Tag tag = Info.tags.get(tagId);
                 int tagSize = tag.lenthList.get(i);
 
                 // 记录标签在磁盘上的中间位置
@@ -226,7 +226,7 @@ public class TagDistributionManager {
 
         // 创建Tag对象并设置分配关系
         for (int i = 0; i < tagValues.length; i++) {
-            Tag tag = new Info.Tag(i, tagValues[i], Info.diskNum);
+            Tag tag = new Tag(i, tagValues[i], Info.diskNum);
             log.info("Tag " + i + " 的分配结果: " + distribution.get(i).toString());
             for (DiskDistributor.Split split : distribution.get(i)) {
                 int diskId = split.diskIdx;
