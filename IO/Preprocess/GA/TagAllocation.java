@@ -1,4 +1,4 @@
-package IO.GA;
+package IO.Preprocess.GA;
 
 /**
  * 表示一个标签在一个磁盘上的分配

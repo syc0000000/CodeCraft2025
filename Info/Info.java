@@ -40,6 +40,15 @@ public class Info {
     /** 标签信息 */
     public static ArrayList<Tag> tags = new ArrayList<>();
 
+    /** 各时间段累计差值数据 */
+    public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
+    /** 每个period要读取的Tag Id，period范围[0, periodNum-1] */
+    public static ArrayList<HashSet<Integer>> periodToTagSet = new ArrayList<>();
+    /** 每个period读取的tag的size 一级是tag，二级是period */
+    public static ArrayList<ArrayList<Integer>> fre_read = new ArrayList<>();
+    /** 每个period读取的tag的size 一级是period，二级是tag */
+    public static ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
+
     // 初始化Info模块
     public static void init() {
         // 重置计数器

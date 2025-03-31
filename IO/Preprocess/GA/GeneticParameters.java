@@ -1,4 +1,4 @@
-package IO.GA;
+package IO.Preprocess.GA;
 
 import java.util.ArrayList;
 import IO.IO;

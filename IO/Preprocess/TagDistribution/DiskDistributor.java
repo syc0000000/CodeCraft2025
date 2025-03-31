@@ -1,22 +1,26 @@
-package IO.model;
+package IO.Preprocess.TagDistribution;
 
 import java.io.Serializable;
 import java.util.*;
-import IO.GA.*;
+
+import IO.Preprocess.Preprocess;
+import IO.Preprocess.GA.*;
+import Info.Info;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
 /**
- * 遗传算法磁盘分配接口类
- * 作为Main与IO.GA下的遗传算法实现之间的接口
+ * 磁盘分配器，负责计算标签在各磁盘上的分布
  */
-public class DiskDistributionGA {
-    private static final ModuleLogger log = LoggerFactory.getLogger("DiskGA");
+public class DiskDistributor {
+    private static final ModuleLogger log = LoggerFactory.getLogger("DiskDistributor");
 
     /**
      * 表示标签在磁盘上的一个分片
      */
     public static class Split implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         public int diskIdx; // 磁盘索引
         public double portion; // 分配比例（百分比）
 
@@ -32,12 +36,12 @@ public class DiskDistributionGA {
     }
 
     /**
-     * 遗传算法入口点
+     * 计算标签在磁盘上的分布，使用遗传算法
      * 
      * @param tagValues 每个标签的对象数量
      * @return 每个标签在各个磁盘上的分配情况
      */
-    public static Map<Integer, List<Split>> entrypoint(int[] tagValues) {
+    public static Map<Integer, List<Split>> computeDistributionByGA(int[] tagValues) {
         log.info("初始化遗传算法参数，收到 " + tagValues.length + " 个标签");
 
         // 检查标签是否完整
@@ -49,7 +53,7 @@ public class DiskDistributionGA {
         GeneticParameters.TAGS = tagValues;
 
         // 转置累积写入-删除数组，从[标签][时间点]转换为[时间点][标签]
-        ArrayList<ArrayList<Integer>> originalData = IO.IO.cumulative_write_minus_del;
+        ArrayList<ArrayList<Integer>> originalData = Preprocess.getCumulativeWriteMinusDel();
         ArrayList<ArrayList<Integer>> transposedData = new ArrayList<>();
 
         if (originalData.size() > 0) {
@@ -100,9 +104,6 @@ public class DiskDistributionGA {
         Individual bestIndividual = ga.run();
         log.info("遗传算法运行完成");
 
-        // 打印结果
-        printSolution(bestIndividual);
-
         // 转换结果格式
         Map<Integer, List<Split>> result = new HashMap<>();
         Map<Integer, List<Individual.TagDiskAllocation>> tagAllocations = bestIndividual.getTagAllocations();
@@ -136,38 +137,26 @@ public class DiskDistributionGA {
     }
 
     /**
-     * 简化版打印方法，只输出基本信息和性能指标
+     * 创建均匀分布策略
+     * 
+     * @param tagValues 标签值数组
+     * @return 均匀分布策略
      */
-    private static void printSolution(Individual individual) {
-        // 计算性能指标
-        double[] diskLoads = Utils.calculateDiskLoads(individual);
-        double[] diskReadVariances = Utils.calculateDiskReadVariance(individual);
-        int totalObjects = Arrays.stream(GeneticParameters.TAGS).sum();
+    public static Map<Integer, List<Split>> createEvenDistribution(int[] tagValues) {
+        Map<Integer, List<Split>> distribution = new HashMap<>();
 
-        // 输出标签分配
-        log.info("最优分配方案:");
-        for (int diskIdx = 0; diskIdx < GeneticParameters.NUM_DISKS; diskIdx++) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(String.format("磁盘%d: ", diskIdx));
-            for (TagAllocation tag : individual.getDisk(diskIdx)) {
-                sb.append(String.format("(标签%d:%.2f%%) ", tag.getTagId(), tag.getProportion() * 100));
+        for (int i = 0; i < tagValues.length; i++) {
+            ArrayList<Split> splits = new ArrayList<>();
+
+            // 平均分配到所有磁盘上，每个磁盘的比例相同
+            double portion = 100.0 / Info.diskNum;
+            for (int diskId = 0; diskId < Info.diskNum; diskId++) {
+                splits.add(new Split(diskId, portion));
             }
-            log.info(sb.toString());
+
+            distribution.put(i, splits);
         }
 
-        // 输出性能指标
-        log.info("性能指标:");
-        log.info(String.format("对象分布变异系数: %.4f (总=%d, 均值=%.1f, 标准差=%.1f, 范围=%.1f-%.1f)",
-                Utils.standardDeviation(diskLoads) / Utils.mean(diskLoads),
-                totalObjects,
-                Utils.mean(diskLoads),
-                Utils.standardDeviation(diskLoads),
-                Arrays.stream(diskLoads).min().getAsDouble(),
-                Arrays.stream(diskLoads).max().getAsDouble()));
-        log.info(String.format("读取方差: %.2f (均值=%.2f, 范围=%.2f-%.2f)",
-                Utils.mean(diskReadVariances),
-                Utils.mean(diskReadVariances),
-                Arrays.stream(diskReadVariances).min().getAsDouble(),
-                Arrays.stream(diskReadVariances).max().getAsDouble()));
+        return distribution;
     }
 }
