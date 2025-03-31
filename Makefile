@@ -8,7 +8,7 @@ SOURCES = $(shell find $(SRCDIR) -name "*.java" -not -path "./build/*")
 CLASSES = $(SOURCES:%.java=$(BUILDDIR)/%.class)
 
 # Default target
-all: clean compile package
+all: clean compile zip
 
 # Compile Java files
 compile:
@@ -18,19 +18,19 @@ compile:
 # Clean build directory
 clean:
 	@rm -rf $(BUILDDIR)
-	@rm -f CodeCraft.tar
+	@rm -f CodeCraft.zip
 
 # Package source files
-package:
-	@echo "Creating tar archive..."
-	@find . -name "*.java" \
-		-not -path "./build/*" \
-		-not -path "./test/*" \
-		| tar -czf CodeCraft.tar -T -
-	@echo "Package created: CodeCraft.tar"
+zip:
+	@echo "Creating zip archive..."
+	@rm -f files.txt
+	@find . -name "*.java" -not -path "./build/*" -not -path "./test/*" | sed 's/^.\///' > files.txt
+	@7z a -tzip CodeCraft.zip @files.txt
+	@rm -f files.txt
+	@echo "Package created: CodeCraft.zip"
 
-# Show contents of tar
+# Show contents of zip
 list:
-	tar -tvf CodeCraft.tar
+	@7z l CodeCraft.zip
 
 .PHONY: all clean compile package list
