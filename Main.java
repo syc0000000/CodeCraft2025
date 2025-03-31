@@ -65,21 +65,17 @@ public class Main {
 
         // 解析命令行参数，获取分布和标签路径
         String loadDistributionPath = null;
-        String loadTagsPath = null;
 
         // 解析命令行参数
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-load") && i + 1 < args.length) {
                 loadDistributionPath = args[i + 1];
                 i++;
-            } else if (args[i].equals("-loadTags") && i + 1 < args.length) {
-                loadTagsPath = args[i + 1];
-                i++;
             }
         }
 
         // 设置分布和标签路径
-        Preprocess.setDistributionPaths(loadDistributionPath, loadTagsPath);
+        Preprocess.setDistributionPaths(loadDistributionPath);
 
         // 执行预处理
         Preprocess.preprocess();

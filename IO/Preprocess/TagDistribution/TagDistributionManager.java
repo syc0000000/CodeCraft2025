@@ -201,7 +201,7 @@ public class TagDistributionManager {
     /**
      * 初始化标签分布和排序
      */
-    public static void initializeTagDistribution(String loadDistributionPath, String loadTagsPath) {
+    public static void initializeTagDistribution(String loadDistributionPath) {
         int[] tagValues = Preprocess.getTagsUnitUsage().stream().mapToInt(Integer::intValue).toArray();
 
         // 获取分布策略
@@ -238,21 +238,13 @@ public class TagDistributionManager {
             Info.tags.add(tag);
         }
 
-        // 处理标签排序
-        if (loadTagsPath != null) {
-            // 从文件加载标签排序结果
-            log.info("从文件加载标签排序: " + loadTagsPath);
-            Map<Integer, ArrayList<Integer>> sortedTags = loadSortedTags(loadTagsPath);
-            applySortedTags(sortedTags);
-        } else {
-            // 对每个磁盘的tag进行排序 (单线程)
-            Map<Integer, ArrayList<Integer>> sortedTags = sortTagsForDisks(diskToTag);
+        // 对每个磁盘的tag进行排序 (单线程)
+        Map<Integer, ArrayList<Integer>> sortedTags = sortTagsForDisks(diskToTag);
 
-            // 保存排序结果到文件
-            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String savePath = "tags/sortedTags_" + timestamp + ".ser";
-            saveSortedTags(sortedTags, savePath);
-            applySortedTags(sortedTags);
-        }
+        // 保存排序结果到文件
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String savePath = "tags/sortedTags_" + timestamp + ".ser";
+        saveSortedTags(sortedTags, savePath);
+        applySortedTags(sortedTags);
     }
 }

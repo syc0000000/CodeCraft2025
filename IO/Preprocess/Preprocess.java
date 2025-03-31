@@ -29,7 +29,6 @@ public class Preprocess {
 
     // 标签分布处理参数
     private static String loadDistributionPath = null;
-    private static String loadTagsPath = null;
 
     // getter方法
     public static ArrayList<ArrayList<Integer>> getCumulativeWriteMinusDel() {
@@ -62,7 +61,7 @@ public class Preprocess {
         initializeSystemInfo();
 
         // 处理标签分布和排序
-        TagDistributionManager.initializeTagDistribution(loadDistributionPath, loadTagsPath);
+        TagDistributionManager.initializeTagDistribution(loadDistributionPath);
 
         System.out.println("OK");
         flushAll();
@@ -71,9 +70,8 @@ public class Preprocess {
     /**
      * 设置分布和排序加载路径
      */
-    public static void setDistributionPaths(String distributionPath, String tagsPath) {
+    public static void setDistributionPaths(String distributionPath) {
         loadDistributionPath = distributionPath;
-        loadTagsPath = tagsPath;
     }
 
     /**
