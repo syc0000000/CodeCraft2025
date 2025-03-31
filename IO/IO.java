@@ -1,6 +1,5 @@
 package IO;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.Scanner;
 import IO.model.CompleteCommandOut;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
-import IO.model.PreprocessOut;
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.WriteCommandIn;
@@ -32,7 +30,7 @@ public class IO {
      * 处理时间戳（特殊情况，直接处理）
      */
     public static void processTimeStamp() {
-        String cmd = scanner.next(); // 读取命令名称 "TIMESTAMP"
+        scanner.next(); // 读取命令名称 "TIMESTAMP"
         int timeStamp = scanner.nextInt();
 
         // 将当前帧写入Info模块

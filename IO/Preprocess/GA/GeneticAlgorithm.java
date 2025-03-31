@@ -413,22 +413,6 @@ public class GeneticAlgorithm {
     }
 
     /**
-     * 检查磁盘上是否有特定标签
-     * 
-     * @param diskTags 磁盘标签列表
-     * @param tagId    要检查的标签ID
-     * @return 是否存在
-     */
-    private boolean hasTag(List<TagAllocation> diskTags, int tagId) {
-        for (TagAllocation tag : diskTags) {
-            if (tag.getTagId() == tagId) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * 获取随机样本（不重复）
      * 
      * @param range 范围（0到range-1）

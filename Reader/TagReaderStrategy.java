@@ -9,7 +9,6 @@ import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info.UserObject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -17,7 +16,6 @@ import java.util.Map;
 import Info.Info;
 import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
-import Info.Info.UserObject;
 
 public class TagReaderStrategy implements ReaderStrategy {
     public class TagInfo {
@@ -25,11 +23,14 @@ public class TagReaderStrategy implements ReaderStrategy {
         int middle;
         int left;
         int end;
-        public int getMiddle(){
+
+        public int getMiddle() {
             return middle;
         }
     }
+
     public ArrayList<ArrayList<TagInfo>> tagInfo = new ArrayList<>();
+
     @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
@@ -41,14 +42,13 @@ public class TagReaderStrategy implements ReaderStrategy {
         // 遍历磁盘
         for (int i = 0; i < Info.diskNum; i++) {
             // 基础准备
-            //本磁盘的tag从前到后分布
-            ArrayList<TagInfo> tagInfos = tagInfo.get(i);
+            // 本磁盘的tag从前到后分布
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
             readCommandOut.actions = new ArrayList<>();
             // 如果检测到需要跳转，则直接跳转
-            readerLogger.debug("磁盘编号"+i+"目前ptr位置为"+disk.ptr+"RWEnd位置为"+disk.RWEnd);
+            readerLogger.debug("磁盘编号" + i + "目前ptr位置为" + disk.ptr + "RWEnd位置为" + disk.RWEnd);
             if (disk.ptr > disk.RWEnd) {
                 readerLogger.debug("指针跳转");
                 readCommandOut.actions.add(Info.Action.JUMP);
@@ -60,22 +60,22 @@ public class TagReaderStrategy implements ReaderStrategy {
                 continue;
             }
             // 准备消耗token
-            readerLogger.debug("token剩余"+tokenNow);
+            readerLogger.debug("token剩余" + tokenNow);
             while (tokenNow > 0) {
                 if (disk.ptr > disk.RWEnd)
                     break;
                 boolean isInTask = disk.unitData.get(disk.ptr).isInTask;
-                
+
                 if (isInTask) {
                     readerLogger.debug("寻找到任务");
                     // 如果token足够，则直接进行操作
-                    
+
                     if (tokenNow > calculateToken(Info.Action.READ, disk)) {
                         readerLogger.debug("token足够");
                         int objId = disk.unitData.get(disk.ptr).objId;
                         int blockId = disk.unitData.get(disk.ptr).blockId;
                         UserObject object = Info.objMap.get(objId);
-                        // 有任务就直接处理                        
+                        // 有任务就直接处理
                         Iterator<ReadTask> iterator = object.readTasks.iterator();
                         while (iterator.hasNext()) {
                             ReadTask readTask = iterator.next();
@@ -124,17 +124,19 @@ public class TagReaderStrategy implements ReaderStrategy {
         readRetrun.completeCommandOuts = completeCommandOuts;
         return readRetrun;
     }
+
     public static class middleComparator implements Comparator<TagInfo> {
         @Override
         public int compare(TagInfo a, TagInfo b) {
             return a.middle - b.middle;
         }
     }
-    public TagReaderStrategy(){
 
-        for(int i = 0; i < Info.diskNum;i++){
+    public TagReaderStrategy() {
+
+        for (int i = 0; i < Info.diskNum; i++) {
             ArrayList<TagInfo> tagInfos = new ArrayList<>();
-            for(int j = 0; j < Info.tagNums;j++){
+            for (int j = 0; j < Info.tagNums; j++) {
                 TagInfo taginfo = new TagInfo();
                 taginfo.tagid = j;
                 taginfo.middle = Info.tags.get(j).middleList.get(i);

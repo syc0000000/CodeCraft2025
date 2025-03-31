@@ -1,8 +1,6 @@
 package Reader;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
@@ -21,7 +19,7 @@ public interface ReaderStrategy {
     public static final ModuleLogger readerLogger = LoggerFactory.getLogger("Reader");
 
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns);
-    
+
     // 添加任务
     public default void addReadTask(ArrayList<ReadCommandIn> readCommandIns) {
         for (ReadCommandIn readCommandIn : readCommandIns) {
@@ -62,7 +60,7 @@ public interface ReaderStrategy {
                 // 向上取整
                 // readerLogger.debug("计算token: pretoken=" + disk.pretoken);
                 int token;
-                if (disk.preoper == action.READ) {
+                if (disk.preoper == Action.READ) {
                     token = (int) Math.ceil(disk.pretoken * 0.8);
                 } else {
                     token = 64;

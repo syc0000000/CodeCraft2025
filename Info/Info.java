@@ -854,17 +854,6 @@ public class Info {
 
         }
 
-        // 从末尾开始查找可用空间
-        private DiskSpace findSpaceFromEnd(int obj_size) {
-            for (int i = unitNum - 1; i >= 0; i--) {
-                DiskSpace space = unitData.get(i).space;
-                if (space.isFree && space.size >= obj_size) {
-                    return space;
-                }
-            }
-            return null;
-        }
-
         /**
          * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。 同时更新unitToSpace。 时间复杂度 O(n) 维护的信息有 1.
          * localdisk的rwEnd 2. unitData的objId和blockId 3. freespaceBySize

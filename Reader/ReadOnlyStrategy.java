@@ -13,9 +13,7 @@ import IO.model.ReadRetrun;
 import Info.Info;
 import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
-import Info.Info.Replica;
 import Info.Info.UserObject;
-import Info.Info.DiskSpace;
 
 public class ReadOnlyStrategy implements ReaderStrategy {
 
@@ -63,7 +61,6 @@ public class ReadOnlyStrategy implements ReaderStrategy {
                     int ptr = disk.ptr;
                     int objId = disk.ptrDoAction(Info.Action.READ);
                     UserObject obj = Info.objMap.get(objId);
-                    DiskSpace space = disk.getSpaceForUnit(disk.ptr);
                     // readerLogger.debug("space: " + space);
 
                     if (objId != -1) {

@@ -1,7 +1,6 @@
 package IO.Preprocess.GA;
 
 import java.util.ArrayList;
-import IO.IO;
 
 /**
  * 遗传算法参数配置类

@@ -25,7 +25,6 @@ public class LoggerImpl implements Logger {
 
     // 文件日志相关
     private boolean fileLoggingEnabled = false;
-    private String logFilePath = "app.log";
     private PrintWriter fileWriter = null;
 
     private LoggerImpl() {
@@ -100,7 +99,6 @@ public class LoggerImpl implements Logger {
             // 创建新的文件写入器，append模式设为true
             fileWriter = new PrintWriter(new FileWriter(filePath, true));
             fileLoggingEnabled = true;
-            logFilePath = filePath;
 
             // 记录启用文件日志的信息
             System.err.println(LocalDateTime.now().format(formatter) + " [SYSTEM] [Logger] 文件日志已启用: " + filePath);

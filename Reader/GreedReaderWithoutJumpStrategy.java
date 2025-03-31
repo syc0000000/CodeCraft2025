@@ -8,7 +8,6 @@ import IO.model.ReadCommandOut;
 import IO.model.ReadRetrun;
 import Info.Info.UserObject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -16,10 +15,9 @@ import java.util.Map;
 import Info.Info;
 import Info.Info.LocalDisk;
 import Info.Info.ReadTask;
-import Info.Info.UserObject;
 
 public class GreedReaderWithoutJumpStrategy implements ReaderStrategy {
-     @Override
+    @Override
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
         // 添加所有的任务
@@ -30,13 +28,13 @@ public class GreedReaderWithoutJumpStrategy implements ReaderStrategy {
         // 遍历磁盘
         for (int i = 0; i < Info.diskNum; i++) {
             // 基础准备
-            
+
             LocalDisk disk = Info.localDiskTbl.get(i);
             int tokenNow = tickToken;
             ReadCommandOut readCommandOut = new ReadCommandOut();
             readCommandOut.actions = new ArrayList<>();
             // 如果检测到需要跳转，则直接跳转
-            readerLogger.debug("磁盘编号"+i+"目前ptr位置为"+disk.ptr+"RWEnd位置为"+disk.RWEnd);
+            readerLogger.debug("磁盘编号" + i + "目前ptr位置为" + disk.ptr + "RWEnd位置为" + disk.RWEnd);
             if (disk.ptr > disk.logicalRWEnd) {
                 readerLogger.debug("指针跳转");
                 readCommandOut.actions.add(Info.Action.JUMP);
@@ -48,22 +46,22 @@ public class GreedReaderWithoutJumpStrategy implements ReaderStrategy {
                 continue;
             }
             // 准备消耗token
-            readerLogger.debug("token剩余"+tokenNow);
+            readerLogger.debug("token剩余" + tokenNow);
             while (tokenNow > 0) {
                 if (disk.ptr > disk.RWEnd)
                     break;
                 boolean isInTask = disk.unitData.get(disk.ptr).isInTask;
-                
+
                 if (isInTask) {
                     readerLogger.debug("寻找到任务");
                     // 如果token足够，则直接进行操作
-                    
+
                     if (tokenNow > calculateToken(Info.Action.READ, disk)) {
                         readerLogger.debug("token足够");
                         int objId = disk.unitData.get(disk.ptr).objId;
                         int blockId = disk.unitData.get(disk.ptr).blockId;
                         UserObject object = Info.objMap.get(objId);
-                        // 有任务就直接处理                        
+                        // 有任务就直接处理
                         Iterator<ReadTask> iterator = object.readTasks.iterator();
                         while (iterator.hasNext()) {
                             ReadTask readTask = iterator.next();
@@ -99,18 +97,18 @@ public class GreedReaderWithoutJumpStrategy implements ReaderStrategy {
                         break;
                     }
                 }
-                readerLogger.debug("此处有任务"+disk.ptr+disk.RWEnd);
+                readerLogger.debug("此处有任务" + disk.ptr + disk.RWEnd);
                 int k = 0;
-                while(disk.ptr + k < disk.RWEnd){
-                    if(disk.unitData.get(disk.ptr + k).isInTask){
+                while (disk.ptr + k < disk.RWEnd) {
+                    if (disk.unitData.get(disk.ptr + k).isInTask) {
                         break;
                     }
                     k++;
                 }
-                //token允许跳转
-                if(tokenNow == tickToken ){
-                    //如果token足够，并且找到末尾，直接跳回开头
-                    if(disk.ptr + k == disk.RWEnd){
+                // token允许跳转
+                if (tokenNow == tickToken) {
+                    // 如果token足够，并且找到末尾，直接跳回开头
+                    if (disk.ptr + k == disk.RWEnd) {
                         readCommandOut.actions.add(Info.Action.JUMP);
                         readCommandOut.jumpTarget = 0;
                         disk.ptrDoAction(Info.Action.JUMP, 0);
@@ -119,24 +117,24 @@ public class GreedReaderWithoutJumpStrategy implements ReaderStrategy {
                         readerLogger.debug("跳转回开头");
                         break;
                     }
-                    if(k > tokenNow){
+                    if (k > tokenNow) {
                         readCommandOut.actions.add(Info.Action.JUMP);
                         readCommandOut.jumpTarget = disk.ptr + k;
                         disk.ptrDoAction(Info.Action.JUMP, disk.ptr + k);
                         disk.preoper = Info.Action.JUMP;
                         disk.pretoken = Info.tokenPerTick;
-                        readerLogger.debug("跳转到"+(disk.ptr+k));
+                        readerLogger.debug("跳转到" + (disk.ptr + k));
                         break;
                     }
                 }
-                if(disk.ptr + k == disk.RWEnd){
+                if (disk.ptr + k == disk.RWEnd) {
                     break;
                 }
-                //token不允许跳转
-                    //pass过去。如果剩下的token足够读，则继续循环读，如果不够在读的地方会退出
-                readerLogger.debug("向后pass"+k+"个单位,tokenNow:"+tokenNow);
+                // token不允许跳转
+                // pass过去。如果剩下的token足够读，则继续循环读，如果不够在读的地方会退出
+                readerLogger.debug("向后pass" + k + "个单位,tokenNow:" + tokenNow);
                 k = k < tokenNow ? k : tokenNow;
-                while(k > 0){
+                while (k > 0) {
                     processAction(Info.Action.PASS, disk, readCommandOut);
                     tokenNow -= disk.pretoken;
                     k--;
