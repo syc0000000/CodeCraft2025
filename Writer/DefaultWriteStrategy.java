@@ -13,6 +13,23 @@ import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
+/**
+ * 默认的写入策略实现类
+ * 
+ * 数据结构:
+ * 
+ * 依赖的全局存储结构:
+ * <ul>
+ * <li>{@link Info#objMap} - 用户对象的全局存储表,以对象ID为索引</li>
+ * <li>{@link Info#localDiskTbl} - 存储所有可用磁盘的信息表</li>
+ * </ul>
+ * 
+ * 磁盘相关结构:
+ * <ul>
+ * <li>{@link LocalDisk#freespaceBySize} - 跟踪每个磁盘上的可用空间，table value为存放{@link DiskSpace}的TreeSet</li>
+ * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息，链表的元素类型为{@link DiskUnit}</li>
+ * </ul>
+ */
 public class DefaultWriteStrategy implements WriteStrategy {
     private final ModuleLogger log = LoggerFactory.getLogger("Writer");
 
@@ -25,7 +42,8 @@ public class DefaultWriteStrategy implements WriteStrategy {
 
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
-            UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            UserObject obj =
+                    new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
 
             // 选3块磁盘
