@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import IO.Preprocess.Preprocess;
+import IO.Preprocess.hardcode.dist1;
 import IO.Preprocess.hardcode.dist2;
 import Info.Info;
 import Info.model.LocalDisk;
@@ -205,18 +206,19 @@ public class TagDistributionManager {
         int[] tagValues = Preprocess.getTagsUnitUsage().stream().mapToInt(Integer::intValue).toArray();
 
         // 获取分布策略
-        Map<Integer, List<DiskDistributor.Split>> distribution = dist2.createHardcodedDistribution();
+        Map<Integer, List<DiskDistributor.Split>> distribution = dist1.createHardcodedDistribution();
 
-        // 如果指定了加载路径，从文件加载分布结果
-        if (loadDistributionPath != null) {
-            distribution = loadDistribution(loadDistributionPath);
-        } else {
-            // 计算并保存分布
-            distribution = computeDistribution(tagValues, true);
-            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String savePath = "distributions/distribution_" + timestamp + ".ser";
-            saveDistribution(distribution, savePath);
-        }
+        // // 如果指定了加载路径，从文件加载分布结果
+        // if (loadDistributionPath != null) {
+        // distribution = loadDistribution(loadDistributionPath);
+        // } else {
+        // // 计算并保存分布
+        // distribution = computeDistribution(tagValues, true);
+        // String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new
+        // Date());
+        // String savePath = "distributions/distribution_" + timestamp + ".ser";
+        // saveDistribution(distribution, savePath);
+        // }
 
         // 每个磁盘有哪些tag
         ArrayList<HashSet<Integer>> diskToTag = new ArrayList<>();

@@ -147,7 +147,7 @@ public class Utils {
         // 计算每个磁盘在所有时间点的读取量方差
         double[] diskReadVariances = calculateDiskReadVariance(individual);
 
-        // 读取方差均值
+        // 磁盘随时间总对象量 方差均值
         double readVarianceMean = mean(diskReadVariances);
 
         // 负载最大差异（最大值和最小值之间的差异）
@@ -159,9 +159,9 @@ public class Utils {
                 Arrays.stream(diskReadVariances).min().getAsDouble();
 
         // 总分 (越小越好) - 增加了最大负载差异和方差差异的惩罚
-        return loadCv * 0 +
-                readVarianceMean * 10 +
-                loadRangeNormalized * 0 +
-                varianceRange * 2;
+        return loadCv * 5 +
+                readVarianceMean * 0.0005 +
+                loadRangeNormalized * 10 +
+                varianceRange * 0;
     }
 }

@@ -43,7 +43,7 @@ public class GeneticParameters {
      * 每个磁盘上标签的最小比例阈值
      * 比例小于此值的分配将被丢弃
      */
-    public static final double MIN_TAG_PROPORTION = 0.08;
+    public static final double MIN_TAG_PROPORTION = 0.00;
 
     // 遗传算法参数
     /**
@@ -59,7 +59,7 @@ public class GeneticParameters {
     /**
      * 变异率
      */
-    public static final double MUTATION_RATE_START = 0.9;
+    public static final double MUTATION_RATE_START = 0.99;
 
     /**
      * 交叉概率
@@ -69,7 +69,7 @@ public class GeneticParameters {
     /**
      * 精英数量，每代保留的最优个体数
      */
-    public static final int ELITE_SIZE = 2000;
+    public static final int ELITE_SIZE = 3000;
 
     /**
      * 锦标赛选择的大小
