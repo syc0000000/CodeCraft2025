@@ -1,12 +1,9 @@
 package MultiReader;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import IO.model.ReadCommandIn;
 import IO.model.ReadRetrun;
-import Info.Info;
-import Info.model.ReadTask;
 
 public class MultiReader {
     private MultiReaderStrategy multiReaderStrategy;
@@ -20,6 +17,7 @@ public class MultiReader {
     }
 
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
+        return null;
 
     }
 }

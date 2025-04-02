@@ -209,16 +209,15 @@ public class TagDistributionManager {
         Map<Integer, List<DiskDistributor.Split>> distribution = dist1.createHardcodedDistribution();
 
         // // 如果指定了加载路径，从文件加载分布结果
-        // if (loadDistributionPath != null) {
-        // distribution = loadDistribution(loadDistributionPath);
-        // } else {
-        // // 计算并保存分布
-        // distribution = computeDistribution(tagValues, true);
-        // String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new
-        // Date());
-        // String savePath = "distributions/distribution_" + timestamp + ".ser";
-        // saveDistribution(distribution, savePath);
-        // }
+        if (loadDistributionPath != null) {
+            distribution = loadDistribution(loadDistributionPath);
+        } else {
+            // 计算并保存分布
+            distribution = computeDistribution(tagValues, true);
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String savePath = "distributions/distribution_" + timestamp + ".ser";
+            saveDistribution(distribution, savePath);
+        }
 
         // 每个磁盘有哪些tag
         ArrayList<HashSet<Integer>> diskToTag = new ArrayList<>();
