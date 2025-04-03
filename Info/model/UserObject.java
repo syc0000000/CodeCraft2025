@@ -16,6 +16,7 @@ public class UserObject {
     /** 存放尚未完成的任务() */
     public LinkedList<ReadTask> readTasks;
     /** 存放过期的任务(task id) */
+    @Deprecated
     public Set<Integer> timeoutTasks = new HashSet<>();
 
     public UserObject(int objId, int objSize, int objTag) {
