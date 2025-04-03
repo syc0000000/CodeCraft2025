@@ -26,6 +26,7 @@ public class Preprocess {
     private static int N; // 硬盘个数
     private static int V; // 每个硬盘存储单元数
     private static int G; // 每tick Token数
+    private static int K; // 垃圾回收操作次数
 
     // 标签分布处理参数
     private static String loadDistributionPath = null;
@@ -97,6 +98,7 @@ public class Preprocess {
         N = scanner.nextInt();
         V = scanner.nextInt();
         G = scanner.nextInt();
+        K = scanner.nextInt();
     }
 
     /**

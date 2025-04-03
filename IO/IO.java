@@ -12,6 +12,8 @@ import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
+import IO.model.BusyCommandOut;
+import IO.model.MultiReadCommandOut;
 import Info.Info;
 import Info.model.Action;
 import Logger.LoggerFactory;
@@ -37,6 +39,16 @@ public class IO {
         Info.timestamp = timeStamp;
 
         System.out.println("TIMESTAMP " + timeStamp);
+        flushAll();
+    }
+
+    /**
+     * 处理垃圾回收
+     */
+    public static void processGC() {
+        scanner.next(); // 读取命令 "GARBAGE"
+        scanner.next(); // 读取命令 "COLLECTION"
+        System.out.println("0");
         flushAll();
     }
 
@@ -159,6 +171,43 @@ public class IO {
     }
 
     /**
+     * 输出多读命令结果到标准输出
+     * 
+     * @param out 多读命令输出结构列表
+     */
+    public static void writeMultiReadCommand(Map<Integer, MultiReadCommandOut> out) {
+
+        for (int i = 0; i < Info.diskNum; i++) {
+            // 输出磁头0的动作序列和跳转目标
+            if (out.containsKey(i)) {
+                for (int j = 0; j < 2; j++) {
+                    List<Action> actions = out.get(i).actions.get(j);
+                    if (actions != null && !actions.isEmpty()
+                            && actions.get(0) == Action.JUMP) {
+                        int target = out.get(i).jumpTargets.get(j) + 1;
+                        System.out.println("j " + target);
+                    } else {
+                        for (Action action : actions) {
+                            if (action == Action.READ) {
+                                System.out.print("r");
+                            } else if (action == Action.PASS) {
+                                System.out.print("p");
+                            }
+                        }
+                        System.out.println("#");
+                    }
+                }
+            } else {
+                // 输出两个#
+                System.out.println("#");
+                System.out.println("#");
+            }
+
+            flushAll();
+        }
+    }
+
+    /**
      * 输出读取完成命令结果到标准输出
      * 
      * @param out 读取完成命令输出结构列表
@@ -171,6 +220,20 @@ public class IO {
             System.out.println(completeCommandOut.commandId);
         }
 
+        flushAll();
+    }
+
+    /**
+     * 输出忙碌命令结果到标准输出
+     * 
+     * @param out 忙碌命令输出结构列表
+     */
+    public static void writeBusyCommand(ArrayList<BusyCommandOut> out) {
+        int size = out.size();
+        System.out.println(size);
+        for (BusyCommandOut busyCommandOut : out) {
+            System.out.println(busyCommandOut.commandId);
+        }
         flushAll();
     }
 

@@ -100,6 +100,11 @@ public class Main {
             IO.writeReadCommand(readRetrun.readCommandOuts);
             IO.writeCompleteCommand(readRetrun.completeCommandOuts);
 
+            // 每1800个时间片执行一次垃圾回收
+            if (i % 1800 == 0) {
+                IO.processGC();
+            }
+
             mainLogger.debug("完成处理时间片 " + i);
         }
 
