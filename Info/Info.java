@@ -3,6 +3,8 @@ package Info;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+
 import IO.model.PreprocessOut;
 import Info.model.*;
 
@@ -34,6 +36,8 @@ public class Info {
     /** 标签信息 */
     public static ArrayList<Tag> tags = new ArrayList<>();
 
+    /** 存放当前[tick-105, tick]时间片内未完成的读取任务的id，对于tick-105到达的任务, 最晚要在tick上报 */
+    public static LinkedList<HashSet<Integer>> readTasksInRecent105Tick = new LinkedList<>();
     /** 各时间段累计差值数据 */
     public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
     /** 每个period要读取的Tag Id，period范围[0, periodNum-1] */

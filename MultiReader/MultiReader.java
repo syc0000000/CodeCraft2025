@@ -13,8 +13,7 @@ import IO.model.ReadCommandOut;
 
 public class MultiReader {
     private MultiReaderStrategy multiReaderStrategy;
-    /** 存放当前[tick-105, tick]时间片内未完成的读取任务的id，对于tick-105到达的任务, 最晚要在tick上报 */
-    public LinkedList<HashSet<Integer>> readTasksInRecent105Tick = new LinkedList<>();
+    
 
     public MultiReader(String multiReaderStrategy) {
         if (multiReaderStrategy.equals("default")) {
@@ -35,11 +34,11 @@ public class MultiReader {
         }
         addReadTask(readCommandIns);
 
-        ReadCommandOut readCommandOut = this.multiReaderStrategy.read();
+        MultiReadCommandOut readCommandOut = this.multiReaderStrategy.read();
 
-        readTasksInRecent105Tick.add(currentTickTasks);
-        if (readTasksInRecent105Tick.size() > 105) {
-            HashSet<Integer> tasksToAbort = readTasksInRecent105Tick.remove(0);
+        Info.readTasksInRecent105Tick.add(currentTickTasks);
+        if (Info.readTasksInRecent105Tick.size() > 105) {
+            HashSet<Integer> tasksToAbort = Info.readTasksInRecent105Tick.remove(0);
             // TODO 删除任务，另外，deleter是不是也要处理这里的信息
         }
         return null;
