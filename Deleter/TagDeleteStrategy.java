@@ -1,7 +1,6 @@
 package Deleter;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Set;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
@@ -9,7 +8,6 @@ import Info.Info;
 import Info.model.DiskSpace;
 import Info.model.DiskSpaceType;
 import Info.model.LocalDisk;
-import Info.model.ReadTask;
 import Info.model.Replica;
 import Info.model.UserObject;
 import Logger.LoggerFactory;
@@ -90,10 +88,10 @@ public class TagDeleteStrategy implements DeleteStrategy {
             space.type = DiskSpaceType.UNUSED;
             // 更新rwend
             if (space.end == rwDisk.RWEnd) {
-                while (rwDisk.RWEnd > 0
-                        && (rwDisk.unitData.get(rwDisk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
-                                || rwDisk.unitData.get(
-                                        rwDisk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
+                while (rwDisk.RWEnd > 0 && (rwDisk.unitData
+                        .get(rwDisk.RWEnd - 1).space.type == DiskSpaceType.UNUSED
+                        || rwDisk.unitData
+                                .get(rwDisk.RWEnd - 1).space.type == DiskSpaceType.BACKUPSPACE)) {
                     rwDisk.RWEnd--;
                 }
             }
@@ -127,32 +125,6 @@ public class TagDeleteStrategy implements DeleteStrategy {
     }
 
     /**
-     * 查找要被终止的读任务
-     */
-    public Set<Integer> findReadTaskToBeTerminated(int obj_id) {
-        UserObject obj = Info.objMap.get(obj_id);
-        Set<Integer> tasks_awaiting_deletion = new HashSet<>();
-
-        if (obj.readTasks == null) {
-            log.debug("当前对象没有正在进行的读任务");
-        }
-        for (ReadTask task : obj.readTasks) {
-            log.debug("终止进行中的读任务, ID = " + task.taskId);
-            tasks_awaiting_deletion.add(task.taskId);
-        }
-
-        if (obj.readTasks == null) {
-            log.debug("当前对象已经超时的读任务");
-        }
-
-        for (int task_id : obj.timeoutTasks) {
-            log.debug("终止已超时的读任务, ID = " + task_id);
-            tasks_awaiting_deletion.add(task_id);
-        }
-        return tasks_awaiting_deletion;
-    }
-
-    /**
      * 释放空间
      * 
      * @param space
@@ -171,7 +143,8 @@ public class TagDeleteStrategy implements DeleteStrategy {
         space.type = DiskSpaceType.UNUSED;
         // 合并前后空间
         DiskSpace prevSpace = space.start > 0 ? disk.unitData.get(space.start - 1).space : null;
-        DiskSpace nextSpace = space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
+        DiskSpace nextSpace =
+                space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
         if (prevSpace != null && prevSpace.isFree) {
             // log.debug("合并前空间: " + prevSpace);
             space.setStartAndEnd(prevSpace.start, space.end);

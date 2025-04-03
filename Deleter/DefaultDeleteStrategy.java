@@ -1,16 +1,13 @@
 package Deleter;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Set;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
-import Info.model.LocalDisk;
 import Info.model.DiskSpace;
-import Info.model.ReadTask;
+import Info.model.LocalDisk;
 import Info.model.Replica;
-import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 
@@ -58,7 +55,8 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
                 Replica replica = Info.objMap.get(obj_id).replicas.get(j);
                 // 每一个副本的对应unit都置为false
                 for (int i = 0; i < Info.objMap.get(obj_id).objSize; i++) {
-                    Info.localDiskTbl.get(replica.diskId).unitData.get(replica.unitIdList.get(i)).isInTask = false;
+                    Info.localDiskTbl.get(replica.diskId).unitData
+                            .get(replica.unitIdList.get(i)).isInTask = false;
                 }
             }
 
@@ -87,31 +85,5 @@ public class DefaultDeleteStrategy implements DeleteStrategy {
             // log.debug("释放空间: " + space);
             disk.releaseSpace(space);
         }
-    }
-
-    /**
-     * 查找要被终止的读任务
-     */
-    public Set<Integer> findReadTaskToBeTerminated(int obj_id) {
-        UserObject obj = Info.objMap.get(obj_id);
-        Set<Integer> tasks_awaiting_deletion = new HashSet<>();
-
-        if (obj.readTasks == null) {
-            log.debug("当前对象没有正在进行的读任务");
-        }
-        for (ReadTask task : obj.readTasks) {
-            log.debug("终止进行中的读任务, ID = " + task.taskId);
-            tasks_awaiting_deletion.add(task.taskId);
-        }
-
-        if (obj.readTasks == null) {
-            log.debug("当前对象已经超时的读任务");
-        }
-
-        for (int task_id : obj.timeoutTasks) {
-            log.debug("终止已超时的读任务, ID = " + task_id);
-            tasks_awaiting_deletion.add(task_id);
-        }
-        return tasks_awaiting_deletion;
     }
 }
