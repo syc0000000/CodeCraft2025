@@ -3,7 +3,7 @@
 import java.util.ArrayList;
 import Deleter.Deleter;
 import IO.IO;
-import IO.Preprocess.Preprocess;
+import IO.Preprocess;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import IO.model.ReadCommandIn;
@@ -54,9 +54,6 @@ public class Main {
                 i++;
             }
         }
-
-        // 设置分布和标签路径
-        Preprocess.setDistributionPaths(loadDistributionPath);
 
         // 执行预处理
         Preprocess.preprocess();

@@ -1,13 +1,13 @@
-package IO.Preprocess.TagDistribution;
+package Writer.TagDistribution;
 
 import java.io.Serializable;
 import java.util.*;
 
-import IO.Preprocess.Preprocess;
-import IO.Preprocess.GA.*;
 import Info.Info;
+import Info.model.Tag;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
+import Writer.GA.*;
 
 /**
  * 磁盘分配器，负责计算标签在各磁盘上的分布
@@ -51,9 +51,14 @@ public class DiskDistributor {
 
         // 初始化遗传算法参数
         GeneticParameters.TAGS = tagValues;
+        // 从tags中拿出cumulative_write_minus_del
+        ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
+        for (Tag tag : Info.tags) {
+            cumulative_write_minus_del.add(tag.totalSizeByPeriod);
+        }
 
         // 转置累积写入-删除数组，从[标签][时间点]转换为[时间点][标签]
-        ArrayList<ArrayList<Integer>> originalData = Preprocess.getCumulativeWriteMinusDel();
+        ArrayList<ArrayList<Integer>> originalData = cumulative_write_minus_del;
         ArrayList<ArrayList<Integer>> transposedData = new ArrayList<>();
 
         if (originalData.size() > 0) {

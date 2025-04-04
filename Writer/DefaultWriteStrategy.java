@@ -26,12 +26,13 @@ import Logger.LoggerFactory.ModuleLogger;
  * 
  * 磁盘相关结构:
  * <ul>
- * <li>{@link LocalDisk#freespaceBySize} - 跟踪每个磁盘上的可用空间，table value为存放{@link DiskSpace}的TreeSet</li>
+ * <li>{@link LocalDisk#freespaceBySize} - 跟踪每个磁盘上的可用空间，table
+ * value为存放{@link DiskSpace}的TreeSet</li>
  * <li>{@link LocalDisk#unitData} - 存储每个磁盘的单元级存储信息，链表的元素类型为{@link DiskUnit}</li>
  * </ul>
  */
 public class DefaultWriteStrategy implements WriteStrategy {
-    private final ModuleLogger log = LoggerFactory.getLogger("Writer");
+    public final ModuleLogger log = LoggerFactory.getLogger("Writer");
 
     @Override
     public ArrayList<WriteCommandOut> write(ArrayList<WriteCommandIn> writeCommandIns) {
@@ -42,8 +43,7 @@ public class DefaultWriteStrategy implements WriteStrategy {
 
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
-            UserObject obj =
-                    new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
+            UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
 
             // 选3块磁盘

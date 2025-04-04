@@ -1,11 +1,11 @@
-package IO.Preprocess.hardcode;
+package Writer.hardcode;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import IO.Preprocess.TagDistribution.DiskDistributor.Split;
+import Writer.TagDistribution.DiskDistributor.Split;
 
 public class dist2 {
 

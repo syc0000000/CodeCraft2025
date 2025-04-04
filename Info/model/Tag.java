@@ -8,8 +8,18 @@ import java.util.ArrayList;
 public class Tag {
     public int tagId; // 标签id
     public int sizeMax; // 大小
+    // Tag随时间的读取量
+    public ArrayList<Integer> readSizeByPeriod;
+    // Tag随时间总量
+    public ArrayList<Integer> totalSizeByPeriod;
+    // Tag分配情况(哪些磁盘上有这个tag)
+    public ArrayList<Integer> diskIdList;
+
+    @Deprecated
     public ArrayList<Integer> sizeList; // 大小列表，key:DiskId, value:size
+    @Deprecated
     public ArrayList<Integer> middleList; // 中间位置列表，key:DiskId, value:middle
+    @Deprecated
     public ArrayList<Integer> lenthList; // 规划的区间长度列表，key:DiskId, value:lenth
 
     public Tag(int tagId, int sizeMax, int disk_num) {
