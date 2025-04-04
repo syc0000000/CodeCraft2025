@@ -13,6 +13,7 @@ public class DiskSpace {
     public int sizeInMap; // 空间大小(用于Map的key)
     public int diskId; // 所属磁盘ID
 
+    @Deprecated
     public DiskSpaceType type; // 空间类型
 
     // 定义Comparator，按start升序排序

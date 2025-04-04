@@ -1,4 +1,4 @@
-package IO.Preprocess.TagDistribution;
+package Writer.TagDistribution;
 
 import java.util.ArrayList;
 import java.util.Collections;

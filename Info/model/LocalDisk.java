@@ -43,6 +43,9 @@ public class LocalDisk {
     /** 读写区的剩余空间，需要在删写时维护 */
     public int rwSizeLeft;
 
+    // 新Tag信息
+    public ArrayList<TagMeta> tagMetas;
+
     public static LocalDisk createDisk(int diskId, int unitNum, String type) {
         LocalDisk disk = new LocalDisk(diskId, unitNum);
         switch (type) {
@@ -142,6 +145,16 @@ public class LocalDisk {
         if (unitId < 0 || unitId >= unitNum)
             return null;
         return unitData.get(unitId).space;
+    }
+
+    // 根据TagId，找到对应的TagMeta
+    public TagMeta getTagMetaByTagId(int tagId) {
+        for (TagMeta tagMeta : tagMetas) {
+            if (tagMeta.tagId == tagId) {
+                return tagMeta;
+            }
+        }
+        return null;
     }
 
     /**
