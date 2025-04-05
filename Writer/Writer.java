@@ -19,6 +19,8 @@ public class Writer {
             this.writeStrategy = new TagWriterStrategy();
         } else if (writeStrategy.equals("nt")) {
             this.writeStrategy = new NewTagWriterStrategy();
+        } else if (writeStrategy.equals("MTGA")) {
+            this.writeStrategy = new MakeTagGreatAgain();
         } else {
             throw new IllegalArgumentException("Invalid write strategy: " + writeStrategy);
         }

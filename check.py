@@ -39,7 +39,7 @@ def main():
     
     # 设置命令行参数
     debug_option = "" if args.release else "-d"
-    input_file = "./test/sample_practice.in" if args.big else "./test/sample_official.in"
+    input_file = "./test/sample_practice.in" if args.big else "./test/sample_practice.in"
     
     # 根据操作系统选择正确的interactor
     interactor = "./test/interactor_mac" if sys.platform == "darwin" else "./test/interactor"

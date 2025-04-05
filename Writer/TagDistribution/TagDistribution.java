@@ -4,11 +4,16 @@ import java.util.*;
 import Info.Info;
 import Info.model.*;
 import Writer.TagDistribution.DiskDistributor.Split;
+import Writer.hardcode.dist1;
+import Logger.LoggerFactory;
+import Logger.LoggerFactory.ModuleLogger;
 
 /**
  * 标签分布管理类，负责所有与标签相关的操作
  */
 public class TagDistribution {
+    private static final ModuleLogger log = LoggerFactory.getLogger("TagDistribution");
+
     // 聚类算法参数
     public static class ClusterConfig {
         // 聚类数量
@@ -62,7 +67,8 @@ public class TagDistribution {
         // 使用遗传算法计算分布或使用硬编码分布
         // tagDistribution = DiskDistributor.computeDistributionByGA(tagsMaxSize);
         // 这里可以选择合适的分布策略
-        tagDistribution = DiskDistributor.createEvenDistribution(tagsMaxSize);
+        // tagDistribution = DiskDistributor.createEvenDistribution(tagsMaxSize);
+        tagDistribution = dist1.createHardcodedDistribution();
 
         // 初始化tag空间分布
         distributeTagSpace();
@@ -103,6 +109,7 @@ public class TagDistribution {
                 int size = (int) (tag.sizeMax * proportion / 100);
                 TagSize tagSize = new TagSize(tagId, size);
                 sizes.get(diskId).add(tagSize);
+                Info.tags.get(tagId).diskIdList.add(diskId);
             }
         }
         // 遍历disk
@@ -122,8 +129,13 @@ public class TagDistribution {
             // 算left right，写tagMeta
             int left = 0;
             for (TagSize tagSize : tagSizes) {
-                disk.tagMetas.add(new TagMeta(tagSize.tagId, left, left + tagSize.size - 1, 0));
+                disk.tagMetas.add(new TagMeta(tagSize.tagId, left, left + tagSize.size - 1, -1));
                 left += tagSize.size;
+                // 建立初始空间
+                DiskSpace diskSpace = new DiskSpace(true, left, left + tagSize.size - 1, disk.diskId, tagSize.tagId);
+                for (int j = left; j < left + tagSize.size; j++) {
+                    disk.unitData.get(j).space = diskSpace;
+                }
             }
         }
     }
@@ -427,6 +439,7 @@ public class TagDistribution {
         for (TimeSeriesPoint p : points) {
             tagClusters.get(p.clusterId).add(p.tagId);
         }
+        log.debug("tagClusters: " + Arrays.toString(tagClusters.toArray()));
     }
 
     private void fallbackClustering() {

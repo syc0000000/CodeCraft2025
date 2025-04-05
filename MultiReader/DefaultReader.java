@@ -22,18 +22,17 @@ public class DefaultReader implements MultiReaderStrategy {
         tokenleft[1] = Info.tokenPerTick;
         LocalDisk disk = Info.localDiskTbl.get(diskId);
         for (int index = 0; index < 2; index++) {
-            
-            if(index == 0){
-                //第一个ptr
+
+            if (index == 0) {
+                // 第一个ptr
                 if (disk.ptr[index] > partition[diskId]) {
                     readCommandOut.actions.get(index).add(Action.JUMP);
                     readCommandOut.jumpTargets.set(index, 0);
                     disk.ptrDoAction(index, Action.JUMP, 0);
                     tokenleft[index] -= Info.tokenPerTick;
                 }
-            }
-            else{
-                //第二个ptr
+            } else {
+                // 第二个ptr
                 if (disk.ptr[index] < disk.logicalRWEnd) {
                     readCommandOut.actions.get(index).add(Action.JUMP);
                     readCommandOut.jumpTargets.set(index, partition[diskId]);
@@ -69,7 +68,8 @@ public class DefaultReader implements MultiReaderStrategy {
                                     readerLogger.debug("上报任务id" + readTask.taskId);
                                     completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
                                     // 移除这个任务
-                                    Info.readTasksInRecent105Tick.get(104 - (Info.timestamp - readTask.startTime))
+                                    Info.readTasksInRecent105Tick.get(Info.readTasksInRecent105Tick.size() - 1
+                                            - (Info.timestamp - readTask.startTime))
                                             .remove(readTask);
                                     iterator.remove();
                                 }
@@ -86,8 +86,7 @@ public class DefaultReader implements MultiReaderStrategy {
                         // 如果token不够，则直接退出
                         break;
                     }
-                }
-                else{
+                } else {
                     // 如果没有任务，则直接跳过
                     readCommandOut.actions.get(index).add(Action.PASS);
                     disk.ptrDoAction(index, Action.PASS);

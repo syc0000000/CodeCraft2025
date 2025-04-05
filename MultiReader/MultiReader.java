@@ -11,6 +11,7 @@ import Info.model.UserObject;
 import Info.model.ReadTask;
 import Info.model.Replica;
 import IO.model.MultiReadCommandOut;
+import IO.model.BusyCommandOut;
 
 public class MultiReader {
     private MultiReaderStrategy multiReaderStrategy;
@@ -70,6 +71,13 @@ public class MultiReader {
                     }
                 }
             }
+            // busyCommandOuts
+            ArrayList<BusyCommandOut> busyCommandOuts = new ArrayList<>();
+            for (ReadTask readTask : tasksToAbort) {
+                BusyCommandOut busyCommandOut = new BusyCommandOut(readTask.taskId);
+                busyCommandOuts.add(busyCommandOut);
+            }
+            readRetrun.busyCommandOuts = busyCommandOuts;
         }
         return readRetrun;
 

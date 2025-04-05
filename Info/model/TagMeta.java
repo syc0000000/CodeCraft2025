@@ -12,4 +12,9 @@ public class TagMeta {
         this.right = right;
         this.rightNow = rightNow;
     }
+
+    @Override
+    public String toString() {
+        return "TagMeta [tagId=" + tagId + ", left=" + left + ", right=" + right + ", rightNow=" + rightNow + "]";
+    }
 }

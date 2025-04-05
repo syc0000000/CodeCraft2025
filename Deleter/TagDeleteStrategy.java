@@ -143,13 +143,12 @@ public class TagDeleteStrategy implements DeleteStrategy {
         space.type = DiskSpaceType.UNUSED;
         // 合并前后空间
         DiskSpace prevSpace = space.start > 0 ? disk.unitData.get(space.start - 1).space : null;
-        DiskSpace nextSpace =
-                space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
-        if (prevSpace != null && prevSpace.isFree) {
+        DiskSpace nextSpace = space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
+        if (prevSpace != null && prevSpace.isFree && prevSpace.tagId == space.tagId) {
             // log.debug("合并前空间: " + prevSpace);
             space.setStartAndEnd(prevSpace.start, space.end);
         }
-        if (nextSpace != null && nextSpace.isFree) {
+        if (nextSpace != null && nextSpace.isFree && nextSpace.tagId == space.tagId) {
             // log.debug("合并后空间: " + nextSpace);
             space.setStartAndEnd(space.start, nextSpace.end);
         }

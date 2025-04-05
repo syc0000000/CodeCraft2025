@@ -14,6 +14,10 @@ public class MultiReadCommandOut {
     public MultiReadCommandOut() {
         this.actions = new ArrayList<>(2);
         this.jumpTargets = new ArrayList<>(2);
+        for (int i = 0; i < 2; i++) {
+            this.actions.add(new ArrayList<Action>());
+            this.jumpTargets.add(-1);
+        }
     }
 
     public MultiReadCommandOut(List<List<Action>> actions, List<Integer> jumpTargets) {

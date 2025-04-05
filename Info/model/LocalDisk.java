@@ -1,6 +1,7 @@
 package Info.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.TreeSet;
 import Logger.LoggerFactory;
@@ -45,6 +46,13 @@ public class LocalDisk {
 
     // 新Tag信息
     public ArrayList<TagMeta> tagMetas;
+
+    @Override
+    public String toString() {
+        return "LocalDisk [diskId=" + diskId + ", unitNum=" + unitNum + ", ptr=" + Arrays.toString(ptr)
+                + ", RWEnd=" + RWEnd + ", sizeLeft=" + sizeLeft + ", preoper=" + Arrays.toString(preoper)
+                + ", pretoken=" + Arrays.toString(pretoken);
+    }
 
     public static LocalDisk createDisk(int diskId, int unitNum, String type) {
         LocalDisk disk = new LocalDisk(diskId, unitNum);
@@ -92,6 +100,7 @@ public class LocalDisk {
                 for (int i = 0; i < disk.logicalBackStart; i++) {
                     disk.unitData.add(new UnitData(-1, -1, rwSpace));
                 }
+                disk.tagMetas = new ArrayList<>();
         }
         return disk;
     }

@@ -64,7 +64,7 @@ public class IO {
         for (int i = 0; i < size; i++) {
             int objId = scanner.nextInt();
             int size_ = scanner.nextInt();
-            int tag = scanner.nextInt();
+            int tag = scanner.nextInt() - 1;
             in.add(new WriteCommandIn(objId, size_, tag));
         }
 

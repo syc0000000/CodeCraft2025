@@ -63,7 +63,7 @@ public class TagWriterStrategy extends DefaultWriteStrategy {
             UserObject obj = new UserObject(writeCommandIn.objId, writeCommandIn.size, writeCommandIn.tag);
             Info.objMap.put(writeCommandIn.objId, obj);
             // Get disks based on tag information
-            Tag tag = Info.tags.get(writeCommandIn.tag - 1);
+            Tag tag = Info.tags.get(writeCommandIn.tag);
             ArrayList<LocalDisk> disks = selectDiskByTag(tag.tagId, obj.objSize);
 
             if (disks == null || disks.size() < 3) {

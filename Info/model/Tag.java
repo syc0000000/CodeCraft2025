@@ -28,6 +28,9 @@ public class Tag {
         this.sizeList = new ArrayList<>(disk_num);
         this.middleList = new ArrayList<>(disk_num);
         this.lenthList = new ArrayList<>(disk_num);
+        this.readSizeByPeriod = new ArrayList<>();
+        this.totalSizeByPeriod = new ArrayList<>();
+        this.diskIdList = new ArrayList<>();
         for (int i = 0; i < disk_num; i++) {
             this.sizeList.add(0);
             this.middleList.add(0);

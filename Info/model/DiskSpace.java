@@ -12,6 +12,7 @@ public class DiskSpace {
     public int size; // 空间大小(缓存以避免重复计算)
     public int sizeInMap; // 空间大小(用于Map的key)
     public int diskId; // 所属磁盘ID
+    public int tagId; // 所属tagId
 
     @Deprecated
     public DiskSpaceType type; // 空间类型
@@ -32,6 +33,11 @@ public class DiskSpace {
         this.diskId = diskId;
         this.type = DiskSpaceType.UNUSED;
         this.sizeInMap = size > 5 ? 5 : size;
+    }
+
+    public DiskSpace(boolean isFree, int start, int end, int diskId, int tagId) {
+        this(isFree, start, end, diskId);
+        this.tagId = tagId;
     }
 
     @Override

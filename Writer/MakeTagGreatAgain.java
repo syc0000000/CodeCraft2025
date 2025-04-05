@@ -29,6 +29,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                 throw new RuntimeException("没有找到可用的磁盘");
             }
             LocalDisk rwDisk = disks.get(0);
+            log.debug("=== 开始为对象" + writeCommandIn.objId + "在磁盘 " + rwDisk.diskId + "选择Unit ===");
             ArrayList<DiskSpace> diskSpaces = getFreeSpaceByTag(writeCommandIn.tag, rwDisk, writeCommandIn.size);
             if (diskSpaces == null) {
                 log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
@@ -56,6 +57,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             Replica replica = new Replica(writeCommandIn.objId, 0, rwDisk.diskId, unitIdList);
             addReplicaToObj(obj, replica);
             saveReplicaToDisk(rwDisk, replica);
+            writeCommandOut.copy1 = new DiskUnit(rwDisk.diskId, unitIdList);
             rwDisk.rwSizeLeft -= obj.objSize;
             // 维护RWEnd
             rwDisk.RWEnd = Math.min(rwDisk.logicalRWEnd, Math.max(rwDisk.RWEnd, maxUnitId));
@@ -66,7 +68,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             }
             // 两个备份磁盘
             for (int i = 1; i < disks.size(); i++) {
-                log.debug("=== 开始为对象" + writeCommandIn.objId + "的backup replica" + i + "选择磁盘 ===");
+                log.debug("=== 开始为对象" + writeCommandIn.objId + "的backup replica" + i + "选择Unit ===");
                 LocalDisk backupDisk = disks.get(i);
                 ArrayList<Integer> unitIds = getFreeUnitFromEnd(backupDisk, obj.objSize);
 
@@ -93,6 +95,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     writeCommandOut.copy3 = new DiskUnit(backupDisk.diskId, unitIds);
                 }
             }
+            // log.debug("处理对象id: " + writeCommandIn.objId + " 的writeCommandOut: " +
+            // writeCommandOut.toString());
 
             writeCommandOuts.add(writeCommandOut);
         }
@@ -123,8 +127,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
         for (int i : tag.diskIdList) {
             LocalDisk disk = Info.localDiskTbl.get(i);
             // 找到剩余空间最大的磁盘
-            if (disk.backSizeLeft > maxSize) {
-                maxSize = disk.backSizeLeft;
+            if (disk.rwSizeLeft > maxSize) {
+                maxSize = disk.rwSizeLeft;
                 rwDisk = disk;
             }
         }
@@ -154,6 +158,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
         candidateDisks.add(rwDisk);
         candidateDisks.add(backupDisk1);
         candidateDisks.add(backupDisk2);
+        log.debug("candidateDisks: " + candidateDisks.toString());
         return candidateDisks;
     }
 
@@ -168,6 +173,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
         int right = tagMeta.right;
         int rightNow = tagMeta.rightNow;
 
+        log.debug("tagMeta: " + tagMeta.toString());
+
         boolean finishFlag = false;
 
         // 第一层级，从left开始扫空间，找到第一个能装得下的空间
@@ -175,6 +182,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             DiskSpace diskSpace = disk.getSpaceForUnit(i);
             if (diskSpace.size >= size) {
                 if (diskSpace.size == size) {
+                    log.debug("找到尺寸刚好的空间: " + diskSpace.toString());
                     diskSpaces.add(diskSpace);
                     diskSpace.isFree = false;
                     finishFlag = true;
@@ -199,6 +207,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
 
                     finishFlag = true;
                     diskSpaces.add(diskSpace);
+                    log.debug("切割空间完成: " + diskSpace.toString());
                     break;
                 }
             }
@@ -249,7 +258,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             int sizeLeft = size; // 剩余空间
             for (int i = bestStart; i <= bestEnd; i++) {
                 DiskSpace diskSpace = disk.getSpaceForUnit(i);
-                if (diskSpace.size <= sizeLeft) {
+                if (diskSpace.size < sizeLeft) {
                     diskSpaces.add(diskSpace);
                     sizeLeft -= diskSpace.size;
                 } else {
