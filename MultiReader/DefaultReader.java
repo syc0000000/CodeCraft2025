@@ -22,11 +22,24 @@ public class DefaultReader implements MultiReaderStrategy {
         tokenleft[1] = Info.tokenPerTick;
         LocalDisk disk = Info.localDiskTbl.get(diskId);
         for (int index = 0; index < 2; index++) {
-            if (disk.ptr[index] > partition[diskId]) {
-                readCommandOut.actions.get(index).add(Action.JUMP);
-                readCommandOut.jumpTargets.set(index, partition[diskId]);
-                disk.ptrDoAction(index, Action.JUMP, partition[diskId]);
-                tokenleft[index] -= Info.tokenPerTick;
+            
+            if(index == 0){
+                //第一个ptr
+                if (disk.ptr[index] > partition[diskId]) {
+                    readCommandOut.actions.get(index).add(Action.JUMP);
+                    readCommandOut.jumpTargets.set(index, 0);
+                    disk.ptrDoAction(index, Action.JUMP, 0);
+                    tokenleft[index] -= Info.tokenPerTick;
+                }
+            }
+            else{
+                //第二个ptr
+                if (disk.ptr[index] < disk.logicalRWEnd) {
+                    readCommandOut.actions.get(index).add(Action.JUMP);
+                    readCommandOut.jumpTargets.set(index, partition[diskId]);
+                    disk.ptrDoAction(index, Action.JUMP, partition[diskId]);
+                    tokenleft[index] -= Info.tokenPerTick;
+                }
             }
             while (tokenleft[index] > 0) {
                 if (disk.ptr[0] > partition[diskId])
@@ -73,6 +86,12 @@ public class DefaultReader implements MultiReaderStrategy {
                         // 如果token不够，则直接退出
                         break;
                     }
+                }
+                else{
+                    // 如果没有任务，则直接跳过
+                    readCommandOut.actions.get(index).add(Action.PASS);
+                    disk.ptrDoAction(index, Action.PASS);
+                    tokenleft[index] -= disk.pretoken[index];
                 }
             }
         }
