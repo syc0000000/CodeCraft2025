@@ -139,55 +139,6 @@ public class IO {
     }
 
     /**
-     * 输出读命令结果到标准输出
-     * 
-     * @param out 读命令输出结构，key为磁盘ID，value为读命令输出结构
-     * @note 只需要放动了的命令，如果磁头完全不动，则不需要传入
-     */
-    public static void writeReadCommand(Map<Integer, MultiReadCommandOut> out) {
-        for (int i = 0; i < Info.diskNum; i++) {
-            if (out.containsKey(i)) {
-                // 判断是否是JUMP操作
-                if (out.get(i).actions != null && !out.get(i).actions.isEmpty()
-                        && out.get(i).actions.get(0).get(0) == Action.JUMP) {
-                    int target = out.get(i).jumpTargets.get(0) + 1;
-                    System.out.println("j " + target);
-                } else {
-                    // 输出读取或通过操作
-                    for (Action action : out.get(i).actions.get(0)) {
-                        if (action == Action.READ) {
-                            System.out.print("r");
-                        } else if (action == Action.PASS) {
-                            System.out.print("p");
-                        }
-                    }
-                    System.out.println("#");
-                }
-                // 第二个指针的操作
-                if (out.get(i).actions != null && !out.get(i).actions.isEmpty()
-                        && out.get(i).actions.get(0).get(1) == Action.JUMP) {
-                    int target = out.get(i).jumpTargets.get(1) + 1;
-                    System.out.println("j " + target);
-                } else {
-                    // 输出读取或通过操作
-                    for (Action action : out.get(i).actions.get(1)) {
-                        if (action == Action.READ) {
-                            System.out.print("r");
-                        } else if (action == Action.PASS) {
-                            System.out.print("p");
-                        }
-                    }
-                    System.out.println("#");
-                }
-            } else {
-                System.out.println("#");
-                System.out.println("#");
-            }
-        }
-        // 注意：此处不刷新输出
-    }
-
-    /**
      * 输出多读命令结果到标准输出
      * 
      * @param out 多读命令输出结构列表

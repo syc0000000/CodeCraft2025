@@ -135,8 +135,9 @@ public class LocalDisk {
         switch (action) {
             case READ:
                 int objId = unitData.get(ptr[index]).objId;
+                pretoken[index] = calculateToken(index, action);    
                 preoper[index] = action;
-                pretoken[index] = calculateToken(index, action);
+
                 unitData.get(ptr[index]).isInTask = false;
                 passPtr(index);
                 return objId;

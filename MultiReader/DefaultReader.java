@@ -22,7 +22,7 @@ public class DefaultReader implements MultiReaderStrategy {
         tokenleft[1] = Info.tokenPerTick;
         LocalDisk disk = Info.localDiskTbl.get(diskId);
         for (int index = 0; index < 2; index++) {
-
+            readerLogger.debug("磁盘"+diskId+"磁头" + index + "的token" + tokenleft[index]+"开始读");
             if (index == 0) {
                 // 第一个ptr
                 if (disk.ptr[index] > partition[diskId]) {
@@ -33,7 +33,7 @@ public class DefaultReader implements MultiReaderStrategy {
                 }
             } else {
                 // 第二个ptr
-                if (disk.ptr[index] < disk.logicalRWEnd) {
+                if (disk.ptr[index] > disk.logicalRWEnd || disk.ptr[index] < partition[diskId]) {
                     readCommandOut.actions.get(index).add(Action.JUMP);
                     readCommandOut.jumpTargets.set(index, partition[diskId]);
                     disk.ptrDoAction(index, Action.JUMP, partition[diskId]);
@@ -41,18 +41,13 @@ public class DefaultReader implements MultiReaderStrategy {
                 }
             }
             while (tokenleft[index] > 0) {
-                if (disk.ptr[0] > partition[diskId])
-                    break;
                 boolean isInTask = disk.unitData.get(disk.ptr[index]).isInTask;
                 if (isInTask) {
                     if (tokenleft[index] > disk.calculateToken(index, Action.READ)) {
-                        readerLogger.debug("token足够");
                         int objId = disk.unitData.get(disk.ptr[index]).objId;
                         int blockId = disk.unitData.get(disk.ptr[index]).blockId;
                         UserObject object = Info.objMap.get(objId);
                         // 有任务就直接处理
-                        readerLogger.debug("objid为" + objId + "blockid为" + blockId);
-
                         Iterator<ReadTask> iterator = object.readTasks.iterator();
                         while (iterator.hasNext()) {
                             ReadTask readTask = iterator.next();
