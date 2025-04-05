@@ -15,7 +15,7 @@ import Logger.Logger;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
 import Writer.Writer;
-import Reader.Reader;
+import MultiReader.MultiReader;
 
 /**
  * 主类，负责程序的主要流程控制
@@ -61,7 +61,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("tag");
-        Reader reader = new Reader("default");
+        MultiReader reader = new MultiReader("default");
 
         // 主循环 - 处理每个时间片
         for (int i = 1; i <= Info.tickNums + 105; i++) {
@@ -96,7 +96,7 @@ public class Main {
             ReadRetrun readRetrun = reader.read(readIn);
             IO.writeReadCommand(readRetrun.readCommandOuts);
             IO.writeCompleteCommand(readRetrun.completeCommandOuts);
-
+            IO.writeBusyCommand(readRetrun.busyCommandOuts);
             // 每1800个时间片执行一次垃圾回收
             if (i % 1800 == 0) {
                 IO.processGC();

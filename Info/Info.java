@@ -40,7 +40,7 @@ public class Info {
     public static ArrayList<Tag> tags = new ArrayList<>();
 
     /** 存放当前[tick-105, tick]时间片内未完成的读取任务的id，对于tick-105到达的任务, 最晚要在tick上报 */
-    public static LinkedList<HashSet<Integer>> readTasksInRecent105Tick = new LinkedList<>();
+    public static LinkedList<HashSet<ReadTask>> readTasksInRecent105Tick = new LinkedList<>();
     /** 各时间段累计差值数据 */
     @Deprecated
     public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
