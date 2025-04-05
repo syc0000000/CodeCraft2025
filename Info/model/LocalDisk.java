@@ -15,13 +15,13 @@ public class LocalDisk {
 
     public int diskId; // 磁盘id
     public int unitNum; // 存储单元数量
-    public int ptr; // 当前磁头指针位置
+    public int[] ptr; // 当前磁头指针1位置
 
     public int RWEnd; // 读写空间结束位置
     public int sizeLeft; // 剩余空间大小
 
-    public Action preoper; // 上一次操作
-    public int pretoken; // 上一次令牌数量
+    public Action[] preoper; // 上一次操作
+    public int[] pretoken; // 上一次令牌数量
 
     // 优化: 按大小组织空闲空间的集合
     // key: 空间大小1-5, value: 该大小的空闲空间列表
@@ -96,44 +96,79 @@ public class LocalDisk {
     public LocalDisk(int diskId, int unitNum) {
         this.diskId = diskId;
         this.unitNum = unitNum;
-        this.ptr = 0;
+        this.ptr = new int[2];
+        this.ptr[0] = 0;
+        this.ptr[1] = 0;
         this.RWEnd = 0;
         this.sizeLeft = unitNum;
-        this.preoper = Action.PASS;
-        this.pretoken = 64;
-
+        this.preoper = new Action[2];
+        this.preoper[0] = Action.PASS;
+        this.preoper[1] = Action.PASS;
+        this.pretoken = new int[2];
+        this.pretoken[0] = 64;
+        this.pretoken[1] = 64;
         // 初始化集合
         // 1-5大小的空闲空间列表
         this.freespaceBySize = new HashMap<>(5);
         this.unitData = new ArrayList<>(unitNum);
     }
 
-    public void passPtr() {
-        ptr++;
+    public void passPtr(int index) {
+        ptr[index]++;
     }
 
     // 执行操作
-    public int ptrDoAction(Action action) {
+    public int ptrDoAction(int index, Action action) {
+
         switch (action) {
             case READ:
-                int objId = unitData.get(ptr).objId;
-                passPtr();
+                int objId = unitData.get(ptr[index]).objId;
+                preoper[index] = action;
+                pretoken[index] = calculateToken(index, action);
+                unitData.get(ptr[index]).isInTask = false;
+                passPtr(index);
                 return objId;
             case PASS:
-                passPtr();
+                preoper[index] = action;
+                pretoken[index] = calculateToken(index, action);
+                passPtr(index);
                 return 0;
             default:
                 return -1;
         }
     }
 
-    public int ptrDoAction(Action action, int jump) {
+    public int ptrDoAction(int index, Action action, int jump) {
+        preoper[index] = action;
+        pretoken[index] = Info.tokenPerTick;
         switch (action) {
             case JUMP:
-                ptr = jump;
+                ptr[index] = jump;
                 return 0;
             default:
                 return -1;
+        }
+    }
+
+    // 计算操作消耗的token，提供默认实现
+    public int calculateToken(int index, Action action) {
+        switch (action) {
+            case READ:
+                // 向上取整
+                // readerLogger.debug("计算token: pretoken=" + disk.pretoken);
+                int token;
+                if (preoper[index] == Action.READ) {
+                    token = (int) Math.ceil(pretoken[index] * 0.8);
+                } else {
+                    token = 64;
+                }
+                return token < 16 ? 16 : token;
+            case JUMP:
+                return Info.tokenPerTick;
+            case PASS:
+                return 1;
+            default:
+                return -1;// 异常
         }
     }
 
