@@ -241,7 +241,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                 if (span < minSpan) {
                     minSpan = span;
                     bestStart = windowStart;
-                    bestEnd = windowEnd;
+                    bestEnd = windowEnd - 1;
                 }
             }
 
