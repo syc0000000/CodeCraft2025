@@ -129,7 +129,7 @@ public class TagDistribution {
             // 算left right，写tagMeta
             int left = 0;
             for (TagSize tagSize : tagSizes) {
-                disk.tagMetas.add(new TagMeta(tagSize.tagId, left, left + tagSize.size - 1, -1));
+                disk.tagMetas.add(new TagMeta(tagSize.tagId, left, left + tagSize.size - 1, -1, 0));
                 // 建立初始空间
                 DiskSpace diskSpace = new DiskSpace(true, left, left + tagSize.size - 1, disk.diskId, tagSize.tagId);
                 for (int j = left; j < left + tagSize.size; j++) {
@@ -137,6 +137,7 @@ public class TagDistribution {
                 }
                 left += tagSize.size;
             }
+            log.debug("disk " + disk.diskId + " 最终left: " + left + " logicalRWEnd: " + disk.logicalRWEnd);
         }
     }
 
