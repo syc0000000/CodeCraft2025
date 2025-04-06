@@ -63,7 +63,7 @@ public class TagDeleteStrategy implements DeleteStrategy {
 
             for (ReadTask task : tasks_awaiting_deletion) {
                 deleteCommandOuts.add(new DeleteCommandOut(task.taskId));
-                Info.readTasksInRecent105Tick.get(Info.readTasksInRecent105Tick.size() - 1
+                Info.readTasksInRecent105Tick.get(Info.readTasksInRecent105Tick.size()
                         - (Info.timestamp - task.startTime))
                         .remove(task);
             }

@@ -1,6 +1,7 @@
 package Writer;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
 import IO.model.DiskUnit;
@@ -164,7 +165,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
 
     // 获取指定tag在磁盘上的空闲空间
     public ArrayList<DiskSpace> getFreeSpaceByTag(int tagId, LocalDisk disk, int size) {
-        ArrayList<DiskSpace> diskSpaces = new ArrayList<>();
+        HashSet<DiskSpace> diskSpaces = new HashSet<>();
         TagMeta tagMeta = disk.getTagMetaByTagId(tagId);
         if (tagMeta == null) {
             return null;
@@ -221,7 +222,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             }
         }
         if (finishFlag) {
-            return diskSpaces;
+            return new ArrayList<>(diskSpaces);
         }
 
         // 第二层级，使用滑动窗口找到最短距离的空间组合
@@ -258,6 +259,9 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                 currentSize--;
             }
             windowStart++;
+            while (windowStart <= right && disk.unitData.get(windowStart).objId != -1) {
+                windowStart++;
+            }
         }
 
         // 如果找到了合适的空间
@@ -268,6 +272,9 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             int sizeLeft = size; // 剩余空间
             for (int i = bestStart; i <= bestEnd; i++) {
                 DiskSpace diskSpace = disk.getSpaceForUnit(i);
+                if (!diskSpace.isFree) {
+                    continue;
+                }
                 if (diskSpace.size < sizeLeft) {
                     diskSpaces.add(diskSpace);
                     sizeLeft -= diskSpace.size;
@@ -297,7 +304,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     break;
                 }
             }
-            return diskSpaces;
+            return new ArrayList<>(diskSpaces);
         }
 
         // 第三级，写到其他tag处
