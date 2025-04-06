@@ -108,6 +108,8 @@ public class TagDeleteStrategy implements DeleteStrategy {
             // Info.tags.get(obj.objTag - 1).sizeList.set(rwDisk.diskId,
             // Info.tags.get(obj.objTag - 1).sizeList.get(rwDisk.diskId) - 1);
             releaseSpace(space);
+            // 更新tagMeta的sizeNow
+            rwDisk.getTagMetaByTagId(Info.objMap.get(obj_id).objTag).sizeNow -= 1;
         }
 
         // free backup replica
