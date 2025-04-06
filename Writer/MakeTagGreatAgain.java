@@ -39,6 +39,15 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                 log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到tagid = "
                         + writeCommandIn.tag + "读写空间, 尝试再在相似tag的空中寻找空间");
                 ArrayList<Integer> similarTags = tagDistribution.getSimilarTags(writeCommandIn.tag);
+                ArrayList<Integer> otherTags = new ArrayList<>();
+                
+                // 向otherTags中添加所有tagId，但不包含similarTags中的tagId
+                for (TagMeta tagMeta : rwDisk.tagMetas) {
+                    if (tagMeta.tagId != writeCommandIn.tag && !similarTags.contains(tagMeta.tagId)) {
+                        otherTags.add(tagMeta.tagId);
+                    }
+                }
+                
                 if (similarTags != null) {
                     for (Integer similarTagId : similarTags) {
                         if (similarTagId == writeCommandIn.tag)
@@ -55,6 +64,22 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         }
                     }
                 }
+                
+                if (otherTags != null && diskSpaces == null) {
+                    for (Integer otherTagId : otherTags) {
+                        TagMeta otherTagMeta = rwDisk.getTagMetaByTagId(otherTagId);
+                        if (otherTagMeta == null)
+                            continue;
+                        ArrayList<DiskSpace> spaces =
+                                getFreeSpaceByTag(otherTagId, rwDisk, writeCommandIn.size);
+                        if (spaces != null) {
+                            log.debug("找到otherTagId = " + otherTagId + "的空间: " + spaces.toString());
+                            diskSpaces = spaces;
+                            break;
+                        }
+                    }
+                }
+
 
                 if (diskSpaces == null) {
                     // 输出整个磁盘unitData
