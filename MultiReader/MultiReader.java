@@ -79,6 +79,8 @@ public class MultiReader {
             }
             readRetrun.busyCommandOuts = busyCommandOuts;
         }
+
+        readRetrun.completeCommandOuts = completeCommandOuts;
         return readRetrun;
 
     }

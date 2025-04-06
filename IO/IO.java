@@ -48,7 +48,10 @@ public class IO {
     public static void processGC() {
         scanner.next(); // 读取命令 "GARBAGE"
         scanner.next(); // 读取命令 "COLLECTION"
-        System.out.println("0");
+        System.out.println("GARBAGE COLLECTION");
+        for (int i = 0; i < Info.diskNum; i++) {
+            System.out.println("0");
+        }
         flushAll();
     }
 
@@ -99,6 +102,7 @@ public class IO {
     public static ArrayList<DeleteCommandIn> readDeleteCommand() {
         ArrayList<DeleteCommandIn> in = new ArrayList<>();
         int size = scanner.nextInt();
+        log.debug("读取到 " + size + " 个删除命令");
         for (int i = 0; i < size; i++) {
             int objId = scanner.nextInt();
             in.add(new DeleteCommandIn(objId));

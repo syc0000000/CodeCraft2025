@@ -101,9 +101,9 @@ public class TagDeleteStrategy implements DeleteStrategy {
             rwDisk.unitData.get(unit_id).isInTask = false;
             rwDisk.rwSizeLeft += 1;
             // 维护sizeList
-            UserObject obj = Info.objMap.get(obj_id);
-            Info.tags.get(obj.objTag - 1).sizeList.set(rwDisk.diskId,
-                    Info.tags.get(obj.objTag - 1).sizeList.get(rwDisk.diskId) - 1);
+            // UserObject obj = Info.objMap.get(obj_id);
+            // Info.tags.get(obj.objTag - 1).sizeList.set(rwDisk.diskId,
+            // Info.tags.get(obj.objTag - 1).sizeList.get(rwDisk.diskId) - 1);
             releaseSpace(space);
         }
 

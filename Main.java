@@ -41,7 +41,7 @@ public class Main {
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 4);
+        logger.enableTimeRange(81, 81);
 
         mainLogger.info("程序启动");
 
