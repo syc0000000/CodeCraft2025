@@ -17,7 +17,7 @@ public class TagDistribution {
     // 聚类算法参数
     public static class ClusterConfig {
         // 聚类数量
-        public static int K = 7;
+        public static int K = 4;
         // 最大迭代次数
         public static int MAX_ITERATIONS = 100;
         // 收敛阈值
@@ -33,7 +33,7 @@ public class TagDistribution {
         // 是否使用最小-最大标准化
         public static boolean USE_MIN_MAX = true;
         // 早停连续稳定次数
-        public static int EARLY_STOP_PATIENCE = 3;
+        public static int EARLY_STOP_PATIENCE = 10;
     }
 
     private static class TimeSeriesPoint {
