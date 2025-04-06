@@ -8,7 +8,7 @@ def read_input_file(filename):
     with open(filename, "r") as f:
         # 读取第一行参数
         header = f.readline().strip()
-        T, M, N, V, G = map(int, header.split())
+        T, M, N, V, G, C = map(int, header.split())
 
         # 读取删除频率数据
         fre_del = []
@@ -38,7 +38,7 @@ def calculate_cumulative(data):
         cumulative[i] = cumulative[i - 1] + data[i - 1]
     return cumulative
 
-def generate_plot(data, ylabel, title, filename):
+def generate_plot(data, ylabel, title, filename, cumulative_mode=True):
     """通用绘图函数"""
     colors = [
         "#F38BA8",
@@ -62,27 +62,46 @@ def generate_plot(data, ylabel, title, filename):
     plt.figure(figsize=(25, 12))
     max_val = 0
     for tag_idx in range(M):
+        if cumulative_mode:
+            # 累计模式
+            cumulative = [0.0] * (T + 105 + 1)
 
-        cumulative = [0.0] * (T + 105 + 1)
+            # 处理时间窗口
+            for j_idx in range(math.ceil(T / 1800)):
+                start = j_idx * 1800 + 1
+                end = min((j_idx + 1) * 1800, T)
+                window_size = end - start + 1
 
-        # 处理时间窗口
-        for j_idx in range(math.ceil(T / 1800)):
-            start = j_idx * 1800 + 1
-            end = min((j_idx + 1) * 1800, T)
-            window_size = end - start + 1
+                if window_size == 0:
+                    continue
 
-            if window_size == 0:
-                continue
+                delta = data[tag_idx][j_idx]
+                delta_per_ts = delta / window_size
 
-            delta = data[tag_idx][j_idx]
-            delta_per_ts = delta / window_size
+                for ts in range(start, end + 1):
+                    cumulative[ts] = cumulative[ts - 1] + delta_per_ts
 
-            for ts in range(start, end + 1):
-                cumulative[ts] = cumulative[ts - 1] + delta_per_ts
+            # 处理无操作时间段
+            for ts in range(T + 1, T + 105 + 1):
+                cumulative[ts] = cumulative[ts - 1]
+        else:
+            # 非累计模式
+            cumulative = [0.0] * (T + 105 + 1)
+            
+            # 处理时间窗口
+            for j_idx in range(math.ceil(T / 1800)):
+                start = j_idx * 1800 + 1
+                end = min((j_idx + 1) * 1800, T)
+                window_size = end - start + 1
 
-        # 处理无操作时间段
-        for ts in range(T + 1, T + 105 + 1):
-            cumulative[ts] = cumulative[ts - 1]
+                if window_size == 0:
+                    continue
+
+                delta = data[tag_idx][j_idx]
+                delta_per_ts = delta / window_size
+
+                for ts in range(start, end + 1):
+                    cumulative[ts] = delta_per_ts
 
         # 跟踪最大值
         local_max = max(cumulative)
@@ -122,36 +141,20 @@ def generate_plot(data, ylabel, title, filename):
 if __name__ == "__main__":
     # 使用示例（文件路径需要根据实际情况修改）
     T, M, N, V, G, fre_del, fre_write, fre_read = read_input_file(
-        "./test/global_process_practice.txt"
+        "./test/sample_practice.in"
     )
 
     write_minus_del = [
         [w - d for w, d in zip(fre_write[i], fre_del[i])] for i in range(M)
     ]
 
-    # 写入csv, 横title：period，竖title: tag
-    with open("write_minus_del.csv", "w") as f:
-        f.write("tag\\period,")
-        # from 1 to ceil(T/1800)
-        for period in range(math.ceil(T / 1800)):
-            f.write(f"period{period+1},")
-        f.write("\n")
-
-        # from tag1 to tagM
-        for tag in range(M):
-            disk_usage = calculate_cumulative(write_minus_del[tag])
-            f.write(f"tag{tag+1},")
-            # write write_minus_del[i]
-            for period in range(math.ceil(T / 1800)):
-                f.write(f"{disk_usage[period+1]},")
-            f.write("\n")
-
-    # # 生成写入-删除差异图
+    # 生成写入-删除差异图
     generate_plot(
         data=write_minus_del,
         ylabel="Write-Delete Difference",
         title="Storage Operation Difference Visualization",
         filename="write_delete_difference.png",
+        cumulative_mode=True,
     )
 
     # 生成预读取数据图
@@ -160,4 +163,5 @@ if __name__ == "__main__":
         ylabel="Pre-Read Value",
         title="Pre-Read Operation Visualization",
         filename="pre_read_visualization.png",
+        cumulative_mode=False,  # 不累计
     )

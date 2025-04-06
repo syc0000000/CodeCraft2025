@@ -86,7 +86,8 @@ public class Info {
             tags.add(tag);
             // 利用write和del初始化cumulative_write_minus_del
             int now_size = 0;
-            for (int j = 0; j < fre_write.size(); j++) {
+            int periodCount = (Info.tickNums - 1) / 1800 + 1;
+            for (int j = 0; j < periodCount; j++) {
                 tag.totalSizeByPeriod.add(now_size);
                 now_size += fre_write.get(i).get(j);
                 now_size -= fre_del.get(i).get(j);

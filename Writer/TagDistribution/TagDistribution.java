@@ -29,9 +29,9 @@ public class TagDistribution {
         // DTW窗口大小
         public static int DTW_WINDOW = 3;
         // 是否使用Z-score标准化
-        public static boolean USE_Z_SCORE = true;
+        public static boolean USE_Z_SCORE = false;
         // 是否使用最小-最大标准化
-        public static boolean USE_MIN_MAX = false;
+        public static boolean USE_MIN_MAX = true;
         // 早停连续稳定次数
         public static int EARLY_STOP_PATIENCE = 3;
     }
@@ -193,6 +193,7 @@ public class TagDistribution {
                 if (improvement < ClusterConfig.CONVERGENCE_THRESHOLD) {
                     stabilityCounter++;
                     if (stabilityCounter >= ClusterConfig.EARLY_STOP_PATIENCE) {
+                        log.debug("在" + iter + "次迭代后，聚类完成，提前停止");
                         break;
                     }
                 } else {
@@ -209,8 +210,8 @@ public class TagDistribution {
             buildFinalClusters(points);
 
         } catch (Exception e) {
-            // 如果聚类失败，使用简单的均匀分配
-            fallbackClustering();
+            log.error("初始化标签聚类失败: " + e.toString());
+            throw new RuntimeException(e);
         }
     }
 
