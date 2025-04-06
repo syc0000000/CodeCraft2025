@@ -130,12 +130,12 @@ public class TagDistribution {
             int left = 0;
             for (TagSize tagSize : tagSizes) {
                 disk.tagMetas.add(new TagMeta(tagSize.tagId, left, left + tagSize.size - 1, -1));
-                left += tagSize.size;
                 // 建立初始空间
                 DiskSpace diskSpace = new DiskSpace(true, left, left + tagSize.size - 1, disk.diskId, tagSize.tagId);
                 for (int j = left; j < left + tagSize.size; j++) {
                     disk.unitData.get(j).space = diskSpace;
                 }
+                left += tagSize.size;
             }
         }
     }
