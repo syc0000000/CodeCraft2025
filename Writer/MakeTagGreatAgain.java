@@ -201,15 +201,15 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         disk.unitData.get(j).space = diskSpace;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
-                        log.debug("将disk" + disk.diskId + "的unitData[" + j
-                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
+                        // log.debug("将disk" + disk.diskId + "的unitData[" + j
+                        // + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
                     for (int j = startNext; j <= space2remain.end; j++) {
                         disk.unitData.get(j).space = space2remain;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
-                        log.debug("将disk" + disk.diskId + "的unitData[" + j
-                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
+                        // log.debug("将disk" + disk.diskId + "的unitData[" + j
+                        // + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
 
                     finishFlag = true;
@@ -218,7 +218,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     break;
                 }
             } else {
-                log.debug("当前空间不匹配: " + diskSpace.toString());
+                // log.debug("当前空间不匹配: " + diskSpace.toString());
             }
         }
         if (finishFlag) {
@@ -277,6 +277,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                 }
                 if (diskSpace.size < sizeLeft) {
                     diskSpaces.add(diskSpace);
+                    diskSpace.isFree = false;
                     sizeLeft -= diskSpace.size;
                 } else {
                     // 出现这种情况一定是最后一个空间
@@ -290,15 +291,15 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         disk.unitData.get(j).space = diskSpace;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
-                        log.debug("将disk" + disk.diskId + "的unitData[" + j
-                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
+                        // log.debug("将disk" + disk.diskId + "的unitData[" + j
+                        // + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
                     for (int j = startNext; j <= space2remain.end; j++) {
                         disk.unitData.get(j).space = space2remain;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
-                        log.debug("将disk" + disk.diskId + "的unitData[" + j
-                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
+                        // log.debug("将disk" + disk.diskId + "的unitData[" + j
+                        // + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
                     diskSpaces.add(diskSpace);
                     break;
@@ -345,14 +346,14 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
         for (int i = disk.unitNum - 1; i >= disk.logicalBackStart && count < objSize; i--) {
             // pick the free unit
             if (disk.unitData.get(i).objId == -1) {
-                log.debug("Found free unit: disk=" + disk.diskId + ", unit=" + i
-                        + ", current objId=" + disk.unitData.get(i).objId);
+                // log.debug("Found free unit: disk=" + disk.diskId + ", unit=" + i
+                // + ", current objId=" + disk.unitData.get(i).objId);
                 unitIdList.add(i);
                 count++;
             } else {
                 // Log when we encounter allocated units
-                log.debug("Skipping allocated unit: disk=" + disk.diskId + ", unit=" + i
-                        + ", used by objId=" + disk.unitData.get(i).objId);
+                // log.debug("Skipping allocated unit: disk=" + disk.diskId + ", unit=" + i
+                // + ", used by objId=" + disk.unitData.get(i).objId);
             }
         }
 

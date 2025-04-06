@@ -432,6 +432,7 @@ public class TagDistribution {
     }
 
     private void buildFinalClusters(List<TimeSeriesPoint> points) {
+        log.debug("buildFinalClusters");
         tagClusters = new ArrayList<>();
         for (int i = 0; i < ClusterConfig.K; i++) {
             tagClusters.add(new ArrayList<>());
@@ -443,6 +444,7 @@ public class TagDistribution {
     }
 
     private void fallbackClustering() {
+        log.debug("fallbackClustering");
         // 简单的均匀分配策略
         tagClusters = new ArrayList<>();
         for (int i = 0; i < ClusterConfig.K; i++) {
