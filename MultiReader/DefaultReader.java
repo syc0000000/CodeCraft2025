@@ -22,7 +22,8 @@ public class DefaultReader implements MultiReaderStrategy {
         tokenleft[1] = Info.tokenPerTick;
         LocalDisk disk = Info.localDiskTbl.get(diskId);
         for (int index = 0; index < 2; index++) {
-            readerLogger.debug("磁盘"+diskId+"磁头" + index + "的token" + tokenleft[index]+"开始读");
+            // readerLogger.debug("磁盘"+diskId+"磁头" + index + "的token" +
+            // tokenleft[index]+"开始读");
             if (index == 0) {
                 // 第一个ptr
                 if (disk.ptr[index] > partition[diskId]) {

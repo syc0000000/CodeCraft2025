@@ -180,7 +180,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
         // 第一层级，从left开始扫空间，找到第一个能装得下的空间
         for (int i = left; i <= right; i++) {
             DiskSpace diskSpace = disk.getSpaceForUnit(i);
-            if (diskSpace.size >= size) {
+            if (diskSpace.size >= size && diskSpace.isFree) {
                 if (diskSpace.size == size) {
                     log.debug("找到尺寸刚好的空间: " + diskSpace.toString());
                     diskSpaces.add(diskSpace);
@@ -189,20 +189,26 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     break;
                 } else {
                     // 切分空间
+                    log.debug("切分空间: " + diskSpace.toString());
                     int end = diskSpace.start + size - 1;
                     int startNext = end + 1;
                     DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
+                    log.debug("切分空间完成: " + diskSpace.toString() + " 剩余空间: " + space2remain.toString());
                     for (int j = diskSpace.start; j <= end; j++) {
                         disk.unitData.get(j).space = diskSpace;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
+                        log.debug("将disk" + disk.diskId + "的unitData[" + j
+                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
                     for (int j = startNext; j <= space2remain.end; j++) {
                         disk.unitData.get(j).space = space2remain;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
+                        log.debug("将disk" + disk.diskId + "的unitData[" + j
+                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
 
                     finishFlag = true;
@@ -210,6 +216,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     log.debug("切割空间完成: " + diskSpace.toString());
                     break;
                 }
+            } else {
+                log.debug("当前空间不匹配: " + diskSpace.toString());
             }
         }
         if (finishFlag) {
@@ -254,6 +262,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
 
         // 如果找到了合适的空间
         if (bestStart != -1) {
+            log.debug("滑动窗口，找到合适的空间: " + bestStart + " " + bestEnd + "此时，minSpan=" + minSpan
+                    + ", currentSize=" + currentSize);
             // 遍历从bestStart到bestEnd，找到所有对应空间
             int sizeLeft = size; // 剩余空间
             for (int i = bestStart; i <= bestEnd; i++) {
@@ -273,11 +283,15 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         disk.unitData.get(j).space = diskSpace;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
+                        log.debug("将disk" + disk.diskId + "的unitData[" + j
+                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
                     for (int j = startNext; j <= space2remain.end; j++) {
                         disk.unitData.get(j).space = space2remain;
                         disk.unitData.get(j).objId = -1;
                         disk.unitData.get(j).blockId = -1;
+                        log.debug("将disk" + disk.diskId + "的unitData[" + j
+                                + "]的objId和blockId设置为: " + -1 + ", " + -1);
                     }
                     diskSpaces.add(diskSpace);
                     break;
