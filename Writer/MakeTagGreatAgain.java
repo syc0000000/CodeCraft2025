@@ -77,8 +77,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     }
                 }
                 // 更新tagMeta的sizeNow
-                rwDisk.getTagMetaByTagId(diskSpace.tagId).sizeNow += diskSpace.size;
             }
+            rwDisk.getTagMetaByTagId(obj.objTag).sizeNow += obj.objSize;
             // 分配空间
             Replica replica = new Replica(writeCommandIn.objId, 0, rwDisk.diskId, unitIdList);
             addReplicaToObj(obj, replica);
