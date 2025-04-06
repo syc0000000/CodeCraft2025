@@ -6,6 +6,7 @@ import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import Info.Info;
 import Info.model.LocalDisk;
+import Info.model.ReadTask;
 import Info.model.Replica;
 import Info.model.UserObject;
 import Logger.LoggerFactory;
@@ -49,11 +50,11 @@ public class NewTagDeleteStrategy implements DeleteStrategy {
         for (DeleteCommandIn deleteCommandIn : deleteCommandIns) {
             int obj_id = deleteCommandIn.objId;
             maintainLocalDiskInfo(obj_id);
-            Set<Integer> tasks_awaiting_deletion = findReadTaskToBeTerminated(obj_id);
+            Set<ReadTask> tasks_awaiting_deletion = findReadTaskToBeTerminated(obj_id);
             Info.objMap.remove(obj_id);
 
-            for (int task_id : tasks_awaiting_deletion) {
-                deleteCommandOuts.add(new DeleteCommandOut(task_id));
+            for (ReadTask task : tasks_awaiting_deletion) {
+                deleteCommandOuts.add(new DeleteCommandOut(task.taskId));
             }
         }
         return deleteCommandOuts;
