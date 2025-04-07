@@ -23,11 +23,9 @@ public class MultiReader {
     public MultiReader(String multiReaderStrategy) {
         if (multiReaderStrategy.equals("default")) {
             this.multiReaderStrategy = new DefaultReader();
-        } 
-        else if (multiReaderStrategy.equals("readonly")) {
+        } else if (multiReaderStrategy.equals("readonly")) {
             this.multiReaderStrategy = new ReadOnlyReader();
-        } 
-        else {
+        } else {
             throw new IllegalArgumentException("Invalid multi reader strategy: " + multiReaderStrategy);
         }
     }
@@ -38,11 +36,11 @@ public class MultiReader {
      */
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
         ReadRetrun readRetrun = new ReadRetrun();
-        //long addtaskstart = System.nanoTime();
+        // long addtaskstart = System.nanoTime();
         addReadTask(readCommandIns);
         HashSet<CompleteCommandOut> completeCommandOuts = new HashSet<>();
         // 得到每一块硬盘的输出以及完成的命令
-        
+
         for (int i = 0; i < Info.diskNum; i++) {
             MultiReadCommandOut readCommandOut = new MultiReadCommandOut();
             this.multiReaderStrategy.read(i, readCommandOut, completeCommandOuts);
@@ -64,16 +62,17 @@ public class MultiReader {
                     Replica replica = object.replicas.get(0);
                     int diskId = replica.diskId;
                     ArrayList<Integer> unitIDList = replica.unitIdList;
+                    // 刷新Obj的isInTask情况
+                    // 先全部清空
                     for (int j = 0; j < object.objSize; j++) {
-
                         // 设置单元中的isInTask为false
                         Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(j)).isInTask = false;
-                        LinkedList<ReadTask> readTasks = object.readTasks;
-                        for (ReadTask readTask : readTasks) {
-                            if (readTask.blockNotFinished.contains(j)) {
-                                Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(j)).isInTask = true;
-                                break;
-                            }
+                    }
+                    LinkedList<ReadTask> readTasks = object.readTasks;
+                    // 然后根据readtask中的blockNotFinished情况，设置isInTask为true
+                    for (ReadTask readTask : readTasks) {
+                        for (int blockId : readTask.blockNotFinished) {
+                            Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(blockId)).isInTask = true;
                         }
                     }
                 }
@@ -87,7 +86,6 @@ public class MultiReader {
             readRetrun.busyCommandOuts = busyCommandOuts;
         }
         readRetrun.completeCommandOuts = completeCommandOuts;
-
 
         return readRetrun;
 
