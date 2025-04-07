@@ -107,76 +107,91 @@ public class DefaultReader implements MultiReaderStrategy {
                     // 解决coner case k>0 preoper是read，但tokenleft[index]==0
                     break;
                 }
-                if (k == 1) {
-                    if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 52
-                            && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // if (k == 1) {
+                // if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 52
+                // && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // }
+                // } else if (k == 2) {
+                // if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 34
+                // && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // }
+                // } else if (k == 3) {
+                // if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 28
+                // && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // }
+                // }
+
+                // pro哥同款方案，距离>9pass,距离<9read
+                if (k <= 9 && k > 0) {
+                    while (k > 0 && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
                         readCommandOut.actions.get(index).add(Action.READ);
                         disk.ptrDoAction(index, Action.READ);
                         tokenleft[index] -= disk.pretoken[index];
                         hasPassOrRead = true;
-                    } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                        readCommandOut.actions.get(index).add(Action.PASS);
-                        disk.ptrDoAction(index, Action.PASS);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
+                        k--;
                     }
-                } else if (k == 2) {
-                    if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 34
-                            && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                        readCommandOut.actions.get(index).add(Action.READ);
-                        disk.ptrDoAction(index, Action.READ);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                            readCommandOut.actions.get(index).add(Action.READ);
-                            disk.ptrDoAction(index, Action.READ);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                    } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                        readCommandOut.actions.get(index).add(Action.PASS);
-                        disk.ptrDoAction(index, Action.PASS);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                            readCommandOut.actions.get(index).add(Action.PASS);
-                            disk.ptrDoAction(index, Action.PASS);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                    }
-                } else if (k == 3) {
-                    if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 28
-                            && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                        readCommandOut.actions.get(index).add(Action.READ);
-                        disk.ptrDoAction(index, Action.READ);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                            readCommandOut.actions.get(index).add(Action.READ);
-                            disk.ptrDoAction(index, Action.READ);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                            readCommandOut.actions.get(index).add(Action.READ);
-                            disk.ptrDoAction(index, Action.READ);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                    } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                        readCommandOut.actions.get(index).add(Action.PASS);
-                        disk.ptrDoAction(index, Action.PASS);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                            readCommandOut.actions.get(index).add(Action.PASS);
-                            disk.ptrDoAction(index, Action.PASS);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                            readCommandOut.actions.get(index).add(Action.PASS);
-                            disk.ptrDoAction(index, Action.PASS);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
+                    if (tokenleft[index] - disk.calculateToken(index, Action.READ) < 0) {
+                        break;
                     }
                 }
+
                 // 任务离得很远
                 else {
                     readerLogger.debug("向后寻找不到任务");
