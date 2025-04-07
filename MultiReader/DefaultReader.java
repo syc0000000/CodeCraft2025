@@ -13,10 +13,12 @@ import Logger.LoggerFactory;
 
 public class DefaultReader implements MultiReaderStrategy {
     // 第一个ptr在分割线左侧，第二个在分割线右侧
-    public int partition[] = new int[10];
+    public int left[][] = new int[2][10];
+    public int right[][] = new int[2][10];
 
     @Override
     public void read(int diskId, MultiReadCommandOut readCommandOut, HashSet<CompleteCommandOut> completeCommandOuts) {
+        
         int tokenleft[] = new int[2];
         tokenleft[0] = Info.tokenPerTick;
         tokenleft[1] = Info.tokenPerTick;
@@ -24,22 +26,12 @@ public class DefaultReader implements MultiReaderStrategy {
         for (int index = 0; index < 2; index++) {
             // readerLogger.debug("磁盘"+diskId+"磁头" + index + "的token" +
             // tokenleft[index]+"开始读");
-            if (index == 0) {
-                // 第一个ptr
-                if (disk.ptr[index] > partition[diskId]) {
-                    readCommandOut.actions.get(index).add(Action.JUMP);
-                    readCommandOut.jumpTargets.set(index, 0);
-                    disk.ptrDoAction(index, Action.JUMP, 0);
-                    tokenleft[index] -= Info.tokenPerTick;
-                }
-            } else {
-                // 第二个ptr
-                if (disk.ptr[index] > disk.logicalRWEnd || disk.ptr[index] < partition[diskId]) {
-                    readCommandOut.actions.get(index).add(Action.JUMP);
-                    readCommandOut.jumpTargets.set(index, partition[diskId]);
-                    disk.ptrDoAction(index, Action.JUMP, partition[diskId]);
-                    tokenleft[index] -= Info.tokenPerTick;
-                }
+            boolean hasPassOrRead = false;
+            if (disk.ptr[index] > right[index][diskId]) {
+                readCommandOut.actions.get(index).add(Action.JUMP);
+                readCommandOut.jumpTargets.set(index, left[index][diskId]);
+                disk.ptrDoAction(index, Action.JUMP, left[index][diskId]);
+                tokenleft[index] -= Info.tokenPerTick;
             }
             while (tokenleft[index] > 0) {
                 boolean isInTask = disk.unitData.get(disk.ptr[index]).isInTask;
@@ -55,7 +47,7 @@ public class DefaultReader implements MultiReaderStrategy {
 
                             if (readTask.blockNotFinished.contains(blockId)) {
 
-                                readerLogger.debug("任务ID" + readTask.taskId);
+                                readerLogger.debug("硬盘"+diskId+"任务ID" + readTask.taskId+"块ID" + blockId+"磁头"+index+"读到块"+disk.ptr[index]);
                                 // 处理块
                                 readTask.blockNotFinished.remove(blockId);
                                 readTask.blockFinished.add(blockId);
@@ -77,21 +69,28 @@ public class DefaultReader implements MultiReaderStrategy {
                         readCommandOut.actions.get(index).add(Action.READ);
                         disk.ptrDoAction(index, Action.READ);
                         tokenleft[index] -= disk.pretoken[index];
+                        hasPassOrRead = true;
                         continue;
                     } else {
                         // 如果token不够，则直接退出
                         break;
                     }
                 }
+                // else{
+                //     readCommandOut.actions.get(index).add(Action.PASS);
+                //     disk.ptrDoAction(index, Action.PASS);
+                //     tokenleft[index] -= disk.pretoken[index];
+                // }
+
                 //如果没有任务，则直接向后寻找
                 int k;
-                int closestTaskPosition = findClosestTask(disk);
+                int closestTaskPosition = findClosestTask(index,disk);
                 // 找任务，找到就直接退出，尝试处理任务
-                if (tokenNow - calculateToken(Action.READ, disk) < 0)
+                if (tokenleft[index] - disk.calculateToken(index, Action.READ) < 0)
                     break;
-                for (k = 1; k < tokenNow - 64; k++) {
-                    if (disk.unitData.get(disk.ptr + k).isInTask) {
-                        readerLogger.debug("向后寻找到任务");
+                for (k = 1; k < tokenleft[index] - 64; k++) {
+                    if (disk.unitData.get(disk.ptr[index] + k).isInTask) {
+                        readerLogger.debug("向后寻找到任务"+k);
                         break;
                     }
                 }
@@ -100,62 +99,73 @@ public class DefaultReader implements MultiReaderStrategy {
 
                 // 判某几种情况
                 if (k == 1) {
-                    if (disk.pretoken < 52 && tokenNow > calculateToken(Action.READ, disk)) {
-                        processAction(Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                    if (disk.pretoken[index] < 52 && tokenleft[index] > disk.calculateToken(index,Action.READ)) {
+                        readCommandOut.actions.get(index).add(Action.READ);
+                        disk.ptrDoAction(index,Action.READ);
+                        tokenleft[index] -= disk.pretoken[index];
                     } else {
-                        processAction(Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                        readCommandOut.actions.get(index).add(Action.PASS);
+                        disk.ptrDoAction(index, Action.PASS);
+                        tokenleft[index] -= disk.pretoken[index];
                     }
                     hasPassOrRead = true;
-                } else if (k == 2 && tokenNow > calculateToken(Action.PASS, disk)) {
-                    if (disk.pretoken < 34) {
-                        processAction(Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                } else if (k == 2 && tokenleft[index] > disk.calculateToken(index, Action.PASS)) {
+                    if (disk.pretoken[index] < 34) {
+                        readCommandOut.actions.get(index).add(Action.READ);
+                        disk.ptrDoAction(index,Action.READ);
+                        tokenleft[index] -= disk.pretoken[index];
+                        readCommandOut.actions.get(index).add(Action.READ);
+                        disk.ptrDoAction(index,Action.READ);
+                        tokenleft[index] -= disk.pretoken[index];
                     } else {
-                        processAction(Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                        readCommandOut.actions.get(index).add(Action.PASS);
+                        disk.ptrDoAction(index, Action.PASS);
+                        tokenleft[index] -= disk.pretoken[index];
+                        readCommandOut.actions.get(index).add(Action.PASS);
+                        disk.ptrDoAction(index, Action.PASS);
+                        tokenleft[index] -= disk.pretoken[index];
                     }
                     hasPassOrRead = true;
-                } else if (k == 3 && tokenNow > calculateToken(Action.PASS, disk)) {
-                    if (disk.pretoken < 28) {
-                        processAction(Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Action.READ, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                } else if (k == 3 && tokenleft[index] > disk.calculateToken(index,Action.PASS)) {
+                    if (disk.pretoken[index] < 28) {
+                        readCommandOut.actions.get(index).add(Action.READ);
+                        disk.ptrDoAction(index,Action.READ);
+                        tokenleft[index] -= disk.pretoken[index];
+                        readCommandOut.actions.get(index).add(Action.READ);
+                        disk.ptrDoAction(index,Action.READ);
+                        tokenleft[index] -= disk.pretoken[index];
+                        readCommandOut.actions.get(index).add(Action.READ);
+                        disk.ptrDoAction(index,Action.READ);
+                        tokenleft[index] -= disk.pretoken[index];
                     } else {
-                        processAction(Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
-                        processAction(Action.PASS, disk, readCommandOut);
-                        tokenNow -= disk.pretoken;
+                        readCommandOut.actions.get(index).add(Action.PASS);
+                        disk.ptrDoAction(index, Action.PASS);
+                        tokenleft[index] -= disk.pretoken[index];
+                        readCommandOut.actions.get(index).add(Action.PASS);
+                        disk.ptrDoAction(index, Action.PASS);
+                        tokenleft[index] -= disk.pretoken[index];
+                        readCommandOut.actions.get(index).add(Action.PASS);
+                        disk.ptrDoAction(index, Action.PASS);
+                        tokenleft[index] -= disk.pretoken[index];
                     }
                     hasPassOrRead = true;
                 }
                 // 任务离得很远
                 else {
                     readerLogger.debug("向后寻找不到任务");
-                    int distance = Math.abs(closestTaskPosition - disk.ptr);
+                    int distance = Math.abs(closestTaskPosition - disk.ptr[index]);
                     if (closestTaskPosition != -1 && !hasPassOrRead && distance > Info.tokenPerTick) {
                         readerLogger.debug("距离 > G，执行跳转到" + closestTaskPosition);
-                        readCommandOut.actions.add(Action.JUMP);
-                        readCommandOut.jumpTarget = closestTaskPosition;
-                        disk.ptrDoAction(Action.JUMP, closestTaskPosition);
-                        disk.preoper = Action.JUMP;
-                        disk.pretoken = Info.tokenPerTick;
-                        readCommandOuts.put(i, readCommandOut);
+                        readCommandOut.actions.get(index).add(Action.JUMP);
+                        readCommandOut.jumpTargets.set(index, left[index][diskId]);
+                        disk.ptrDoAction(index, Action.JUMP, left[index][diskId]);
+                        tokenleft[index] -= Info.tokenPerTick;
                         break;
                     } else {
                         while (k > 0) {
-                            processAction(Action.PASS, disk, readCommandOut);
-                            tokenNow -= disk.pretoken;
+                            readCommandOut.actions.get(index).add(Action.PASS);
+                            disk.ptrDoAction(index, Action.PASS);
+                            tokenleft[index] -= disk.pretoken[index];
                             k--;
                         }
                     }
@@ -165,10 +175,36 @@ public class DefaultReader implements MultiReaderStrategy {
         }
 
     }
+    private int findClosestTask(int index, LocalDisk disk) {
+        int closestPosition = -1;
+
+        for (int pos = disk.ptr[index]; pos <= left[index][disk.diskId]; pos++) {
+            if (disk.unitData.get(pos).isInTask) {
+                closestPosition = pos;
+                break;
+            }
+        }
+        if (closestPosition != -1) {
+            return closestPosition;
+        }
+
+        for (int pos = left[index][disk.diskId]; pos < disk.ptr[index]; pos++) {
+            if (disk.unitData.get(pos).isInTask) {
+                closestPosition = pos;
+                break;
+            }
+        }
+
+        return closestPosition;
+    }
+
 
     public DefaultReader() {
-        for (int i = 0; i < partition.length; i++) {
-            partition[i] = Info.localDiskTbl.get(i).logicalRWEnd / 2;
+        for (int i = 0; i < 10; i++) {
+            left[1][i] = Info.localDiskTbl.get(i).logicalRWEnd / 2;
+            left[0][i] = 0;
+            right[1][i] = Info.localDiskTbl.get(i).logicalRWEnd;
+            right[0][i] = Info.localDiskTbl.get(i).logicalRWEnd / 2;
         }
     }
 }

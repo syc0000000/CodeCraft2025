@@ -45,7 +45,7 @@ public class Main {
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 82);
+        logger.enableTimeRange(0, 98);
 
         mainLogger.info("程序启动");
 
@@ -66,7 +66,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("MTGA");
-        MultiReader reader = new MultiReader("readonly");
+        MultiReader reader = new MultiReader("default");
 
         // 主循环 - 处理每个时间片
         for (int i = 1; i <= Info.tickNums + 105; i++) {

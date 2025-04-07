@@ -24,7 +24,7 @@ public class MultiReader {
         if (multiReaderStrategy.equals("default")) {
             this.multiReaderStrategy = new DefaultReader();
         } 
-        if (multiReaderStrategy.equals("readonly")) {
+        else if (multiReaderStrategy.equals("readonly")) {
             this.multiReaderStrategy = new ReadOnlyReader();
         } 
         else {
@@ -70,7 +70,7 @@ public class MultiReader {
                         Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(j)).isInTask = false;
                         LinkedList<ReadTask> readTasks = object.readTasks;
                         for (ReadTask readTask : readTasks) {
-                            if (readTask.blockNotFinished.contains(replica.unitIdList.get(j))) {
+                            if (readTask.blockNotFinished.contains(j)) {
                                 Info.localDiskTbl.get(diskId).unitData.get(unitIDList.get(j)).isInTask = true;
                                 break;
                             }
