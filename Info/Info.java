@@ -1,12 +1,15 @@
 package Info;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-
 import IO.model.PreprocessOut;
-import Info.model.*;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.Tag;
+import Info.model.UserObject;
 
 // Info模块 - 管理全局信息和数据结构
 public class Info {
@@ -45,18 +48,16 @@ public class Info {
     @Deprecated
     public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
     /** 每个period要读取的Tag Id，period范围[0, periodNum-1] */
-    @Deprecated
     public static ArrayList<HashSet<Integer>> periodToTagSet = new ArrayList<>();
-    /** 每个period读取的tag的size 一级是tag，二级是period */
-    @Deprecated
-    public static ArrayList<ArrayList<Integer>> fre_read = new ArrayList<>();
     /** 每个period读取的tag的size 一级是period，二级是tag */
-    @Deprecated
     public static ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
+    /** 每个period读取的tag的密度 一级是period，二级是tag */
+    public static ArrayList<ArrayList<Double>> tagDensities = new ArrayList<>();
 
     // 根据预处理结果初始化系统参数
-    public static void initFromPreprocessOut(PreprocessOut preOut, ArrayList<ArrayList<Integer>> fre_read,
-            ArrayList<ArrayList<Integer>> fre_write, ArrayList<ArrayList<Integer>> fre_del) {
+    public static void initFromPreprocessOut(PreprocessOut preOut,
+            ArrayList<ArrayList<Integer>> fre_read, ArrayList<ArrayList<Integer>> fre_write,
+            ArrayList<ArrayList<Integer>> fre_del) {
         tickNums = preOut.T; // 总tick数
         tagNums = preOut.M; // 标签总数
         diskNum = preOut.N; // 硬盘个数
@@ -73,6 +74,9 @@ public class Info {
         tags.clear();
         // 初始化tag
         initTag(fre_read, fre_write, fre_del);
+        initReadSizeByPeriod(fre_read);
+        // 选择8个标签，在这里调参
+        selectTagsByCount(8);
     }
 
     /**
@@ -103,6 +107,87 @@ public class Info {
             }
             tag.sizeMax = max_size;
         }
+    }
 
+    private static void initReadSizeByPeriod(ArrayList<ArrayList<Integer>> fre_read) {
+        // 初始化readSizeByPeriod
+        int periodCount = (tickNums - 1) / 1800 + 1;
+        
+        for (int periodIdx = 0; periodIdx < periodCount; periodIdx++) {
+            // 初始化每个period下各个Tag的读取大小
+            readSizeByPeriod.add(new ArrayList<>());
+            for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
+                readSizeByPeriod.get(periodIdx).add(fre_read.get(tagIdx).get(periodIdx));
+            }
+            
+            // 初始化每个period下各个Tag的密度(readSize / tagLength)
+            tagDensities.add(new ArrayList<>());
+            for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
+                double density = (double) readSizeByPeriod.get(periodIdx).get(tagIdx)
+                        / tags.get(tagIdx).sizeMax;
+                tagDensities.get(periodIdx).add(density);
+            }
+        }
+    }
+
+    /**
+     * 为每个周期选择标签，选择的标签数量为pickCount
+     * 
+     * @param pickCount
+     */
+    private static void selectTagsByCount(int pickCount) {
+        for (int periodIdx = 0; periodIdx < readSizeByPeriod.size(); periodIdx++) {
+            ArrayList<Double> densityData = tagDensities.get(periodIdx);
+
+            // 选择标签
+            for (int i = 0; i < pickCount; i++) {
+                int maxIndex = -1;
+                double maxDensity = -1;
+                for (int j = 0; j < densityData.size(); j++) {
+                    if (densityData.get(j) > maxDensity) {
+                        maxDensity = densityData.get(j);
+                        maxIndex = j;
+                    }
+                }
+                if (maxIndex != -1) {
+                    periodToTagSet.get(periodIdx).add(maxIndex);
+                    densityData.set(maxIndex, -1.0); // 标记为已选择
+                }
+            }
+        }
+    }
+
+    /**
+     * Export readSizeByPeriod data to CSV format
+     * 
+     * @param filepath The path to save the CSV file
+     * @return true if export successful, false otherwise
+     */
+    public static void exportReadSizeByPeriodToCSV(String filepath) {
+        StringBuilder csv = new StringBuilder();
+
+        // Add header row with tag numbers
+        csv.append("Period|Tag");
+        for (int i = 1; i <= tagNums; i++) {
+            csv.append(",").append(i);
+        }
+        csv.append("\n");
+
+        // Add data rows
+        for (int period = 0; period < readSizeByPeriod.size(); period++) {
+            ArrayList<Integer> periodData = readSizeByPeriod.get(period);
+
+            csv.append(period + 1); // Period numbers start from 1
+            for (int tagValue : periodData) {
+                csv.append(",").append(tagValue);
+            }
+            csv.append("\n");
+        }
+
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Path.of(filepath), csv.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

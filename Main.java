@@ -1,9 +1,5 @@
 // main.java
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import Deleter.Deleter;
 import IO.IO;
@@ -11,15 +7,15 @@ import IO.Preprocess;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
 import IO.model.ReadCommandIn;
+import IO.model.ReadRetrun;
 import IO.model.WriteCommandIn;
 import IO.model.WriteCommandOut;
-import IO.model.ReadRetrun;
 import Info.Info;
 import Logger.Logger;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
-import Writer.Writer;
 import MultiReader.MultiReader;
+import Writer.Writer;
 
 /**
  * 主类，负责程序的主要流程控制
@@ -36,16 +32,16 @@ public class Main {
         logger.enableModule("Preprocess");
         // logger.enableModule("Writer");
         // logger.enableModule("Deleter");
-        logger.enableModule("Info");
+        // logger.enableModule("Info");
         logger.enableModule("DiskGA");
         // logger.enableModule("IO");
         logger.enableModule("TagDistribution");
-        logger.enableModule("Reader");
+        // logger.enableModule("Reader");
         logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(1800, 3600);
+        logger.enableTimeRange(0, 2);
 
         mainLogger.info("程序启动");
 
@@ -62,7 +58,9 @@ public class Main {
 
         // 执行预处理
         Preprocess.preprocess();
-
+        // Export readSizeByPeriod data to CSV
+        Info.exportReadSizeByPeriodToCSV("logs/readSizeByPeriod.csv");
+        
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("MTGA");
