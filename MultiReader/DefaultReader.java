@@ -82,12 +82,85 @@ public class DefaultReader implements MultiReaderStrategy {
                         // 如果token不够，则直接退出
                         break;
                     }
-                } else {
-                    // 如果没有任务，则直接跳过
-                    readCommandOut.actions.get(index).add(Action.PASS);
-                    disk.ptrDoAction(index, Action.PASS);
-                    tokenleft[index] -= disk.pretoken[index];
                 }
+                //如果没有任务，则直接向后寻找
+                int k;
+                int closestTaskPosition = findClosestTask(disk);
+                // 找任务，找到就直接退出，尝试处理任务
+                if (tokenNow - calculateToken(Action.READ, disk) < 0)
+                    break;
+                for (k = 1; k < tokenNow - 64; k++) {
+                    if (disk.unitData.get(disk.ptr + k).isInTask) {
+                        readerLogger.debug("向后寻找到任务");
+                        break;
+                    }
+                }
+                // 寻找出了RWEnd的范围
+                // 没找到
+
+                // 判某几种情况
+                if (k == 1) {
+                    if (disk.pretoken < 52 && tokenNow > calculateToken(Action.READ, disk)) {
+                        processAction(Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    } else {
+                        processAction(Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    }
+                    hasPassOrRead = true;
+                } else if (k == 2 && tokenNow > calculateToken(Action.PASS, disk)) {
+                    if (disk.pretoken < 34) {
+                        processAction(Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    } else {
+                        processAction(Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    }
+                    hasPassOrRead = true;
+                } else if (k == 3 && tokenNow > calculateToken(Action.PASS, disk)) {
+                    if (disk.pretoken < 28) {
+                        processAction(Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Action.READ, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    } else {
+                        processAction(Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                        processAction(Action.PASS, disk, readCommandOut);
+                        tokenNow -= disk.pretoken;
+                    }
+                    hasPassOrRead = true;
+                }
+                // 任务离得很远
+                else {
+                    readerLogger.debug("向后寻找不到任务");
+                    int distance = Math.abs(closestTaskPosition - disk.ptr);
+                    if (closestTaskPosition != -1 && !hasPassOrRead && distance > Info.tokenPerTick) {
+                        readerLogger.debug("距离 > G，执行跳转到" + closestTaskPosition);
+                        readCommandOut.actions.add(Action.JUMP);
+                        readCommandOut.jumpTarget = closestTaskPosition;
+                        disk.ptrDoAction(Action.JUMP, closestTaskPosition);
+                        disk.preoper = Action.JUMP;
+                        disk.pretoken = Info.tokenPerTick;
+                        readCommandOuts.put(i, readCommandOut);
+                        break;
+                    } else {
+                        while (k > 0) {
+                            processAction(Action.PASS, disk, readCommandOut);
+                            tokenNow -= disk.pretoken;
+                            k--;
+                        }
+                    }
+                }
+
             }
         }
 

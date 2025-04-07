@@ -1,5 +1,9 @@
 // main.java
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import Deleter.Deleter;
 import IO.IO;
@@ -26,22 +30,22 @@ public class Main {
 
     public static void main(String[] args) {
         // 配置日志记录器
-        logger.setLevel(Logger.Level.ERROR);
+        logger.setLevel(Logger.Level.DEBUG);
         // logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
         logger.enableModule("Preprocess");
-        logger.enableModule("Writer");
-        logger.enableModule("Deleter");
+        //logger.enableModule("Writer");
+        //logger.enableModule("Deleter");
         logger.enableModule("Info");
         logger.enableModule("DiskGA");
         // logger.enableModule("IO");
         logger.enableModule("TagDistribution");
-        // logger.enableModule("Reader");
+        logger.enableModule("Reader");
         logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 9999999);
+        logger.enableTimeRange(0, 82);
 
         mainLogger.info("程序启动");
 
@@ -62,7 +66,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("MTGA");
-        MultiReader reader = new MultiReader("default");
+        MultiReader reader = new MultiReader("readonly");
 
         // 主循环 - 处理每个时间片
         for (int i = 1; i <= Info.tickNums + 105; i++) {
@@ -72,7 +76,6 @@ public class Main {
 
             // 处理时间戳
             IO.processTimeStamp();
-
             // 处理删除命令
             ArrayList<DeleteCommandIn> deleteIn = IO.readDeleteCommand();
             if (!deleteIn.isEmpty()) {
@@ -80,7 +83,6 @@ public class Main {
             }
             ArrayList<DeleteCommandOut> deleteOut = deleter.delete(deleteIn);
             IO.writeDeleteCommand(deleteOut);
-
             // 处理写入命令
             ArrayList<WriteCommandIn> writeIn = IO.readWriteCommand();
             if (!writeIn.isEmpty()) {
@@ -88,8 +90,7 @@ public class Main {
             }
             ArrayList<WriteCommandOut> writeOut = writer.write(writeIn);
             IO.writeWriteCommand(writeOut);
-
-            // 处理读取命令
+                        // 处理读取命令
             ArrayList<ReadCommandIn> readIn = IO.readReadCommand();
             if (!readIn.isEmpty()) {
                 mainLogger.info("读取到 " + readIn.size() + " 个读取命令");
@@ -103,7 +104,8 @@ public class Main {
                 IO.processGC();
             }
 
-            mainLogger.debug("完成处理时间片 " + i);
+          
+        mainLogger.debug("完成处理时间片 " + i);
         }
 
         mainLogger.info("程序执行完毕");

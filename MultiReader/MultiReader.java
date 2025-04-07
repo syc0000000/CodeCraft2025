@@ -1,5 +1,9 @@
 package MultiReader;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -19,7 +23,11 @@ public class MultiReader {
     public MultiReader(String multiReaderStrategy) {
         if (multiReaderStrategy.equals("default")) {
             this.multiReaderStrategy = new DefaultReader();
-        } else {
+        } 
+        if (multiReaderStrategy.equals("readonly")) {
+            this.multiReaderStrategy = new ReadOnlyReader();
+        } 
+        else {
             throw new IllegalArgumentException("Invalid multi reader strategy: " + multiReaderStrategy);
         }
     }
@@ -29,18 +37,17 @@ public class MultiReader {
      * @return
      */
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
-
         ReadRetrun readRetrun = new ReadRetrun();
-
+        //long addtaskstart = System.nanoTime();
         addReadTask(readCommandIns);
         HashSet<CompleteCommandOut> completeCommandOuts = new HashSet<>();
         // 得到每一块硬盘的输出以及完成的命令
+        
         for (int i = 0; i < Info.diskNum; i++) {
             MultiReadCommandOut readCommandOut = new MultiReadCommandOut();
             this.multiReaderStrategy.read(i, readCommandOut, completeCommandOuts);
             readRetrun.readCommandOuts.put(i, readCommandOut);
         }
-
         if (Info.readTasksInRecent105Tick.size() > 105) {
             HashSet<ReadTask> tasksToAbort = Info.readTasksInRecent105Tick.remove(0);
             // TODO 删除任务，另外，deleter是不是也要处理这里的信息
@@ -79,8 +86,9 @@ public class MultiReader {
             }
             readRetrun.busyCommandOuts = busyCommandOuts;
         }
-
         readRetrun.completeCommandOuts = completeCommandOuts;
+
+
         return readRetrun;
 
     }
