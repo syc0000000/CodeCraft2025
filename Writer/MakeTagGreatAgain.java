@@ -17,6 +17,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
     public ArrayList<WriteCommandOut> write(ArrayList<WriteCommandIn> writeCommandIns) {
         ArrayList<WriteCommandOut> writeCommandOuts = new ArrayList<>();
         for (WriteCommandIn writeCommandIn : writeCommandIns) {
+            log.debug("开始处理写入请求 " + writeCommandIn.objId);
             // 开始处理写入请求
             WriteCommandOut writeCommandOut = new WriteCommandOut();
             writeCommandOut.objId = writeCommandIn.objId;
@@ -39,14 +40,14 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         + writeCommandIn.tag + "读写空间, 尝试再在相似tag的空中寻找空间");
                 ArrayList<Integer> similarTags = tagDistribution.getSimilarTags(writeCommandIn.tag);
                 ArrayList<Integer> otherTags = new ArrayList<>();
-                
+
                 // 向otherTags中添加所有tagId，但不包含similarTags中的tagId
                 for (TagMeta tagMeta : rwDisk.tagMetas) {
                     if (tagMeta.tagId != writeCommandIn.tag && !similarTags.contains(tagMeta.tagId)) {
                         otherTags.add(tagMeta.tagId);
                     }
                 }
-                
+
                 if (similarTags != null) {
                     for (Integer similarTagId : similarTags) {
                         if (similarTagId == writeCommandIn.tag)
@@ -63,14 +64,13 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         }
                     }
                 }
-                
+
                 if (otherTags != null && diskSpaces == null) {
                     for (Integer otherTagId : otherTags) {
                         TagMeta otherTagMeta = rwDisk.getTagMetaByTagId(otherTagId);
                         if (otherTagMeta == null)
                             continue;
-                        ArrayList<DiskSpace> spaces =
-                                getFreeSpaceByTag(otherTagId, rwDisk, writeCommandIn.size);
+                        ArrayList<DiskSpace> spaces = getFreeSpaceByTag(otherTagId, rwDisk, writeCommandIn.size);
                         if (spaces != null) {
                             log.debug("找到otherTagId = " + otherTagId + "的空间: " + spaces.toString());
                             diskSpaces = spaces;
@@ -78,7 +78,6 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                         }
                     }
                 }
-
 
                 if (diskSpaces == null) {
                     // 输出整个磁盘unitData
