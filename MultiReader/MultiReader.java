@@ -37,9 +37,10 @@ public class MultiReader {
      * @return
      */
     public ReadRetrun read(ArrayList<ReadCommandIn> readCommandIns) {
+        HashSet<ReadTask> earlyBusyTasks = new HashSet<>();
         ReadRetrun readRetrun = new ReadRetrun();
         // long addtaskstart = System.nanoTime();
-        addReadTask(readCommandIns);
+        earlyBusyTasks = addReadTask(readCommandIns);
         HashSet<CompleteCommandOut> completeCommandOuts = new HashSet<>();
         // 得到每一块硬盘的输出以及完成的命令
 
@@ -87,6 +88,11 @@ public class MultiReader {
             }
             readRetrun.busyCommandOuts = busyCommandOuts;
         }
+        // 处理earlyBusyTasks
+        for (ReadTask readTask : earlyBusyTasks) {
+            BusyCommandOut busyCommandOut = new BusyCommandOut(readTask.taskId);
+            readRetrun.busyCommandOuts.add(busyCommandOut);
+        }
         readRetrun.completeCommandOuts = completeCommandOuts;
 
         return readRetrun;
@@ -94,10 +100,27 @@ public class MultiReader {
     }
 
     // 添加任务
-    private void addReadTask(ArrayList<ReadCommandIn> readCommandIns) {
+    // 注意注意：返回值是当前tick需要报Busy的task，新的task已经直接加进去Info了
+    private HashSet<ReadTask> addReadTask(ArrayList<ReadCommandIn> readCommandIns) {
+        HashSet<ReadTask> earlyBusyTasks = new HashSet<>();
         HashSet<ReadTask> currentTickTasks = new HashSet<>();
         for (ReadCommandIn readCommandIn : readCommandIns) {
             UserObject object = Info.objMap.get(readCommandIn.objId);
+            if (multiReaderStrategy instanceof RangeReader) {
+                // earlyBusy
+                int period = Info.timestamp / 1800;
+                if (period >= Info.periodToTagSet.size()) {
+                    period = Info.periodToTagSet.size() - 1;
+                }
+                if (1800 * (period + 1) - Info.timestamp > 50) {
+                    // 如果不是马上要换period，都不添加其他tag的任务
+                    if (!Info.periodToTagSet.get(period).contains(object.objTag)) {
+                        ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
+                        earlyBusyTasks.add(readTask);
+                        continue;
+                    }
+                }
+            }
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
             currentTickTasks.add(readTask);
             object.readTasks.add(readTask);
@@ -113,5 +136,6 @@ public class MultiReader {
             }
         }
         Info.readTasksInRecent105Tick.add(currentTickTasks);
+        return earlyBusyTasks;
     }
 }

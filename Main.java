@@ -65,7 +65,7 @@ public class Main {
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("MTGA");
-        MultiReader reader = new MultiReader("default");
+        MultiReader reader = new MultiReader("range");
 
         // 主循环 - 处理每个时间片
         for (int i = 1; i <= Info.tickNums + 105; i++) {

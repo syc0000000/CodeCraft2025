@@ -81,7 +81,7 @@ public class Info {
         initReadMetricsForPeriods(fre_read);
         // 选择8个标签，在这里调参
         // selectTagsByRatio(8);
-        selectTagsByDensity(8);
+        selectTagsByDensity(9);
     }
 
     /**
@@ -141,10 +141,10 @@ public class Info {
             tagSizeRatio.add(new ArrayList<>());
             for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
                 // 该period下tag的size占比
-                // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... + readSizeOfTagN
-                double ratio =
-                        (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
-                                .get(periodIdx).stream().mapToInt(Integer::intValue).sum() * 100;
+                // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... +
+                // readSizeOfTagN
+                double ratio = (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
+                        .get(periodIdx).stream().mapToInt(Integer::intValue).sum() * 100;
                 tagSizeRatio.get(periodIdx).add(ratio);
             }
         }
