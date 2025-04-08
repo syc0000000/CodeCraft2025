@@ -119,6 +119,18 @@ public class MultiReader {
                         earlyBusyTasks.add(readTask);
                         continue;
                     }
+                } else {
+                    // 在每个period最后105个tick，判断是不是下一个period的tag
+                    int nextPeriod = period + 1;
+                    if (nextPeriod >= Info.periodToTagSet.size()) {
+                        nextPeriod = Info.periodToTagSet.size() - 1;
+                    }
+                    if (!Info.periodToTagSet.get(nextPeriod).contains(object.objTag) &&
+                            !Info.periodToTagSet.get(period).contains(object.objTag)) {
+                        ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);
+                        earlyBusyTasks.add(readTask);
+                        continue;
+                    }
                 }
             }
             ReadTask readTask = new ReadTask(readCommandIn.commandId, readCommandIn.objId, object.objSize);

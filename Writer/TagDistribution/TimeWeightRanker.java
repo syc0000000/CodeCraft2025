@@ -18,7 +18,7 @@ public class TimeWeightRanker {
      * @return 排序后的标签列表
      */
     public static ArrayList<Integer> rankTags(HashSet<Integer> tagSet, int diskId) {
-        ArrayList<ArrayList<Integer>> readSizeByPeriod = Info.readSizeByPeriod;
+        ArrayList<ArrayList<Integer>> readSizeByPeriod = null;
 
         // 存储每个标签的时间得分（得分越高表示高峰期越早）
         HashMap<Integer, Double> temporalScores = new HashMap<>();

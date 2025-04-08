@@ -22,6 +22,11 @@ public class RangeReader implements MultiReaderStrategy {
     // period-diskId-ptrId-任意一个unit会不会在range中
     private ArrayList<ArrayList<ArrayList<ArrayList<Boolean>>>> isInRange = new ArrayList<>();
 
+    // 增加range分配策略常量
+    public static final int POSITION_BALANCED_STRATEGY = 0;
+    public static final int READ_SIZE_BALANCED_STRATEGY = 1;
+    public static final int SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY = 2;
+
     public static class Range {
         int start;
         int end;
@@ -39,6 +44,10 @@ public class RangeReader implements MultiReaderStrategy {
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet) {
+        this(periodToTagSet, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+    }
+
+    public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet, int strategy) {
         // 入参：periodToTagSet，表示每个period可接受的tag集合
         // 1. 根据tag集合，依次找出每个磁盘每个period的总range
         // 2. 根据总range，分出两个磁头的range
@@ -65,28 +74,22 @@ public class RangeReader implements MultiReaderStrategy {
                 }
                 // 排序(从小到大)
                 ranges.sort((a, b) -> a.start - b.start);
-                // 分出两个磁头的range
-                // 遍历所有start和end，从最接近中心的点划断（不管是start还是end）
-                int mid = disk.logicalRWEnd / 2;
-                int minDiff = Integer.MAX_VALUE;
-                int splitPoint = 0;
-                for (Range range : ranges) {
-                    int diff = Math.abs(range.start - mid);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        splitPoint = range.start;
-                    }
-                }
-                // 分出两个磁头的range
+
+                // 根据选择的策略分配range
                 ArrayList<Range> leftRanges = new ArrayList<>();
                 ArrayList<Range> rightRanges = new ArrayList<>();
-                for (Range range : ranges) {
-                    if (range.start < splitPoint) {
-                        leftRanges.add(range);
-                    } else {
-                        rightRanges.add(range);
-                    }
+
+                if (strategy == POSITION_BALANCED_STRATEGY) {
+                    // 使用基于位置的分配策略
+                    distributeRangesByPosition(ranges, leftRanges, rightRanges, disk);
+                } else if (strategy == READ_SIZE_BALANCED_STRATEGY) {
+                    // 使用基于读取量的分配策略
+                    distributeRangesByReadSize(ranges, leftRanges, rightRanges, disk, period);
+                } else {
+                    // 使用顺序不交叉且读取量平衡的策略
+                    distributeRangesBySequentialReadSize(ranges, leftRanges, rightRanges, disk, period);
                 }
+
                 // 两个磁头的range
                 rangeList.get(period).get(diskId).add(leftRanges);
                 rangeList.get(period).get(diskId).add(rightRanges);
@@ -113,6 +116,170 @@ public class RangeReader implements MultiReaderStrategy {
             }
         }
         log.info("RangeReader初始化完成,rangeList: " + Arrays.deepToString(rangeList.toArray()));
+    }
+
+    // 基于位置的分配策略
+    private void distributeRangesByPosition(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
+            ArrayList<Range> rightRanges, LocalDisk disk) {
+        // 遍历所有start和end，从最接近中心的点划断（不管是start还是end）
+        int mid = disk.logicalRWEnd / 2;
+        int minDiff = Integer.MAX_VALUE;
+        int splitPoint = 0;
+        for (Range range : ranges) {
+            int diff = Math.abs(range.start - mid);
+            if (diff < minDiff) {
+                minDiff = diff;
+                splitPoint = range.start;
+            }
+        }
+        // 分出两个磁头的range
+        for (Range range : ranges) {
+            if (range.start < splitPoint) {
+                leftRanges.add(range);
+            } else {
+                rightRanges.add(range);
+            }
+        }
+    }
+
+    // 基于读取量的分配策略
+    private void distributeRangesByReadSize(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
+            ArrayList<Range> rightRanges, LocalDisk disk, int period) {
+        // 计算所有Range的总readSize
+        int totalReadSize = 0;
+        ArrayList<Integer> rangeReadSizes = new ArrayList<>();
+
+        for (Range range : ranges) {
+            int tagId = -1;
+            // 查找range对应的tagId
+            for (TagMeta tagMeta : disk.tagMetas) {
+                if (tagMeta.left == range.start && tagMeta.right == range.end) {
+                    tagId = tagMeta.tagId;
+                    break;
+                }
+            }
+
+            // 获取这个tag在当前period的readSize
+            int readSize = 0;
+            if (tagId != -1) {
+                if (period < Info.tags.get(tagId).readSizeByPeriod.size()) {
+                    readSize = Info.tags.get(tagId).readSizeByPeriod.get(period);
+                }
+            }
+
+            totalReadSize += readSize;
+            rangeReadSizes.add(readSize);
+        }
+
+        // 使用贪心算法分配range，尽量使两边readSize平衡
+        int leftReadSize = 0;
+        int rightReadSize = 0;
+
+        // 按照readSize从大到小排序ranges
+        ArrayList<Range> sortedRanges = new ArrayList<>(ranges);
+        for (int i = 0; i < sortedRanges.size(); i++) {
+            for (int j = i + 1; j < sortedRanges.size(); j++) {
+                int readSizeI = rangeReadSizes.get(ranges.indexOf(sortedRanges.get(i)));
+                int readSizeJ = rangeReadSizes.get(ranges.indexOf(sortedRanges.get(j)));
+                if (readSizeI < readSizeJ) {
+                    Range temp = sortedRanges.get(i);
+                    sortedRanges.set(i, sortedRanges.get(j));
+                    sortedRanges.set(j, temp);
+                }
+            }
+        }
+
+        // 从大到小分配ranges，选择当前读取量较小的一侧
+        for (Range range : sortedRanges) {
+            int readSize = rangeReadSizes.get(ranges.indexOf(range));
+            if (leftReadSize <= rightReadSize) {
+                leftRanges.add(range);
+                leftReadSize += readSize;
+            } else {
+                rightRanges.add(range);
+                rightReadSize += readSize;
+            }
+        }
+    }
+
+    // 顺序不交叉且读取量平衡的策略
+    private void distributeRangesBySequentialReadSize(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
+            ArrayList<Range> rightRanges, LocalDisk disk, int period) {
+        if (ranges.isEmpty()) {
+            return;
+        }
+
+        // 首先计算每个range的readSize
+        ArrayList<Integer> rangeReadSizes = new ArrayList<>();
+        for (Range range : ranges) {
+            int tagId = -1;
+            // 查找range对应的tagId
+            for (TagMeta tagMeta : disk.tagMetas) {
+                if (tagMeta.left == range.start && tagMeta.right == range.end) {
+                    tagId = tagMeta.tagId;
+                    break;
+                }
+            }
+
+            // 获取这个tag在当前period的readSize
+            int readSize = 0;
+            if (tagId != -1) {
+                if (period < Info.tags.get(tagId).readSizeByPeriod.size()) {
+                    readSize = Info.tags.get(tagId).readSizeByPeriod.get(period);
+                }
+            }
+
+            rangeReadSizes.add(readSize);
+        }
+
+        // 尝试所有可能的划分点，找到使左右读取量差异最小的那个点
+        int minDiff = Integer.MAX_VALUE;
+        int bestSplitIndex = 0; // 默认在第一个range后分割
+
+        for (int splitIndex = 0; splitIndex < ranges.size(); splitIndex++) {
+            // 计算左侧总读取量
+            int leftSum = 0;
+            for (int i = 0; i < splitIndex; i++) {
+                leftSum += rangeReadSizes.get(i);
+            }
+
+            // 计算右侧总读取量
+            int rightSum = 0;
+            for (int i = splitIndex; i < ranges.size(); i++) {
+                rightSum += rangeReadSizes.get(i);
+            }
+
+            // 计算差异并更新最佳分割点
+            int diff = Math.abs(leftSum - rightSum);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestSplitIndex = splitIndex;
+            }
+        }
+
+        // 根据最佳分割点分配ranges
+        for (int i = 0; i < ranges.size(); i++) {
+            if (i < bestSplitIndex) {
+                leftRanges.add(ranges.get(i));
+            } else {
+                rightRanges.add(ranges.get(i));
+            }
+        }
+
+        // 记录分配结果到日志
+        int leftSum = 0;
+        for (int i = 0; i < bestSplitIndex; i++) {
+            leftSum += rangeReadSizes.get(i);
+        }
+
+        int rightSum = 0;
+        for (int i = bestSplitIndex; i < ranges.size(); i++) {
+            rightSum += rangeReadSizes.get(i);
+        }
+
+        log.debug("顺序不交叉的读取量均衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
+                ", 左侧读取量:" + leftSum + ", 右侧读取量:" + rightSum +
+                ", 分割点:" + (ranges.isEmpty() ? "无" : ranges.get(bestSplitIndex).start));
     }
 
     // 计算这一tick的目的地，考虑任务、range、磁头位置
@@ -167,14 +334,14 @@ public class RangeReader implements MultiReaderStrategy {
 
                             if (readTask.blockNotFinished.contains(blockId)) {
 
-                                readerLogger.debug("硬盘" + diskId + "任务ID" + readTask.taskId + "块ID" + blockId + "磁头"
+                                log.debug("硬盘" + diskId + "任务ID" + readTask.taskId + "块ID" + blockId + "磁头"
                                         + index + "读到块" + disk.ptr[index]);
                                 // 处理块
                                 readTask.blockNotFinished.remove(blockId);
                                 readTask.blockFinished.add(blockId);
-                                // readerLogger.debug("任务是否完成"+readTask.blockNotFinished.isEmpty());
+                                log.debug("任务是否完成" + readTask.blockNotFinished.isEmpty());
                                 if (readTask.blockNotFinished.isEmpty()) {
-                                    readerLogger.debug("上报任务id" + readTask.taskId);
+                                    log.debug("上报任务id" + readTask.taskId);
                                     completeCommandOuts.add(new CompleteCommandOut(readTask.taskId));
                                     // 移除这个任务
                                     Info.readTasksInRecent105Tick.get(Info.readTasksInRecent105Tick.size() - 1
@@ -201,7 +368,7 @@ public class RangeReader implements MultiReaderStrategy {
                 // 如果没有任务，则直接向后寻找
                 int target = calculateTarget(index, disk);
                 int k = target - disk.ptr[index];
-                readerLogger.debug("k " + k + " tokenleft " + tokenleft[index] + " disk.ptr[index] "
+                log.debug("k " + k + " tokenleft " + tokenleft[index] + " disk.ptr[index] "
                         + disk.ptr[index] + " closestTaskPosition " + target + "preoper "
                         + disk.preoper[index] + " pretoken " + disk.pretoken[index]);
                 if (tokenleft[index] == 0) {
@@ -293,9 +460,9 @@ public class RangeReader implements MultiReaderStrategy {
                 }
                 // 任务离得很远
                 else {
-                    readerLogger.debug("向后寻找不到任务");
+                    log.debug("向后寻找不到任务");
                     if (target != -1 && !hasPassOrRead && (k > Info.tokenPerTick || k < 0)) {
-                        readerLogger.debug("距离 > G，执行跳转到" + target);
+                        log.debug("距离 > G，执行跳转到" + target);
                         readCommandOut.actions.get(index).add(Action.JUMP);
                         readCommandOut.jumpTargets.set(index, target);
                         disk.ptrDoAction(index, Action.JUMP, target);
@@ -307,7 +474,7 @@ public class RangeReader implements MultiReaderStrategy {
                         break;
                     } else {
                         // 此时，说明盘上有任务
-                        readerLogger.debug("盘上有任务，执行pass " + k + " tokenleft " + tokenleft[index]);
+                        log.debug("盘上有任务，执行pass " + k + " tokenleft " + tokenleft[index]);
                         while (k > 0 && tokenleft[index] > 0) {
                             readCommandOut.actions.get(index).add(Action.PASS);
                             disk.ptrDoAction(index, Action.PASS);
