@@ -42,7 +42,12 @@ def main():
     input_file = "./test/sample_practice.in" if args.big else "./test/sample_practice.in"
     
     # 根据操作系统选择正确的interactor
-    interactor = "./test/interactor_mac" if sys.platform == "darwin" else "./test/interactor"
+    if sys.platform == "win32":
+        interactor = "./test/interactor.exe"
+    elif sys.platform == "darwin":
+        interactor = "./test/interactor_mac"
+    else:
+        interactor = "./test/interactor"
     
     # 备份上次结果（如果存在）
     result_file = "./test/result.txt"
