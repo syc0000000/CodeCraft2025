@@ -32,7 +32,7 @@ public class Main {
         logger.enableModule("Preprocess");
         // logger.enableModule("Writer");
         // logger.enableModule("Deleter");
-        // logger.enableModule("Info");
+        logger.enableModule("Info");
         logger.enableModule("DiskGA");
         // logger.enableModule("IO");
         logger.enableModule("TagDistribution");

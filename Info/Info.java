@@ -10,9 +10,12 @@ import Info.model.LocalDisk;
 import Info.model.ReadTask;
 import Info.model.Tag;
 import Info.model.UserObject;
+import Logger.LoggerFactory;
+import Logger.LoggerFactory.ModuleLogger;
 
 // Info模块 - 管理全局信息和数据结构
 public class Info {
+    private static final ModuleLogger log = LoggerFactory.getLogger("Info");
     /** 硬盘数量 */
     public static int diskNum;
     /** 存储单元数量 */
@@ -81,7 +84,9 @@ public class Info {
         initReadMetricsForPeriods(fre_read);
         // 选择8个标签，在这里调参
         // selectTagsByRatio(8);
-        selectTagsByDensity(9);
+        // selectTagsByDensity(9);
+        // 16个小于1的数的方差范围是0-0.25
+        selectTagsByDynamicVariance(0.05, 3, 16);
     }
 
     /**
@@ -143,8 +148,9 @@ public class Info {
                 // 该period下tag的size占比
                 // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... +
                 // readSizeOfTagN
-                double ratio = (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
-                        .get(periodIdx).stream().mapToInt(Integer::intValue).sum() * 100;
+                double ratio =
+                        (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
+                                .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
                 tagSizeRatio.get(periodIdx).add(ratio);
             }
         }
@@ -201,6 +207,123 @@ public class Info {
                 }
             }
         }
+    }
+
+    /**
+     * 为每个周期动态选择标签，保持已选标签的大小比例方差在阈值以下
+     * 
+     * @param varianceThreshold 方差阈值
+     * @param minCount 每个周期至少选择的标签数量
+     * @param maxCount 每个周期最多选择的标签数量
+     */
+    private static void selectTagsByDynamicVariance(double varianceThreshold, int minCount,
+            int maxCount) {
+        for (int periodIdx = 0; periodIdx < readSizeByPeriod.size(); periodIdx++) {
+            ArrayList<Double> ratioData = tagSizeRatio.get(periodIdx);
+            ArrayList<Double> tempRatios = new ArrayList<>(ratioData);
+            ArrayList<Integer> selectedTags = new ArrayList<>();
+
+            // 先选择比例最高的标签作为起点
+            int firstTag = getMaxRatioTagIndex(tempRatios);
+            selectedTags.add(firstTag);
+            tempRatios.set(firstTag, -1.0);
+            periodToTagSet.get(periodIdx).add(firstTag);
+
+            // 确保至少选择minTags个标签
+            while (selectedTags.size() < minCount) {
+                int nextTag = getMinVarianceTag(tempRatios, selectedTags, ratioData);
+                if (nextTag == -1)
+                    break; // 没有更多标签可选
+
+                selectedTags.add(nextTag);
+                tempRatios.set(nextTag, -1.0);
+                periodToTagSet.get(periodIdx).add(nextTag);
+            }
+
+            // 动态添加更多标签，直到方差低于阈值或达到最大标签数
+            double currentVariance = calculateVariance(selectedTags, ratioData);
+            while (selectedTags.size() < maxCount) {
+                int nextTag = getMinVarianceTag(tempRatios, selectedTags, ratioData);
+                if (nextTag == -1)
+                    break; // 没有更多标签可选
+
+                // 临时添加标签并计算新方差
+                selectedTags.add(nextTag);
+                double newVariance = calculateVariance(selectedTags, ratioData);
+
+                // 如果新方差更低或已达到最小标签数但方差仍可接受，保留这个标签
+                if (newVariance < currentVariance || (selectedTags.size() <= minCount
+                        && newVariance < varianceThreshold)) {
+                    tempRatios.set(nextTag, -1.0);
+                    periodToTagSet.get(periodIdx).add(nextTag);
+                    currentVariance = newVariance;
+                } else {
+                    // 否则移除这个标签
+                    selectedTags.remove(selectedTags.size() - 1);
+                    break; // 如果添加更多标签不会减少方差，则停止
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取大小比例最高的标签索引
+     */
+    private static int getMaxRatioTagIndex(ArrayList<Double> ratios) {
+        int maxIndex = 0;
+        double maxRatio = ratios.get(0);
+        for (int i = 1; i < ratios.size(); i++) {
+            if (ratios.get(i) > maxRatio) {
+                maxRatio = ratios.get(i);
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
+    }
+
+    /**
+     * 计算选中标签的大小比例方差
+     */
+    private static double calculateVariance(ArrayList<Integer> tagIds, ArrayList<Double> ratios) {
+        double sum = 0;
+        for (int tagId : tagIds) {
+            sum += ratios.get(tagId);
+        }
+        double mean = sum / tagIds.size();
+
+        double squareSum = 0;
+        for (int tagId : tagIds) {
+            double diff = ratios.get(tagId) - mean;
+            squareSum += diff * diff;
+        }
+        double variance = squareSum / tagIds.size();
+        log.debug("大小比例方差: " + variance);
+        return variance;
+    }
+
+    /**
+     * 获取导致最小方差的标签
+     */
+    private static int getMinVarianceTag(ArrayList<Double> ratioCandidates,
+            ArrayList<Integer> selectedTags, ArrayList<Double> ratiosForVariance) {
+        int bestTag = -1;
+        double minVariance = Double.MAX_VALUE;
+
+        for (int tagIdx = 0; tagIdx < ratioCandidates.size(); tagIdx++) {
+            if (ratioCandidates.get(tagIdx) < 0) // 略过已选择的标签
+                continue;
+
+            selectedTags.add(tagIdx);
+            double variance = calculateVariance(selectedTags, ratiosForVariance);
+            selectedTags.remove(selectedTags.size() - 1);
+
+            if (variance < minVariance) {
+                minVariance = variance;
+                bestTag = tagIdx;
+            }
+        }
+
+        return bestTag;
     }
 
     /**
