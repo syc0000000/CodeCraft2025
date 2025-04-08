@@ -50,7 +50,7 @@ public class RangeReader implements MultiReaderStrategy {
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet) {
-        this(periodToTagSet, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        this(periodToTagSet, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet, int strategy) {
@@ -504,7 +504,7 @@ public class RangeReader implements MultiReaderStrategy {
         tokenleft[1] = Info.tokenPerTick;
         for (int index = 0; index < 2; index++) {
             boolean hasPassOrRead = false;
-            while (tokenleft[index] >= 0) {
+            while (tokenleft[index] > 0) {
                 boolean isInTask = disk.unitData.get(disk.ptr[index]).isInTask;
                 if (isInTask) {
                     if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
@@ -655,6 +655,9 @@ public class RangeReader implements MultiReaderStrategy {
                     } else if (k < 0) {
                         // 这里实际上是两种情况，一种是整个盘就没有任务，k=-1-disk.ptr[index]
                         // 一种是后面的任务已经被消化完，盘上有任务，但在ptr前面，但是又因为已经有过其他操作，所以不能跳转
+                        break;
+                    } else if (k == 0) {
+                        // k=0情况，表示目标位置就是当前位置，无需操作
                         break;
                     } else {
                         // 此时，说明盘上有任务

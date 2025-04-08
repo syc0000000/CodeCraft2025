@@ -86,7 +86,7 @@ public class Info {
         // selectTagsByRatio(8);
         // selectTagsByDensity(9);
         // 16个小于1的数的方差范围是0-0.25
-        selectTagsByDynamicVariance1(0.2, 8, 16);
+        selectTagsByDynamicVariance1(0.2, 9, 16);
     }
 
     /**
@@ -148,9 +148,8 @@ public class Info {
                 // 该period下tag的size占比
                 // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... +
                 // readSizeOfTagN
-                double ratio =
-                        (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
-                                .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
+                double ratio = (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
+                        .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
                 tagSizeRatio.get(periodIdx).add(ratio);
             }
         }
@@ -213,8 +212,8 @@ public class Info {
      * 根据当前period，不同tag的read方差，方差越小、选择的tag越多 然后根据tag密度选择前n个标签
      * 
      * @param varianceThreshold 方差阈值
-     * @param minCount 每个周期至少选择的标签数量
-     * @param maxCount 每个周期最多选择的标签数量
+     * @param minCount          每个周期至少选择的标签数量
+     * @param maxCount          每个周期最多选择的标签数量
      */
     private static void selectTagsByDynamicVariance1(double varianceThreshold, int minCount,
             int maxCount) {
@@ -266,6 +265,35 @@ public class Info {
             // 确定要选择的标签数量
             int tagsToSelect = selectedTags.size();
 
+            // 后处理hardcode
+            HashMap<Integer, Integer> peroid2Count = new HashMap<>();
+            peroid2Count.put(0, 16);
+            peroid2Count.put(1, 16);
+            peroid2Count.put(2, 16);
+            peroid2Count.put(3, 16);
+            peroid2Count.put(4, 14);
+            peroid2Count.put(5, 12);
+            peroid2Count.put(6, 6);
+            peroid2Count.put(7, 5);
+            peroid2Count.put(8, 14);
+            peroid2Count.put(9, 9);
+            peroid2Count.put(10, 6);
+            peroid2Count.put(11, 7);
+            peroid2Count.put(12, 8);
+            peroid2Count.put(13, 10);
+            peroid2Count.put(14, 9);
+            peroid2Count.put(15, 8);
+            peroid2Count.put(16, 5);
+            peroid2Count.put(17, 7);
+            peroid2Count.put(18, 5);
+            peroid2Count.put(19, 7);
+            peroid2Count.put(20, 5);
+            peroid2Count.put(21, 7);
+            peroid2Count.put(22, 5);
+            if (peroid2Count.get(periodIdx) != null) {
+                tagsToSelect = peroid2Count.get(periodIdx);
+            }
+
             // 根据密度选择前n个标签
             ArrayList<Double> densityData = tagDensities.get(periodIdx);
             ArrayList<Integer> tagIndices = new ArrayList<>();
@@ -293,8 +321,8 @@ public class Info {
      * 根据当前period，不同tag的read方差，方差越小、选择的tag越多
      * 
      * @param varianceThreshold 方差阈值
-     * @param minCount 每个周期至少选择的标签数量
-     * @param maxCount 每个周期最多选择的标签数量
+     * @param minCount          每个周期至少选择的标签数量
+     * @param maxCount          每个周期最多选择的标签数量
      */
     private static void selectTagsByDynamicVariance(double varianceThreshold, int minCount,
             int maxCount) {
