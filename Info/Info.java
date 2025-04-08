@@ -1,12 +1,15 @@
 package Info;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-
 import IO.model.PreprocessOut;
-import Info.model.*;
+import Info.model.LocalDisk;
+import Info.model.ReadTask;
+import Info.model.Tag;
+import Info.model.UserObject;
 
 // Info模块 - 管理全局信息和数据结构
 public class Info {
@@ -45,18 +48,20 @@ public class Info {
     @Deprecated
     public static ArrayList<ArrayList<Integer>> cumulative_write_minus_del = new ArrayList<>();
     /** 每个period要读取的Tag Id，period范围[0, periodNum-1] */
-    @Deprecated
     public static ArrayList<HashSet<Integer>> periodToTagSet = new ArrayList<>();
-    /** 每个period读取的tag的size 一级是tag，二级是period */
-    @Deprecated
-    public static ArrayList<ArrayList<Integer>> fre_read = new ArrayList<>();
+
+    // 私有变量
     /** 每个period读取的tag的size 一级是period，二级是tag */
-    @Deprecated
-    public static ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
+    private static ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
+    /** 每个period读取的tag的密度 一级是period，二级是tag */
+    private static ArrayList<ArrayList<Double>> tagDensities = new ArrayList<>();
+    /** 每个period读取的tag的size占比 一级是period，二级是tag */
+    private static ArrayList<ArrayList<Double>> tagSizeRatio = new ArrayList<>();
 
     // 根据预处理结果初始化系统参数
-    public static void initFromPreprocessOut(PreprocessOut preOut, ArrayList<ArrayList<Integer>> fre_read,
-            ArrayList<ArrayList<Integer>> fre_write, ArrayList<ArrayList<Integer>> fre_del) {
+    public static void initFromPreprocessOut(PreprocessOut preOut,
+            ArrayList<ArrayList<Integer>> fre_read, ArrayList<ArrayList<Integer>> fre_write,
+            ArrayList<ArrayList<Integer>> fre_del) {
         tickNums = preOut.T; // 总tick数
         tagNums = preOut.M; // 标签总数
         diskNum = preOut.N; // 硬盘个数
@@ -73,6 +78,10 @@ public class Info {
         tags.clear();
         // 初始化tag
         initTag(fre_read, fre_write, fre_del);
+        initReadMetricsForPeriods(fre_read);
+        // 选择8个标签，在这里调参
+        // selectTagsByRatio(8);
+        selectTagsByDensity(8);
     }
 
     /**
@@ -103,6 +112,173 @@ public class Info {
             }
             tag.sizeMax = max_size;
         }
+    }
 
+    private static void initReadMetricsForPeriods(ArrayList<ArrayList<Integer>> fre_read) {
+        // 初始化readSizeByPeriod
+        int periodCount = (tickNums - 1) / 1800 + 1;
+
+        // 清空并初始化periodToTagSet
+        periodToTagSet.clear();
+        for (int periodIdx = 0; periodIdx < periodCount; periodIdx++) {
+            // 初始化periodToTagSet
+            periodToTagSet.add(new HashSet<>());
+            // 初始化每个period下各个Tag的读取大小
+            readSizeByPeriod.add(new ArrayList<>());
+            for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
+                readSizeByPeriod.get(periodIdx).add(fre_read.get(tagIdx).get(periodIdx));
+            }
+
+            // 初始化每个period下各个Tag的密度(readSize / tagLength)
+            tagDensities.add(new ArrayList<>());
+            for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
+                double density = (double) readSizeByPeriod.get(periodIdx).get(tagIdx)
+                        / tags.get(tagIdx).sizeMax;
+                tagDensities.get(periodIdx).add(density);
+            }
+
+            // 初始化每个period下各个Tag的size占比
+            tagSizeRatio.add(new ArrayList<>());
+            for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
+                // 该period下tag的size占比
+                // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... + readSizeOfTagN
+                double ratio =
+                        (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
+                                .get(periodIdx).stream().mapToInt(Integer::intValue).sum() * 100;
+                tagSizeRatio.get(periodIdx).add(ratio);
+            }
+        }
+    }
+
+    /**
+     * 为每个周期选择标签，选择的标签数量为pickCount
+     * 
+     * @param pickCount
+     */
+    private static void selectTagsByDensity(int pickCount) {
+        for (int periodIdx = 0; periodIdx < readSizeByPeriod.size(); periodIdx++) {
+            ArrayList<Double> densityData = tagDensities.get(periodIdx);
+            // 创建密度数据的副本，避免修改原始数据
+            ArrayList<Double> tempDensities = new ArrayList<>(densityData);
+
+            // 选择标签
+            for (int i = 0; i < pickCount; i++) {
+                int maxIndex = -1;
+                double maxDensity = -1;
+                for (int j = 0; j < tempDensities.size(); j++) {
+                    if (tempDensities.get(j) > maxDensity) {
+                        maxDensity = tempDensities.get(j);
+                        maxIndex = j;
+                    }
+                }
+                if (maxIndex != -1) {
+                    periodToTagSet.get(periodIdx).add(maxIndex);
+                    tempDensities.set(maxIndex, -1.0); // 标记为已选择（在副本上操作）
+                }
+            }
+        }
+    }
+
+    private static void selectTagsByRatio(int pickCount) {
+        for (int periodIdx = 0; periodIdx < readSizeByPeriod.size(); periodIdx++) {
+            ArrayList<Double> ratioData = tagSizeRatio.get(periodIdx);
+            // 创建密度数据的副本，避免修改原始数据
+            ArrayList<Double> tempRatios = new ArrayList<>(ratioData);
+
+            // 选择标签
+            for (int i = 0; i < pickCount; i++) {
+                int maxIndex = -1;
+                double maxDensity = -1;
+                for (int j = 0; j < tempRatios.size(); j++) {
+                    if (tempRatios.get(j) > maxDensity) {
+                        maxDensity = tempRatios.get(j);
+                        maxIndex = j;
+                    }
+                }
+                if (maxIndex != -1) {
+                    periodToTagSet.get(periodIdx).add(maxIndex);
+                    tempRatios.set(maxIndex, -1.0); // 标记为已选择（在副本上操作）
+                }
+            }
+        }
+    }
+
+    /**
+     * 打印tagDensities, periodToTagSet
+     * 
+     * @return
+     */
+    public static String tagInfoString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("periodToTagSet:\n");
+        for (int period = 0; period < periodToTagSet.size(); period++) {
+            sb.append("Period ").append(period + 1).append(": ");
+            HashSet<Integer> tags = periodToTagSet.get(period);
+            for (Integer tag : tags) {
+                sb.append(tag).append(" ");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Export readSizeByPeriod data to CSV format
+     * 
+     * @param filepath The path to save the CSV file
+     * @return true if export successful, false otherwise
+     */
+    public static void exportTagInfoToCSV() {
+        StringBuilder readSizeCSV = new StringBuilder();
+        StringBuilder tagDensityCSV = new StringBuilder();
+        StringBuilder tagSizeRatioCSV = new StringBuilder();
+
+        // Add header row with tag numbers
+        readSizeCSV.append("Period|Tag");
+        tagDensityCSV.append("Period|Tag");
+        tagSizeRatioCSV.append("Period|Tag");
+
+        for (int i = 1; i <= tagNums; i++) {
+            readSizeCSV.append(",").append(i);
+            tagDensityCSV.append(",").append(i);
+            tagSizeRatioCSV.append(",").append(i);
+        }
+        readSizeCSV.append("\n");
+        tagDensityCSV.append("\n");
+        tagSizeRatioCSV.append("\n");
+
+        // Add data rows
+        for (int period = 0; period < readSizeByPeriod.size(); period++) {
+            ArrayList<Integer> periodData = readSizeByPeriod.get(period);
+            ArrayList<Double> periodDensity = tagDensities.get(period);
+            ArrayList<Double> periodSizeRatio = tagSizeRatio.get(period);
+
+            readSizeCSV.append(period + 1); // Period numbers start from 1
+            tagDensityCSV.append(period + 1); // Period numbers start from 1
+            tagSizeRatioCSV.append(period + 1); // Period numbers start from 1
+            for (int tagValue : periodData) {
+                readSizeCSV.append(",").append(tagValue);
+            }
+            for (double densityValue : periodDensity) {
+                tagDensityCSV.append(",").append(densityValue);
+            }
+            for (double ratioValue : periodSizeRatio) {
+                tagSizeRatioCSV.append("%,").append(ratioValue);
+            }
+            readSizeCSV.append("\n");
+            tagDensityCSV.append("\n");
+            tagSizeRatioCSV.append("%\n");
+        }
+
+        try {
+            java.nio.file.Files.write(java.nio.file.Paths.get("logs/readSizeByPeriod.csv"),
+                    readSizeCSV.toString().getBytes());
+            java.nio.file.Files.write(java.nio.file.Paths.get("logs/tagDensityByPeriod.csv"),
+                    tagDensityCSV.toString().getBytes());
+            java.nio.file.Files.write(java.nio.file.Paths.get("logs/tagSizeRatioByPeriod.csv"),
+                    tagSizeRatioCSV.toString().getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
