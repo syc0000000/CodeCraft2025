@@ -14,15 +14,15 @@ public class TimeWeightRanker {
      * 入口点，输入一个tagSet和diskId，返回一个tagSet的排序
      * 
      * @param tagSet 要排序的标签集合
+     * @param readSizeByPeriod 每个周期的读取量列表
      * @param diskId 指定的磁盘ID
      * @return 排序后的标签列表
      */
-    public static ArrayList<Integer> rankTags(HashSet<Integer> tagSet, int diskId) {
-        ArrayList<ArrayList<Integer>> readSizeByPeriod = null;
-
+    public static ArrayList<Integer> rankTags(HashSet<Integer> tagSet) {
         // 存储每个标签的时间得分（得分越高表示高峰期越早）
         HashMap<Integer, Double> temporalScores = new HashMap<>();
 
+        ArrayList<ArrayList<Integer>> readSizeByPeriod = Info.readSizeByPeriod;
         // 获取总周期数
         int totalPeriods = readSizeByPeriod.size();
 
