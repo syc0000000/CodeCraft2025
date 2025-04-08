@@ -88,6 +88,8 @@ public class RangeReader implements MultiReaderStrategy {
                 // 两个磁头的range
                 rangeList.get(period).get(diskId).add(leftRanges);
                 rangeList.get(period).get(diskId).add(rightRanges);
+                isInRange.get(period).get(diskId).add(new ArrayList<>());
+                isInRange.get(period).get(diskId).add(new ArrayList<>());
                 // 两个磁头的isInRange
                 for (int i = 0; i <= disk.logicalRWEnd; i++) {
                     boolean isInLeftRange = false;
@@ -114,6 +116,9 @@ public class RangeReader implements MultiReaderStrategy {
     // 计算这一tick的目的地，考虑任务、range、磁头位置
     public int calculateTarget(int index, LocalDisk disk) {
         int period = Info.timestamp / 1800;
+        if (period >= rangeList.size()) {
+            period = rangeList.size() - 1;
+        }
         int diskId = disk.diskId;
         // 向后扫任务
         int closestPosition = -1;
@@ -201,74 +206,87 @@ public class RangeReader implements MultiReaderStrategy {
                     // 解决coner case k>0 preoper是read，但tokenleft[index]==0
                     break;
                 }
-                if (k == 1) {
-                    if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 52
-                            && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // if (k == 1) {
+                // if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 52
+                // && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // }
+                // } else if (k == 2) {
+                // if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 34
+                // && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // }
+                // } else if (k == 3) {
+                // if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 28
+                // && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
+                // readCommandOut.actions.get(index).add(Action.READ);
+                // disk.ptrDoAction(index, Action.READ);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // hasPassOrRead = true;
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
+                // readCommandOut.actions.get(index).add(Action.PASS);
+                // disk.ptrDoAction(index, Action.PASS);
+                // tokenleft[index] -= disk.pretoken[index];
+                // }
+                // }
+                // }
+                // pro哥同款方案，距离>9pass,距离<9read
+                if (k <= 9 && k > 0) {
+                    while (k > 0 && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
                         readCommandOut.actions.get(index).add(Action.READ);
                         disk.ptrDoAction(index, Action.READ);
                         tokenleft[index] -= disk.pretoken[index];
                         hasPassOrRead = true;
-                    } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                        readCommandOut.actions.get(index).add(Action.PASS);
-                        disk.ptrDoAction(index, Action.PASS);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
+                        k--;
                     }
-                } else if (k == 2) {
-                    if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 34
-                            && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                        readCommandOut.actions.get(index).add(Action.READ);
-                        disk.ptrDoAction(index, Action.READ);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                            readCommandOut.actions.get(index).add(Action.READ);
-                            disk.ptrDoAction(index, Action.READ);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                    } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                        readCommandOut.actions.get(index).add(Action.PASS);
-                        disk.ptrDoAction(index, Action.PASS);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                            readCommandOut.actions.get(index).add(Action.PASS);
-                            disk.ptrDoAction(index, Action.PASS);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                    }
-                } else if (k == 3) {
-                    if (disk.preoper[index] == Action.READ && disk.pretoken[index] < 28
-                            && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                        readCommandOut.actions.get(index).add(Action.READ);
-                        disk.ptrDoAction(index, Action.READ);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                            readCommandOut.actions.get(index).add(Action.READ);
-                            disk.ptrDoAction(index, Action.READ);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
-                            readCommandOut.actions.get(index).add(Action.READ);
-                            disk.ptrDoAction(index, Action.READ);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                    } else if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                        readCommandOut.actions.get(index).add(Action.PASS);
-                        disk.ptrDoAction(index, Action.PASS);
-                        tokenleft[index] -= disk.pretoken[index];
-                        hasPassOrRead = true;
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                            readCommandOut.actions.get(index).add(Action.PASS);
-                            disk.ptrDoAction(index, Action.PASS);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
-                        if (tokenleft[index] >= disk.calculateToken(index, Action.PASS)) {
-                            readCommandOut.actions.get(index).add(Action.PASS);
-                            disk.ptrDoAction(index, Action.PASS);
-                            tokenleft[index] -= disk.pretoken[index];
-                        }
+                    if (tokenleft[index] - disk.calculateToken(index, Action.READ) < 0) {
+                        break;
                     }
                 }
                 // 任务离得很远
