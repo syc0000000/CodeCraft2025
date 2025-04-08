@@ -55,9 +55,11 @@ public class RangeReader implements MultiReaderStrategy {
                 ArrayList<Range> ranges = new ArrayList<>();
                 for (int tag : tagSet) {
                     TagMeta tagMeta = disk.getTagMetaByTagId(tag);
-                    int start = tagMeta.left;
-                    int end = tagMeta.right;
-                    ranges.add(new Range(start, end, diskId));
+                    if (tagMeta != null) {
+                        int start = tagMeta.left;
+                        int end = tagMeta.right;
+                        ranges.add(new Range(start, end, diskId));
+                    }
                     // rangeList.get(period).get(diskId).get(ptrId).add(new Range(start, end,
                     // diskId));
                 }
