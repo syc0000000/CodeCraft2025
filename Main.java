@@ -59,8 +59,9 @@ public class Main {
         // 执行预处理
         Preprocess.preprocess();
         // Export readSizeByPeriod data to CSV
-        Info.exportReadSizeByPeriodToCSV("logs/readSizeByPeriod.csv");
-        
+        // Info.exportTagInfoToCSV();
+        mainLogger.debug(Info.tagInfoString());
+
         // 初始化策略
         Deleter deleter = new Deleter("tag");
         Writer writer = new Writer("MTGA");
