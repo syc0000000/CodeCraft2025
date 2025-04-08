@@ -86,7 +86,7 @@ public class Info {
         // selectTagsByRatio(8);
         // selectTagsByDensity(9);
         // 16个小于1的数的方差范围是0-0.25
-        selectTagsByDynamicVariance(0.05, 3, 16);
+        selectTagsByDynamicVariance1(0.2, 8, 16);
     }
 
     /**
@@ -210,7 +210,87 @@ public class Info {
     }
 
     /**
-     * 为每个周期动态选择标签，保持已选标签的大小比例方差在阈值以下
+     * 根据当前period，不同tag的read方差，方差越小、选择的tag越多 然后根据tag密度选择前n个标签
+     * 
+     * @param varianceThreshold 方差阈值
+     * @param minCount 每个周期至少选择的标签数量
+     * @param maxCount 每个周期最多选择的标签数量
+     */
+    private static void selectTagsByDynamicVariance1(double varianceThreshold, int minCount,
+            int maxCount) {
+        for (int periodIdx = 0; periodIdx < readSizeByPeriod.size(); periodIdx++) {
+            ArrayList<Double> ratioData = tagSizeRatio.get(periodIdx);
+            ArrayList<Double> tempRatios = new ArrayList<>(ratioData);
+            ArrayList<Integer> selectedTags = new ArrayList<>();
+
+            // 先选择比例最高的标签作为起点
+            int firstTag = getMaxRatioTagIndex(tempRatios);
+            selectedTags.add(firstTag);
+            tempRatios.set(firstTag, -1.0);
+
+            // 确保至少选择minTags个标签
+            while (selectedTags.size() < minCount) {
+                int nextTag = getMinVarianceTag(tempRatios, selectedTags, ratioData);
+                if (nextTag == -1)
+                    break; // 没有更多标签可选
+
+                selectedTags.add(nextTag);
+                tempRatios.set(nextTag, -1.0);
+            }
+
+            // 动态添加更多标签，直到方差低于阈值或达到最大标签数
+            double currentVariance = calculateVariance(selectedTags, ratioData);
+            while (selectedTags.size() < maxCount) {
+                int nextTag = getMinVarianceTag(tempRatios, selectedTags, ratioData);
+                if (nextTag == -1)
+                    break; // 没有更多标签可选
+
+                // 临时添加标签并计算新方差
+                selectedTags.add(nextTag);
+                double newVariance = calculateVariance(selectedTags, ratioData);
+
+                // 如果新方差更低或已达到最小标签数但方差仍可接受，保留这个标签
+                if (newVariance < currentVariance
+                        || (selectedTags.size() <= minCount && newVariance < varianceThreshold)) {
+                    tempRatios.set(nextTag, -1.0);
+                    currentVariance = newVariance;
+                } else {
+                    // 否则移除这个标签
+                    selectedTags.remove(selectedTags.size() - 1);
+                    log.debug("Period " + periodIdx + " Variance: " + currentVariance
+                            + ", Selected " + selectedTags.size() + " tags");
+                    break; // 如果添加更多标签不会减少方差，则停止
+                }
+            }
+
+            // 确定要选择的标签数量
+            int tagsToSelect = selectedTags.size();
+
+            // 根据密度选择前n个标签
+            ArrayList<Double> densityData = tagDensities.get(periodIdx);
+            ArrayList<Integer> tagIndices = new ArrayList<>();
+            ArrayList<Double> tempDensities = new ArrayList<>(densityData);
+
+            // 创建临时的索引-密度对
+            for (int i = 0; i < tempDensities.size(); i++) {
+                tagIndices.add(i);
+            }
+
+            // 根据密度降序排序标签索引
+            tagIndices.sort((a, b) -> Double.compare(tempDensities.get(b), tempDensities.get(a)));
+
+            // 选择前n个高密度标签
+            for (int i = 0; i < Math.min(tagsToSelect, tagIndices.size()); i++) {
+                periodToTagSet.get(periodIdx).add(tagIndices.get(i));
+            }
+
+            log.debug("Period " + periodIdx + ": Selected " + periodToTagSet.get(periodIdx).size()
+                    + " tags based on density after variance calculation");
+        }
+    }
+
+    /**
+     * 根据当前period，不同tag的read方差，方差越小、选择的tag越多
      * 
      * @param varianceThreshold 方差阈值
      * @param minCount 每个周期至少选择的标签数量
@@ -252,14 +332,15 @@ public class Info {
                 double newVariance = calculateVariance(selectedTags, ratioData);
 
                 // 如果新方差更低或已达到最小标签数但方差仍可接受，保留这个标签
-                if (newVariance < currentVariance || (selectedTags.size() <= minCount
-                        && newVariance < varianceThreshold)) {
+                if (newVariance < currentVariance
+                        || (selectedTags.size() <= minCount && newVariance < varianceThreshold)) {
                     tempRatios.set(nextTag, -1.0);
                     periodToTagSet.get(periodIdx).add(nextTag);
                     currentVariance = newVariance;
                 } else {
                     // 否则移除这个标签
                     selectedTags.remove(selectedTags.size() - 1);
+                    log.debug("period " + periodIdx + " Variance" + currentVariance);
                     break; // 如果添加更多标签不会减少方差，则停止
                 }
             }
@@ -297,7 +378,6 @@ public class Info {
             squareSum += diff * diff;
         }
         double variance = squareSum / tagIds.size();
-        log.debug("大小比例方差: " + variance);
         return variance;
     }
 
