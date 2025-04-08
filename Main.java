@@ -30,18 +30,18 @@ public class Main {
         // logger.setLevel(Logger.Level.DEBUG);
         logger.enableModule("Main");
         logger.enableModule("Preprocess");
-        logger.enableModule("Writer");
-        logger.enableModule("Deleter");
+        // logger.enableModule("Writer");
+        // logger.enableModule("Deleter");
         logger.enableModule("Info");
         logger.enableModule("DiskGA");
-        logger.enableModule("IO");
+        // logger.enableModule("IO");
         logger.enableModule("TagDistribution");
-        logger.enableModule("Reader");
+        // logger.enableModule("Reader");
         logger.enableModule("GAForRank");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 0);
+        logger.enableTimeRange(0, 2);
 
         mainLogger.info("程序启动");
 
