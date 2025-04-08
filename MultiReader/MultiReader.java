@@ -25,6 +25,8 @@ public class MultiReader {
             this.multiReaderStrategy = new DefaultReader();
         } else if (multiReaderStrategy.equals("readonly")) {
             this.multiReaderStrategy = new ReadOnlyReader();
+        } else if (multiReaderStrategy.equals("range")) {
+            this.multiReaderStrategy = new RangeReader(Info.periodToTagSet);
         } else {
             throw new IllegalArgumentException("Invalid multi reader strategy: " + multiReaderStrategy);
         }
