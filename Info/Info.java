@@ -5,10 +5,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+
+import IO.model.GCCommandOut;
 import IO.model.PreprocessOut;
 import Info.model.LocalDisk;
 import Info.model.ReadTask;
+import Info.model.Replica;
 import Info.model.Tag;
+import Info.model.TagMeta;
+import Info.model.UnitData;
 import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -267,29 +272,60 @@ public class Info {
 
             // 后处理hardcode
             HashMap<Integer, Integer> peroid2Count = new HashMap<>();
-            peroid2Count.put(0, 16);
-            peroid2Count.put(1, 16);
-            peroid2Count.put(2, 16);
-            peroid2Count.put(3, 16);
-            peroid2Count.put(4, 14);
-            peroid2Count.put(5, 12);
-            peroid2Count.put(6, 6);
-            peroid2Count.put(7, 5);
-            peroid2Count.put(8, 14);
-            peroid2Count.put(9, 9);
-            peroid2Count.put(10, 6);
-            peroid2Count.put(11, 7);
-            peroid2Count.put(12, 8);
-            peroid2Count.put(13, 10);
-            peroid2Count.put(14, 9);
-            peroid2Count.put(15, 8);
-            peroid2Count.put(16, 5);
-            peroid2Count.put(17, 7);
-            peroid2Count.put(18, 5);
-            peroid2Count.put(19, 7);
-            peroid2Count.put(20, 5);
-            peroid2Count.put(21, 7);
-            peroid2Count.put(22, 5);
+
+            // 从文件中读取最优参数
+            try {
+                java.nio.file.Path optimalParamsPath = java.nio.file.Paths.get("optimal_period_tags.txt");
+                if (java.nio.file.Files.exists(optimalParamsPath)) {
+                    java.util.List<String> lines = java.nio.file.Files.readAllLines(optimalParamsPath);
+                    for (String line : lines) {
+                        line = line.trim();
+                        if (line.isEmpty() || line.startsWith("#")) {
+                            continue; // 跳过空行和注释
+                        }
+                        String[] parts = line.split(":");
+                        if (parts.length == 2) {
+                            int period = Integer.parseInt(parts[0].trim());
+                            int count = Integer.parseInt(parts[1].trim());
+                            peroid2Count.put(period, count);
+                            log.debug("从文件加载参数 - Period " + period + ": " + count + " 标签");
+                        }
+                    }
+                } else {
+                    log.debug("参数文件不存在，使用默认配置");
+                }
+            } catch (Exception e) {
+                log.error("读取最优参数文件失败: " + e.getMessage());
+            }
+
+            // 如果没有从文件读取到参数，使用硬编码的默认值
+            if (peroid2Count.isEmpty()) {
+                peroid2Count.put(0, 16);
+                peroid2Count.put(1, 16);
+                peroid2Count.put(2, 16);
+                peroid2Count.put(3, 16);
+                peroid2Count.put(4, 14);
+                peroid2Count.put(5, 12);
+                peroid2Count.put(6, 6);
+                peroid2Count.put(7, 5);
+                peroid2Count.put(8, 14);
+                peroid2Count.put(9, 9);
+                peroid2Count.put(10, 6);
+                peroid2Count.put(11, 7);
+                peroid2Count.put(12, 8);
+                peroid2Count.put(13, 10);
+                peroid2Count.put(14, 9);
+                peroid2Count.put(15, 8);
+                peroid2Count.put(16, 5);
+                peroid2Count.put(17, 7);
+                peroid2Count.put(18, 5);
+                peroid2Count.put(19, 7);
+                peroid2Count.put(20, 5);
+                peroid2Count.put(21, 7);
+                peroid2Count.put(22, 5);
+            }
+
+            // 使用配置的标签数量
             if (peroid2Count.get(periodIdx) != null) {
                 tagsToSelect = peroid2Count.get(periodIdx);
             }
@@ -511,5 +547,10 @@ public class Info {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public ArrayList<GCCommandOut> GC() {
+        // 临时返回空列表，等待实现完整的GC功能
+        return new ArrayList<>();
     }
 }
