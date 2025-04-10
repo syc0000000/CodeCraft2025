@@ -270,54 +270,34 @@ public class Info {
             peroid2Count.put(1, 16);
             peroid2Count.put(2, 16);
             peroid2Count.put(3, 16);
-            peroid2Count.put(4, 14);
-            peroid2Count.put(5, 12);
+            peroid2Count.put(4, 16);
+            peroid2Count.put(5, 14);
             peroid2Count.put(6, 6);
-            peroid2Count.put(7, 5);
-            peroid2Count.put(8, 14);
-            peroid2Count.put(9, 9);
-            peroid2Count.put(10, 6);
+            peroid2Count.put(7, 16);
+            peroid2Count.put(8, 15);
+            peroid2Count.put(9, 7);
+            peroid2Count.put(10, 5);
             peroid2Count.put(11, 7);
             peroid2Count.put(12, 8);
             peroid2Count.put(13, 10);
             peroid2Count.put(14, 9);
-            peroid2Count.put(15, 8);
-            peroid2Count.put(16, 5);
-            peroid2Count.put(17, 7);
-            peroid2Count.put(18, 5);
+            peroid2Count.put(15, 7);
+            peroid2Count.put(16, 6);
+            peroid2Count.put(17, 6);
+            peroid2Count.put(18, 7);
             peroid2Count.put(19, 7);
-            peroid2Count.put(20, 5);
-            peroid2Count.put(21, 7);
-            peroid2Count.put(22, 5);
-            if (peroid2Count.get(periodIdx) != null) {
-                tagsToSelect = peroid2Count.get(periodIdx);
-            }
-
-            // 后处理hardcode
-            HashMap<Integer, Integer> peroid2Count = new HashMap<>();
-            peroid2Count.put(0, 16);
-            peroid2Count.put(1, 16);
-            peroid2Count.put(2, 16);
-            peroid2Count.put(3, 16);
-            peroid2Count.put(4, 14);
-            peroid2Count.put(5, 12);
-            peroid2Count.put(6, 6);
-            peroid2Count.put(7, 5);
-            peroid2Count.put(8, 14);
-            peroid2Count.put(9, 9);
-            peroid2Count.put(10, 6);
-            peroid2Count.put(11, 7);
-            peroid2Count.put(12, 8);
-            peroid2Count.put(13, 10);
-            peroid2Count.put(14, 9);
-            peroid2Count.put(15, 8);
-            peroid2Count.put(16, 5);
-            peroid2Count.put(17, 7);
-            peroid2Count.put(18, 5);
-            peroid2Count.put(19, 7);
-            peroid2Count.put(20, 5);
-            peroid2Count.put(21, 7);
-            peroid2Count.put(22, 5);
+            peroid2Count.put(20, 6);
+            peroid2Count.put(21, 5);
+            peroid2Count.put(22, 6);
+            peroid2Count.put(23, 6);
+            peroid2Count.put(24, 6);
+            peroid2Count.put(25, 7);
+            peroid2Count.put(26, 6);
+            peroid2Count.put(27, 6);
+            peroid2Count.put(28, 7);
+            peroid2Count.put(29, 8);
+            peroid2Count.put(30, 9);
+            peroid2Count.put(31, 8);
             if (peroid2Count.get(periodIdx) != null) {
                 tagsToSelect = peroid2Count.get(periodIdx);
             }
