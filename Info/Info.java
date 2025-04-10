@@ -270,33 +270,6 @@ public class Info {
             // 确定要选择的标签数量
             int tagsToSelect = selectedTags.size();
             // 后处理hardcode
-            HashMap<Integer, Integer> peroid2Count = new HashMap<>();
-            peroid2Count.put(0, 16);
-            peroid2Count.put(1, 16);
-            peroid2Count.put(2, 16);
-            peroid2Count.put(3, 16);
-            peroid2Count.put(4, 14);
-            peroid2Count.put(5, 12);
-            peroid2Count.put(6, 6);
-            peroid2Count.put(7, 5);
-            peroid2Count.put(8, 14);
-            peroid2Count.put(9, 9);
-            peroid2Count.put(10, 6);
-            peroid2Count.put(11, 7);
-            peroid2Count.put(12, 8);
-            peroid2Count.put(13, 10);
-            peroid2Count.put(14, 9);
-            peroid2Count.put(15, 8);
-            peroid2Count.put(16, 5);
-            peroid2Count.put(17, 7);
-            peroid2Count.put(18, 5);
-            peroid2Count.put(19, 7);
-            peroid2Count.put(20, 5);
-            peroid2Count.put(21, 7);
-            peroid2Count.put(22, 5);
-            if (peroid2Count.get(periodIdx) != null) {
-                tagsToSelect = peroid2Count.get(periodIdx);
-            }
 
             // 加载配置策略：1. 命令行参数 2. 配置文件 3. 默认值
             HashMap<Integer, Integer> peroid2Count = loadPeriodTagConfig();
