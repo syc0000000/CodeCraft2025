@@ -71,7 +71,8 @@ public class TagDistribution {
         tagDistribution = dist1.createHardcodedDistribution();
 
         // 初始化tag空间分布
-        distributeTagSpace();
+        // distributeTagSpace();
+        distributeTagSpaceWithSort();
 
         // 初始化tag聚类
         initializeTagClusters();
@@ -138,6 +139,63 @@ public class TagDistribution {
                 left += tagSize.size;
             }
             log.debug("disk " + disk.diskId + " 最终left: " + left + " logicalRWEnd: " + disk.logicalRWEnd);
+        }
+    }
+
+    private void distributeTagSpaceWithSort() {
+        // 外层是disk，内层是tag
+        // 新建一个1,2,...16的HashSet<Integer> Instance
+        HashSet<Integer> tagSet = new HashSet<>();
+        for (int i = 0; i < Info.tags.size(); i++) {
+            tagSet.add(i);
+        }
+
+        ArrayList<Integer> tagIdAfterSort = TimeWeightRanker.rankTags(tagSet);
+        ArrayList<ArrayList<TagSize>> sizes = new ArrayList<>();
+        for (int i = 0; i < Info.diskNum; i++) {
+            sizes.add(new ArrayList<>());
+        }
+
+        for (int tagId: tagIdAfterSort) {
+            Tag tag = Info.tags.get(tagId);
+            List<Split> splits = tagDistribution.get(tagId);
+            for (Split split : splits) {
+                int diskId = split.diskIdx;
+                double proportion = split.portion;
+                int size = (int) (tag.sizeMax * proportion / 100);
+                TagSize tagSize = new TagSize(tagId, size);
+                sizes.get(diskId).add(tagSize);
+                Info.tags.get(tagId).diskIdList.add(diskId);
+            }
+        }
+        // 遍历disk
+        for (int i = 0; i < Info.diskNum; i++) {
+            LocalDisk disk = Info.localDiskTbl.get(i);
+            ArrayList<TagSize> tagSizes = sizes.get(i);
+            // 获取size总和
+            int totalSize = 0;
+            for (TagSize tagSize : tagSizes) {
+                totalSize += tagSize.size;
+            }
+            // 根据tag的rwSize，缩放tagSize，比例
+            double ratio = 1.0 * disk.logicalRWEnd / totalSize;
+            for (TagSize tagSize : tagSizes) {
+                tagSize.size = (int) (tagSize.size * ratio);
+            }
+            // 算left right，写tagMeta
+            int left = 0;
+            for (TagSize tagSize : tagSizes) {
+                disk.tagMetas.add(new TagMeta(tagSize.tagId, left, left + tagSize.size - 1, -1, 0));
+                // 建立初始空间
+                DiskSpace diskSpace = new DiskSpace(true, left, left + tagSize.size - 1,
+                        disk.diskId, tagSize.tagId);
+                for (int j = left; j < left + tagSize.size; j++) {
+                    disk.unitData.get(j).space = diskSpace;
+                }
+                left += tagSize.size;
+            }
+            log.debug("disk " + disk.diskId + " 最终left: " + left + " logicalRWEnd: "
+                    + disk.logicalRWEnd);
         }
     }
 
