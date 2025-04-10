@@ -33,7 +33,4 @@ zip:
 list:
 	@7z l CodeCraft.zip
 
-move:
-	mv CodeCraft.zip /mnt/c/Users/28699/Downloads/CodeCraft.zip
-
 .PHONY: all clean compile package list
