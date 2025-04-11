@@ -121,7 +121,7 @@ public class GabageCollection {
             // 3. 添加GCCommandOut
             gcCommandOut.size += obj.objSize;
             gcCommandOut.s.addAll(unitIdListBefore);
-            gcCommandOut.t.addAll(unitIdList);
+            gcCommandOut.t.addAll(unitIdListAfter);
             gcUsed += obj.objSize;
         }
         return gcCommandOut;
