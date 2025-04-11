@@ -56,7 +56,6 @@ public class GabageCollection {
             }
 
             // 1. 删除
-            removeFromDisk(obj.objId);
 
             // 2. 重写
             TagMeta tagMetaOfObj = disk.getTagMetaByTagId(obj.objTag);
@@ -116,6 +115,8 @@ public class GabageCollection {
                     disk.unitData.get(unitIDList.get(blockId)).isInTask = true;
                 }
             }
+
+            removeFromDisk(unitIdListBefore, disk, obj.objId);
 
             // 3. 添加GCCommandOut
             gcCommandOut.size += obj.objSize;
@@ -326,14 +327,8 @@ public class GabageCollection {
      * @param obj_id
      * @return
      */
-    private static void removeFromDisk(int obj_id) {
+    private static void removeFromDisk(ArrayList<Integer> unit_ids, LocalDisk rwDisk, int obj_id) {
         log.debug("准备释放 Obj_ID = " + obj_id + " 所占用的空间");
-        // free rw replica
-        Replica replica = Info.objMap.get(obj_id).replicas.get(0);
-        log.debug("开始释放RW副本所占用的空间，副本信息：" + replica);
-        int disk_id = replica.diskId;
-        ArrayList<Integer> unit_ids = replica.unitIdList;
-        LocalDisk rwDisk = Info.localDiskTbl.get(disk_id);
         for (int unit_id : unit_ids) {
             DiskSpace space = rwDisk.unitData.get(unit_id).space;
             // 更新rwend

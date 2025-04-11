@@ -31,11 +31,11 @@ public class Main {
         // logger.setLevel(Logger.Level.DEBUG);
         // logger.enableModule("Main");
         // logger.enableModule("Preprocess");
-        logger.enableModule("Writer");
+        // logger.enableModule("Writer");
         // logger.enableModule("Deleter");
         // logger.enableModule("Info");
         // logger.enableModule("DiskGA");
-        logger.enableModule("IO");
+        // logger.enableModule("IO");
         // logger.enableModule("TagDistribution");
         // logger.enableModule("Reader");
         // logger.enableModule("GAForRank");
@@ -43,7 +43,7 @@ public class Main {
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(9000, 10800);
+        logger.enableTimeRange(20000, 35000);
 
         mainLogger.info("程序启动");
 
@@ -103,6 +103,7 @@ public class Main {
             // 每1800个时间片执行一次垃圾回收
             if (i % 1800 == 0) {
                 IO.writeGCCommand(GabageCollection.entry());
+                // IO.processGC();
             }
 
             mainLogger.debug("完成处理时间片 " + i);
