@@ -107,12 +107,12 @@ public class Info {
             int now_size = 0;
             int periodCount = (Info.tickNums - 1) / 1800 + 1;
             for (int j = 0; j < periodCount; j++) {
-                tag.totalSizeByPeriod.add(now_size);
                 now_size += fre_write.get(i).get(j);
                 now_size -= fre_del.get(i).get(j);
+                tag.totalSizeByPeriod.add(now_size);
                 tag.readSizeByPeriod.add(fre_read.get(i).get(j));
             }
-            tag.totalSizeByPeriod.add(now_size);
+            //tag.totalSizeByPeriod.add(now_size);
             // 扫sizeByPeriod, 找到最大的size
             int max_size = 0;
             for (int j = 0; j < tag.totalSizeByPeriod.size(); j++) {
@@ -143,8 +143,22 @@ public class Info {
             tagDensities.add(new ArrayList<>());
             for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
                 double density = (double) readSizeByPeriod.get(periodIdx).get(tagIdx)
-                        / tags.get(tagIdx).sizeMax;
+                        / tags.get(tagIdx).totalSizeByPeriod.get(periodIdx);
                 tagDensities.get(periodIdx).add(density);
+                
+                if(density < 1){
+                    log.debug("Period " + periodIdx + ", Tag " + tagIdx + ": Density = "
+                        + density+", Unit Size = "
+                        + readSizeByPeriod.get(periodIdx).get(tagIdx)+", Read Size = "
+                        + readSizeByPeriod.get(periodIdx).get(tagIdx));
+                }
+                else{
+                    log.debug("Period " + periodIdx + ", Tag " + tagIdx + ": Density = "
+                        + density+", Unit Size = "
+                        + tags.get(tagIdx).totalSizeByPeriod.get(periodIdx)+", Read Size = "
+                        + readSizeByPeriod.get(periodIdx).get(tagIdx));
+
+                }
             }
 
             // 初始化每个period下各个Tag的size占比
@@ -261,8 +275,8 @@ public class Info {
                 } else {
                     // 否则移除这个标签
                     selectedTags.remove(selectedTags.size() - 1);
-                    log.debug("Period " + periodIdx + " Variance: " + currentVariance
-                            + ", Selected " + selectedTags.size() + " tags");
+                    //log.debug("Period " + periodIdx + " Variance: " + currentVariance
+                            //+ ", Selected " + selectedTags.size() + " tags");
                     break; // 如果添加更多标签不会减少方差，则停止
                 }
             }
@@ -291,17 +305,50 @@ public class Info {
 
             // 根据密度降序排序标签索引
             tagIndices.sort((a, b) -> Double.compare(tempDensities.get(b), tempDensities.get(a)));
-
+            int debug_unitsize = 0;
+            int debug_readsize = 0;
+            int debug_unitsize_fixed = 0;
             // 选择前n个高密度标签
             for (int i = 0; i < Math.min(tagsToSelect, tagIndices.size()); i++) {
+                debug_readsize += readSizeByPeriod.get(periodIdx).get(tagIndices.get(i));
+                debug_unitsize += tags.get(tagIndices.get(i)).totalSizeByPeriod.get(periodIdx);
+                if(readSizeByPeriod.get(periodIdx).get(tagIndices.get(i))/tags.get(tagIndices.get(i)).totalSizeByPeriod.get(periodIdx) < 1.1){
+                    debug_unitsize_fixed += readSizeByPeriod.get(periodIdx).get(tagIndices.get(i));
+                }
+                else{
+                    debug_unitsize_fixed += tags.get(tagIndices.get(i)).totalSizeByPeriod.get(periodIdx);
+                }
+                //read每次消耗在48到24，根据token总量计算能够允许的最大unitsize和最小unitsize
+                if(debug_unitsize_fixed > 20000){
+                    break;
+                }
                 periodToTagSet.get(periodIdx).add(tagIndices.get(i));
-            }
 
+            }
+            if(debug_unitsize_fixed < 10000){
+                for(int i = Math.min(tagsToSelect, tagIndices.size()); i < tagIndices.size(); i++){
+                    debug_readsize += readSizeByPeriod.get(periodIdx).get(tagIndices.get(i));
+                    debug_unitsize += tags.get(tagIndices.get(i)).totalSizeByPeriod.get(periodIdx);
+                    if(readSizeByPeriod.get(periodIdx).get(tagIndices.get(i))/tags.get(tagIndices.get(i)).totalSizeByPeriod.get(periodIdx) < 1.1){
+                        debug_unitsize_fixed += readSizeByPeriod.get(periodIdx).get(tagIndices.get(i));
+                    }
+                    else{
+                        debug_unitsize_fixed += tags.get(tagIndices.get(i)).totalSizeByPeriod.get(periodIdx);
+                    }
+                    if(debug_unitsize_fixed > 10000){
+                        break;
+                    }
+                    periodToTagSet.get(periodIdx).add(tagIndices.get(i));
+                }
+            }
+            float ratio = (float) debug_readsize / debug_unitsize;
             log.debug("Period " + periodIdx + ": Selected " + periodToTagSet.get(periodIdx).size()
-                    + " tags based on density after variance calculation");
+                    + "合计密度为"+ratio + "修正长度为: "+debug_unitsize_fixed);
         }
     }
-
+    private static void selectTagsByTotalRatio() {
+        
+    }
     /**
      * 加载标签配置，优先级: 命令行参数 > 配置文件 > 默认值
      * 
@@ -342,7 +389,7 @@ public class Info {
                         int period = Integer.parseInt(parts[0].trim());
                         int count = Integer.parseInt(parts[1].trim());
                         peroid2Count.put(period, count);
-                        log.debug("从文件加载参数 - Period " + period + ": " + count + " 标签");
+                        //log.debug("从文件加载参数 - Period " + period + ": " + count + " 标签");
                     }
                 }
             } else {
@@ -354,29 +401,9 @@ public class Info {
 
         // 3. 如果没有从文件读取到参数，使用硬编码的默认值
         if (peroid2Count.isEmpty()) {
-            peroid2Count.put(0, 16);
-            peroid2Count.put(1, 16);
-            peroid2Count.put(2, 16);
-            peroid2Count.put(3, 16);
-            peroid2Count.put(4, 14);
-            peroid2Count.put(5, 12);
-            peroid2Count.put(6, 6);
-            peroid2Count.put(7, 5);
-            peroid2Count.put(8, 14);
-            peroid2Count.put(9, 9);
-            peroid2Count.put(10, 6);
-            peroid2Count.put(11, 7);
-            peroid2Count.put(12, 8);
-            peroid2Count.put(13, 10);
-            peroid2Count.put(14, 9);
-            peroid2Count.put(15, 8);
-            peroid2Count.put(16, 5);
-            peroid2Count.put(17, 7);
-            peroid2Count.put(18, 5);
-            peroid2Count.put(19, 7);
-            peroid2Count.put(20, 5);
-            peroid2Count.put(21, 7);
-            peroid2Count.put(22, 5);
+            for(int tmp = 0; tmp < 49; tmp++){
+                peroid2Count.put(tmp, 9);
+            }
         }
 
         return peroid2Count;

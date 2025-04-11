@@ -45,7 +45,7 @@ public class RangeReader implements MultiReaderStrategy {
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet) {
-        this(periodToTagSet, READ_SIZE_BALANCED_STRATEGY);
+        this(periodToTagSet, 2);
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet, int strategy) {
