@@ -73,11 +73,11 @@ public class GabageCollection {
             log.debug("unitIdListBefore: " + unitIdListBefore.toString());
 
             // 分配空间
-            ArrayList<Integer> unitIdList = new ArrayList<>();
+            ArrayList<Integer> unitIdListAfter = new ArrayList<>();
             int maxUnitId = Integer.MIN_VALUE;
             for (DiskSpace diskSpace : diskSpaces) {
                 for (int i = diskSpace.start; i <= diskSpace.end; i++) {
-                    unitIdList.add(i);
+                    unitIdListAfter.add(i);
                     if (i > maxUnitId) {
                         maxUnitId = i;
                     }
@@ -85,10 +85,10 @@ public class GabageCollection {
                 // 更新tagMeta的sizeNow
             }
             // unitidList 排序，从小到大
-            Collections.sort(unitIdList);
+            Collections.sort(unitIdListAfter);
             disk.getTagMetaByTagId(obj.objTag).sizeNow += obj.objSize;
             // 分配空间
-            Replica replicaAfter = new Replica(obj.objId, 0, disk.diskId, unitIdList);
+            Replica replicaAfter = new Replica(obj.objId, 0, disk.diskId, unitIdListAfter);
             addReplicaToObj(obj, replicaAfter);
             saveReplicaToDisk(disk, replicaAfter);
             disk.rwSizeLeft -= obj.objSize;
