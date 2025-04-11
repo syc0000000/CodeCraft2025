@@ -107,12 +107,11 @@ public class Info {
             int now_size = 0;
             int periodCount = (Info.tickNums - 1) / 1800 + 1;
             for (int j = 0; j < periodCount; j++) {
-                tag.totalSizeByPeriod.add(now_size);
                 now_size += fre_write.get(i).get(j);
                 now_size -= fre_del.get(i).get(j);
+                tag.totalSizeByPeriod.add(now_size);
                 tag.readSizeByPeriod.add(fre_read.get(i).get(j));
             }
-            tag.totalSizeByPeriod.add(now_size);
             // 扫sizeByPeriod, 找到最大的size
             int max_size = 0;
             for (int j = 0; j < tag.totalSizeByPeriod.size(); j++) {
@@ -143,7 +142,7 @@ public class Info {
             tagDensities.add(new ArrayList<>());
             for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
                 double density = (double) readSizeByPeriod.get(periodIdx).get(tagIdx)
-                        / tags.get(tagIdx).sizeMax;
+                        / tags.get(tagIdx).totalSizeByPeriod.get(periodIdx);
                 tagDensities.get(periodIdx).add(density);
             }
 
@@ -358,25 +357,50 @@ public class Info {
             peroid2Count.put(1, 16);
             peroid2Count.put(2, 16);
             peroid2Count.put(3, 16);
-            peroid2Count.put(4, 14);
+            peroid2Count.put(4, 16);
             peroid2Count.put(5, 12);
-            peroid2Count.put(6, 6);
-            peroid2Count.put(7, 5);
-            peroid2Count.put(8, 14);
-            peroid2Count.put(9, 9);
+            peroid2Count.put(6, 13);
+            peroid2Count.put(7, 16);
+            peroid2Count.put(8, 6);
+            peroid2Count.put(9, 5);
             peroid2Count.put(10, 6);
             peroid2Count.put(11, 7);
             peroid2Count.put(12, 8);
-            peroid2Count.put(13, 10);
+            peroid2Count.put(13, 9);
             peroid2Count.put(14, 9);
             peroid2Count.put(15, 8);
-            peroid2Count.put(16, 5);
-            peroid2Count.put(17, 7);
-            peroid2Count.put(18, 5);
+            peroid2Count.put(16, 7);
+            peroid2Count.put(17, 6);
+            peroid2Count.put(18, 7);
             peroid2Count.put(19, 7);
-            peroid2Count.put(20, 5);
-            peroid2Count.put(21, 7);
-            peroid2Count.put(22, 5);
+            peroid2Count.put(20, 6);
+            peroid2Count.put(21, 6);
+            peroid2Count.put(22, 7);
+            peroid2Count.put(23, 7);
+            peroid2Count.put(24, 6);
+            peroid2Count.put(25, 6);
+            peroid2Count.put(26, 7);
+            peroid2Count.put(27, 5);
+            peroid2Count.put(28, 8);
+            peroid2Count.put(29, 8);
+            peroid2Count.put(30, 8);
+            peroid2Count.put(31, 8);
+            peroid2Count.put(32, 9);
+            peroid2Count.put(33, 10);
+            peroid2Count.put(34, 9);
+            peroid2Count.put(35, 8);
+            peroid2Count.put(36, 8);
+            peroid2Count.put(37, 10);
+            peroid2Count.put(38, 8);
+            peroid2Count.put(39, 6);
+            peroid2Count.put(40, 6);
+            peroid2Count.put(41, 9);
+            peroid2Count.put(42, 8);
+            peroid2Count.put(43, 13);
+            peroid2Count.put(44, 15);
+            peroid2Count.put(45, 6);
+            peroid2Count.put(46, 13);
+            peroid2Count.put(47, 13);
         }
 
         return peroid2Count;

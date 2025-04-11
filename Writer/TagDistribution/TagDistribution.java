@@ -17,23 +17,23 @@ public class TagDistribution {
     // 聚类算法参数
     public static class ClusterConfig {
         // 聚类数量
-        public static int K = 4;
+        public static int K = 5;
         // 最大迭代次数
-        public static int MAX_ITERATIONS = 100;
+        public static int MAX_ITERATIONS = 1000;
         // 收敛阈值
-        public static double CONVERGENCE_THRESHOLD = 1e-4;
+        public static double CONVERGENCE_THRESHOLD = 1e-5;
         // 滑动窗口大小（用于平滑）
-        public static int SMOOTH_WINDOW_SIZE = 3;
+        public static int SMOOTH_WINDOW_SIZE = 5;
         // 是否使用DTW距离
         public static boolean USE_DTW = false;
         // DTW窗口大小
         public static int DTW_WINDOW = 3;
         // 是否使用Z-score标准化
-        public static boolean USE_Z_SCORE = false;
+        public static boolean USE_Z_SCORE = true;
         // 是否使用最小-最大标准化
-        public static boolean USE_MIN_MAX = true;
+        public static boolean USE_MIN_MAX = false;
         // 早停连续稳定次数
-        public static int EARLY_STOP_PATIENCE = 10;
+        public static int EARLY_STOP_PATIENCE = 50;
     }
 
     private static class TimeSeriesPoint {
@@ -156,7 +156,7 @@ public class TagDistribution {
             sizes.add(new ArrayList<>());
         }
 
-        for (int tagId: tagIdAfterSort) {
+        for (int tagId : tagIdAfterSort) {
             Tag tag = Info.tags.get(tagId);
             List<Split> splits = tagDistribution.get(tagId);
             for (Split split : splits) {
