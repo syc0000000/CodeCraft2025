@@ -2,6 +2,7 @@
 
 import java.util.ArrayList;
 import Deleter.Deleter;
+import GC.GabageCollection;
 import IO.IO;
 import IO.Preprocess;
 import IO.model.DeleteCommandIn;
@@ -41,7 +42,7 @@ public class Main {
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 0);
+        logger.enableTimeRange(9000, 10800);
 
         mainLogger.info("程序启动");
 
@@ -100,7 +101,7 @@ public class Main {
             IO.writeBusyCommand(readRetrun.busyCommandOuts);
             // 每1800个时间片执行一次垃圾回收
             if (i % 1800 == 0) {
-                IO.processGC();
+                IO.writeGCCommand(GabageCollection.entry());
             }
 
             mainLogger.debug("完成处理时间片 " + i);
