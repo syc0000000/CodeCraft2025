@@ -33,7 +33,7 @@ zip:
 zip_all:
 	@echo "Creating complete zip archive..."
 	@rm -f CodeCraft_all.zip
-	@7z a -tzip CodeCraft_all.zip . -xr!.git -xr!CodeCraft.zip -xr!CodeCraft_all.zip -xr!test/interactor_mac -xr!test/interactor.exe -xr!*.txt
+	@7z a -tzip CodeCraft_all.zip . -xr!.git -xr!CodeCraft.zip -xr!CodeCraft_all.zip -xr!test/interactor_mac -xr!test/interactor.exe -xr!*.txt -xr!.venv
 	@echo "Full package created: CodeCraft_all.zip"
 
 # Show contents of zip
