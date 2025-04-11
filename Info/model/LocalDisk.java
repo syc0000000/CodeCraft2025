@@ -135,7 +135,7 @@ public class LocalDisk {
         switch (action) {
             case READ:
                 int objId = unitData.get(ptr[index]).objId;
-                pretoken[index] = calculateToken(index, action);    
+                pretoken[index] = calculateToken(index, action);
                 preoper[index] = action;
 
                 unitData.get(ptr[index]).isInTask = false;
@@ -724,5 +724,15 @@ public class LocalDisk {
         }
         log.debug("释放space后更新RWEnd: " + RWEnd + " -> " + prevUnitIndex);
         RWEnd = prevUnitIndex;
+    }
+
+    public int getTagMetaByIndex(int index) {
+        // 遍历tagMetas，找到index对应的tagId
+        for (int i = 0; i < tagMetas.size(); i++) {
+            if (tagMetas.get(i).left <= index && tagMetas.get(i).right >= index) {
+                return tagMetas.get(i).tagId;
+            }
+        }
+        return -1;
     }
 }

@@ -243,7 +243,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     log.debug("切分空间: " + diskSpace.toString());
                     int end = diskSpace.start + size - 1;
                     int startNext = end + 1;
-                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId);
+                    int tagIdByIndex = disk.getTagMetaByIndex(startNext);
+                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
                     log.debug("切分空间完成: " + diskSpace.toString() + " 剩余空间: " + space2remain.toString());
@@ -334,7 +335,8 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                     // 切分空间
                     int end = diskSpace.start + sizeLeft - 1;
                     int startNext = end + 1;
-                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId);
+                    int tagIdByIndex = disk.getTagMetaByIndex(startNext);
+                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
                     for (int j = diskSpace.start; j <= end; j++) {

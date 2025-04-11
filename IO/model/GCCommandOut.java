@@ -22,12 +22,11 @@ public class GCCommandOut {
         t = new ArrayList<>();
     }
 
-
     public String toString() {
         StringBuilder result = new StringBuilder();
         result.append(size).append("\n");
         for (int i = 0; i < size; i++) {
-            result.append(s.get(i)).append(" ").append(t.get(i)).append("\n");
+            result.append(s.get(i) + 1).append(" ").append(t.get(i) + 1).append("\n");
         }
         return result.toString();
     }

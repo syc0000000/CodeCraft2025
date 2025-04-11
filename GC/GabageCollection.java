@@ -1,6 +1,7 @@
 package GC;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 
@@ -84,6 +85,8 @@ public class GabageCollection {
                 }
                 // 更新tagMeta的sizeNow
             }
+            // unitidList 排序，从小到大
+            Collections.sort(unitIdList);
             disk.getTagMetaByTagId(obj.objTag).sizeNow += obj.objSize;
             // 分配空间
             Replica replicaAfter = new Replica(obj.objId, 0, disk.diskId, unitIdList);
@@ -151,7 +154,8 @@ public class GabageCollection {
                     log.debug("切分空间: " + diskSpace.toString());
                     int end = diskSpace.start + size - 1;
                     int startNext = end + 1;
-                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId);
+                    int tagIdByIndex = disk.getTagMetaByIndex(startNext);
+                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
                     log.debug("切分空间完成: " + diskSpace.toString() + " 剩余空间: " + space2remain.toString());
@@ -242,7 +246,8 @@ public class GabageCollection {
                     // 切分空间
                     int end = diskSpace.start + sizeLeft - 1;
                     int startNext = end + 1;
-                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId);
+                    int tagIdByIndex = disk.getTagMetaByIndex(startNext);
+                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
                     for (int j = diskSpace.start; j <= end; j++) {
