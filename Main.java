@@ -26,8 +26,11 @@ public class Main {
     private static final ModuleLogger mainLogger = LoggerFactory.getLogger("Main");
 
     public static void main(String[] args) {
+        // 处理命令行参数
+        processCommandLineArgs(args);
+
         // 配置日志记录器
-        logger.setLevel(Logger.Level.DEBUG);
+        logger.setLevel(Logger.Level.ERROR);
         // logger.setLevel(Logger.Level.DEBUG);
         // logger.enableModule("Main");
         // logger.enableModule("Preprocess");
@@ -114,5 +117,21 @@ public class Main {
         // 程序结束前关闭文件日志
         logger.disableFileLogging();
         logger.disableFileLogging();
+    }
+
+    /**
+     * 处理命令行参数
+     * 
+     * @param args 命令行参数数组
+     */
+    private static void processCommandLineArgs(String[] args) {
+        // 检查是否有传递period和tags参数
+        for (int i = 0; i < args.length - 1; i++) {
+            if (args[i].equals("-period") && i < args.length - 1) {
+                System.setProperty("period", args[i + 1]);
+            } else if (args[i].equals("-tags") && i < args.length - 1) {
+                System.setProperty("tags", args[i + 1]);
+            }
+        }
     }
 }

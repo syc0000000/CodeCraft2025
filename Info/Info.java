@@ -5,10 +5,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+
+import IO.model.GCCommandOut;
 import IO.model.PreprocessOut;
 import Info.model.LocalDisk;
 import Info.model.ReadTask;
+import Info.model.Replica;
 import Info.model.Tag;
+import Info.model.TagMeta;
+import Info.model.UnitData;
 import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -102,12 +107,11 @@ public class Info {
             int now_size = 0;
             int periodCount = (Info.tickNums - 1) / 1800 + 1;
             for (int j = 0; j < periodCount; j++) {
-                tag.totalSizeByPeriod.add(now_size);
                 now_size += fre_write.get(i).get(j);
                 now_size -= fre_del.get(i).get(j);
+                tag.totalSizeByPeriod.add(now_size);
                 tag.readSizeByPeriod.add(fre_read.get(i).get(j));
             }
-            tag.totalSizeByPeriod.add(now_size);
             // 扫sizeByPeriod, 找到最大的size
             int max_size = 0;
             for (int j = 0; j < tag.totalSizeByPeriod.size(); j++) {
@@ -138,7 +142,7 @@ public class Info {
             tagDensities.add(new ArrayList<>());
             for (int tagIdx = 0; tagIdx < tagNums; tagIdx++) {
                 double density = (double) readSizeByPeriod.get(periodIdx).get(tagIdx)
-                        / tags.get(tagIdx).sizeMax;
+                        / tags.get(tagIdx).totalSizeByPeriod.get(periodIdx);
                 tagDensities.get(periodIdx).add(density);
             }
 
@@ -265,39 +269,11 @@ public class Info {
             // 确定要选择的标签数量
             int tagsToSelect = selectedTags.size();
             // 后处理hardcode
-            HashMap<Integer, Integer> peroid2Count = new HashMap<>();
-            peroid2Count.put(0, 16);
-            peroid2Count.put(1, 16);
-            peroid2Count.put(2, 16);
-            peroid2Count.put(3, 16);
-            peroid2Count.put(4, 16);
-            peroid2Count.put(5, 14);
-            peroid2Count.put(6, 6);
-            peroid2Count.put(7, 16);
-            peroid2Count.put(8, 15);
-            peroid2Count.put(9, 7);
-            peroid2Count.put(10, 5);
-            peroid2Count.put(11, 7);
-            peroid2Count.put(12, 8);
-            peroid2Count.put(13, 10);
-            peroid2Count.put(14, 9);
-            peroid2Count.put(15, 7);
-            peroid2Count.put(16, 6);
-            peroid2Count.put(17, 6);
-            peroid2Count.put(18, 7);
-            peroid2Count.put(19, 7);
-            peroid2Count.put(20, 6);
-            peroid2Count.put(21, 5);
-            peroid2Count.put(22, 6);
-            peroid2Count.put(23, 6);
-            peroid2Count.put(24, 6);
-            peroid2Count.put(25, 7);
-            peroid2Count.put(26, 6);
-            peroid2Count.put(27, 6);
-            peroid2Count.put(28, 7);
-            peroid2Count.put(29, 8);
-            peroid2Count.put(30, 9);
-            peroid2Count.put(31, 8);
+
+            // 加载配置策略：1. 命令行参数 2. 配置文件 3. 默认值
+            HashMap<Integer, Integer> peroid2Count = loadPeriodTagConfig();
+
+            // 使用配置的标签数量
             if (peroid2Count.get(periodIdx) != null) {
                 tagsToSelect = peroid2Count.get(periodIdx);
             }
@@ -326,61 +302,108 @@ public class Info {
     }
 
     /**
-     * 根据当前period，不同tag的read方差，方差越小、选择的tag越多
+     * 加载标签配置，优先级: 命令行参数 > 配置文件 > 默认值
      * 
-     * @param varianceThreshold 方差阈值
-     * @param minCount          每个周期至少选择的标签数量
-     * @param maxCount          每个周期最多选择的标签数量
+     * @return 期间到标签数量的映射
      */
-    private static void selectTagsByDynamicVariance(double varianceThreshold, int minCount,
-            int maxCount) {
-        for (int periodIdx = 0; periodIdx < readSizeByPeriod.size(); periodIdx++) {
-            ArrayList<Double> ratioData = tagSizeRatio.get(periodIdx);
-            ArrayList<Double> tempRatios = new ArrayList<>(ratioData);
-            ArrayList<Integer> selectedTags = new ArrayList<>();
+    private static HashMap<Integer, Integer> loadPeriodTagConfig() {
+        HashMap<Integer, Integer> peroid2Count = new HashMap<>();
 
-            // 先选择比例最高的标签作为起点
-            int firstTag = getMaxRatioTagIndex(tempRatios);
-            selectedTags.add(firstTag);
-            tempRatios.set(firstTag, -1.0);
-            periodToTagSet.get(periodIdx).add(firstTag);
+        // 1. 尝试从命令行参数读取
+        try {
+            String periodParam = System.getProperty("period");
+            String tagsParam = System.getProperty("tags");
 
-            // 确保至少选择minTags个标签
-            while (selectedTags.size() < minCount) {
-                int nextTag = getMinVarianceTag(tempRatios, selectedTags, ratioData);
-                if (nextTag == -1)
-                    break; // 没有更多标签可选
-
-                selectedTags.add(nextTag);
-                tempRatios.set(nextTag, -1.0);
-                periodToTagSet.get(periodIdx).add(nextTag);
+            if (periodParam != null && tagsParam != null) {
+                int period = Integer.parseInt(periodParam);
+                int tags = Integer.parseInt(tagsParam);
+                peroid2Count.put(period, tags);
+                log.info("从命令行读取参数 - Period " + period + ": " + tags + " 标签");
+                // 命令行参数只适用于单个period，直接返回
+                return peroid2Count;
             }
-
-            // 动态添加更多标签，直到方差低于阈值或达到最大标签数
-            double currentVariance = calculateVariance(selectedTags, ratioData);
-            while (selectedTags.size() < maxCount) {
-                int nextTag = getMinVarianceTag(tempRatios, selectedTags, ratioData);
-                if (nextTag == -1)
-                    break; // 没有更多标签可选
-
-                // 临时添加标签并计算新方差
-                selectedTags.add(nextTag);
-                double newVariance = calculateVariance(selectedTags, ratioData);
-
-                // 如果新方差更低或已达到最小标签数但方差仍可接受，保留这个标签
-                if (newVariance < currentVariance
-                        || (selectedTags.size() <= minCount && newVariance < varianceThreshold)) {
-                    tempRatios.set(nextTag, -1.0);
-                    periodToTagSet.get(periodIdx).add(nextTag);
-                    currentVariance = newVariance;
-                } else {
-                    // 否则移除这个标签
-                    selectedTags.remove(selectedTags.size() - 1);
-                    log.debug("period " + periodIdx + " Variance" + currentVariance);
-                    break; // 如果添加更多标签不会减少方差，则停止
-                }
-            }
+        } catch (Exception e) {
+            log.warn("解析命令行参数失败: " + e.getMessage());
         }
+
+        // 2. 从文件中读取最优参数
+        try {
+            java.nio.file.Path optimalParamsPath = java.nio.file.Paths.get("optimal_period_tags.txt");
+            if (java.nio.file.Files.exists(optimalParamsPath)) {
+                java.util.List<String> lines = java.nio.file.Files.readAllLines(optimalParamsPath);
+                for (String line : lines) {
+                    line = line.trim();
+                    if (line.isEmpty() || line.startsWith("#")) {
+                        continue; // 跳过空行和注释
+                    }
+                    String[] parts = line.split(":");
+                    if (parts.length == 2) {
+                        int period = Integer.parseInt(parts[0].trim());
+                        int count = Integer.parseInt(parts[1].trim());
+                        peroid2Count.put(period, count);
+                        log.debug("从文件加载参数 - Period " + period + ": " + count + " 标签");
+                    }
+                }
+            } else {
+                log.debug("参数文件不存在，使用默认配置");
+            }
+        } catch (Exception e) {
+            log.error("读取最优参数文件失败: " + e.getMessage());
+        }
+
+        // 3. 如果没有从文件读取到参数，使用硬编码的默认值
+        if (peroid2Count.isEmpty()) {
+            peroid2Count.put(0, 16);
+            peroid2Count.put(1, 16);
+            peroid2Count.put(2, 16);
+            peroid2Count.put(3, 16);
+            peroid2Count.put(4, 16);
+            peroid2Count.put(5, 12);
+            peroid2Count.put(6, 13);
+            peroid2Count.put(7, 16);
+            peroid2Count.put(8, 6);
+            peroid2Count.put(9, 5);
+            peroid2Count.put(10, 6);
+            peroid2Count.put(11, 7);
+            peroid2Count.put(12, 8);
+            peroid2Count.put(13, 9);
+            peroid2Count.put(14, 9);
+            peroid2Count.put(15, 8);
+            peroid2Count.put(16, 7);
+            peroid2Count.put(17, 6);
+            peroid2Count.put(18, 7);
+            peroid2Count.put(19, 7);
+            peroid2Count.put(20, 6);
+            peroid2Count.put(21, 6);
+            peroid2Count.put(22, 7);
+            peroid2Count.put(23, 7);
+            peroid2Count.put(24, 6);
+            peroid2Count.put(25, 6);
+            peroid2Count.put(26, 7);
+            peroid2Count.put(27, 5);
+            peroid2Count.put(28, 8);
+            peroid2Count.put(29, 8);
+            peroid2Count.put(30, 8);
+            peroid2Count.put(31, 8);
+            peroid2Count.put(32, 9);
+            peroid2Count.put(33, 10);
+            peroid2Count.put(34, 9);
+            peroid2Count.put(35, 8);
+            peroid2Count.put(36, 8);
+            peroid2Count.put(37, 10);
+            peroid2Count.put(38, 8);
+            peroid2Count.put(39, 6);
+            peroid2Count.put(40, 6);
+            peroid2Count.put(41, 9);
+            peroid2Count.put(42, 8);
+            peroid2Count.put(43, 13);
+            peroid2Count.put(44, 15);
+            peroid2Count.put(45, 6);
+            peroid2Count.put(46, 13);
+            peroid2Count.put(47, 13);
+        }
+
+        return peroid2Count;
     }
 
     /**
@@ -519,5 +542,10 @@ public class Info {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public ArrayList<GCCommandOut> GC() {
+        // 临时返回空列表，等待实现完整的GC功能
+        return new ArrayList<>();
     }
 }

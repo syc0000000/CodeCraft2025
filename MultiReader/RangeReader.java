@@ -2,8 +2,10 @@ package MultiReader;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import IO.model.CompleteCommandOut;
 import IO.model.MultiReadCommandOut;
 import Info.Info;
@@ -27,6 +29,41 @@ public class RangeReader implements MultiReaderStrategy {
     public static final int READ_SIZE_BALANCED_STRATEGY = 1;
     public static final int SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY = 2;
     public static final int SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY = 3;
+    public static final int ACTIVE_UNITS_BALANCED_STRATEGY = 4;
+
+    private static HashMap<Integer, Integer> periodToStrategy = new HashMap<>();
+    private static int defaultStrategy = ACTIVE_UNITS_BALANCED_STRATEGY;
+    static {
+        // periodToStrategy.put(6, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(7, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(8, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(9, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(10, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(17, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(18, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(19, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(20, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(21, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(22, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(23, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(27, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(28, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(34, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(35, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(36, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(37, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(38, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(39, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(40, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(41, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(42, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(43, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(44, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(45, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(46, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+        // periodToStrategy.put(47, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
+
+    }
 
     public static class Range {
         int start;
@@ -45,12 +82,17 @@ public class RangeReader implements MultiReaderStrategy {
 
         @Override
         public String toString() {
-            return "[" + start + ", " + end + "]";
+            return "Range{" +
+                    "start=" + start +
+                    ", end=" + end +
+                    ", diskId=" + diskId +
+                    '}';
         }
+
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet) {
-        this(periodToTagSet, SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY);
+        this(periodToTagSet, defaultStrategy);
     }
 
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet, int strategy) {
@@ -94,9 +136,15 @@ public class RangeReader implements MultiReaderStrategy {
                 } else if (strategy == SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY) {
                     // 使用顺序不交叉且读取量平衡的策略
                     distributeRangesBySequentialReadSize(ranges, leftRanges, rightRanges, disk, period);
-                } else {
+                } else if (strategy == SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY) {
                     // 使用允许切分Tag的读取量平衡策略
                     distributeRangesBySplitTagReadSize(ranges, leftRanges, rightRanges, disk, period);
+                } else if (strategy == ACTIVE_UNITS_BALANCED_STRATEGY) {
+                    // 使用有任务unit数量平衡的策略
+                    distributeRangesByActiveUnits(ranges, leftRanges, rightRanges, disk, period, 1.1);
+                }
+                if (periodToStrategy.containsKey(period)) {
+                    strategy = periodToStrategy.get(period);
                 }
 
                 // 两个磁头的range
@@ -125,6 +173,182 @@ public class RangeReader implements MultiReaderStrategy {
             }
         }
         log.info("RangeReader初始化完成,rangeList: " + Arrays.deepToString(rangeList.toArray()));
+    }
+
+    // 允许切分Tag的读取量平衡策略
+    private void distributeRangesBySplitTagReadSize(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
+            ArrayList<Range> rightRanges, LocalDisk disk, int period) {
+        if (ranges.isEmpty()) {
+            return;
+        }
+
+        // 计算每个range的readSize和总readSize
+        ArrayList<Integer> rangeReadSizes = new ArrayList<>();
+        int totalReadSize = 0;
+
+        ArrayList<Integer> tagIds = new ArrayList<>(); // 保存每个range对应的tagId
+
+        for (Range range : ranges) {
+            int tagId = -1;
+            // 查找range对应的tagId
+            for (TagMeta tagMeta : disk.tagMetas) {
+                if (tagMeta.left == range.start && tagMeta.right == range.end) {
+                    tagId = tagMeta.tagId;
+                    break;
+                }
+            }
+
+            tagIds.add(tagId);
+
+            // 获取这个tag在当前period的readSize
+            int readSize = 0;
+            if (tagId != -1) {
+                if (period < Info.tags.get(tagId).readSizeByPeriod.size()) {
+                    readSize = Info.tags.get(tagId).readSizeByPeriod.get(period);
+                }
+            }
+
+            rangeReadSizes.add(readSize);
+            totalReadSize += readSize;
+        }
+
+        // 理想情况下每边应该有的读取量
+        int targetReadSize = totalReadSize / 2;
+
+        // 先尝试找到最接近目标读取量的完整range分割方案
+        int bestSplitIndex = 0;
+        int currentSum = 0;
+        int minDiff = Integer.MAX_VALUE;
+
+        for (int i = 0; i < ranges.size(); i++) {
+            currentSum += rangeReadSizes.get(i);
+            int diff = Math.abs(currentSum - targetReadSize);
+
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestSplitIndex = i + 1; // 在i之后分割
+            }
+        }
+
+        // 计算使用完整range分割的左右读取量
+        int leftSum = 0;
+        for (int i = 0; i < bestSplitIndex; i++) {
+            leftSum += rangeReadSizes.get(i);
+        }
+
+        int rightSum = totalReadSize - leftSum;
+        int imbalance = Math.abs(leftSum - rightSum);
+
+        // 如果不平衡度太大，考虑切分一个range来改善平衡性
+        if (bestSplitIndex > 0 && bestSplitIndex < ranges.size() && imbalance > 0) {
+            // 确定是切分bestSplitIndex前的range还是后的range
+            boolean splitPrevious = false;
+            int rangeToSplitIndex;
+
+            if (leftSum > rightSum) {
+                // 左侧读取量过大，考虑切分最后一个左侧range
+                rangeToSplitIndex = bestSplitIndex - 1;
+                splitPrevious = true;
+            } else {
+                // 右侧读取量过大，考虑切分第一个右侧range
+                rangeToSplitIndex = bestSplitIndex;
+                splitPrevious = false;
+            }
+
+            // 获取要切分的range信息
+            Range rangeToSplit = ranges.get(rangeToSplitIndex);
+            int rangeReadSize = rangeReadSizes.get(rangeToSplitIndex);
+
+            // 只有在range足够大时才考虑切分
+            if (rangeReadSize > 10 && rangeToSplit.end - rangeToSplit.start > 5) {
+                // 计算需要转移的读取量
+                int transferAmount = imbalance / 2;
+
+                // 如果transferAmount太小，不值得切分
+                if (transferAmount > 5) {
+                    // 计算切分比例
+                    double splitRatio = (double) transferAmount / rangeReadSize;
+
+                    // 根据比例计算切分点
+                    int splitPoint;
+                    if (splitPrevious) {
+                        // 从左侧range末尾切出一部分到右侧
+                        splitPoint = rangeToSplit.start
+                                + (int) ((rangeToSplit.end - rangeToSplit.start) * (1 - splitRatio));
+                    } else {
+                        // 从右侧range开头切出一部分到左侧
+                        splitPoint = rangeToSplit.start
+                                + (int) ((rangeToSplit.end - rangeToSplit.start) * splitRatio);
+                    }
+
+                    // 确保切分点有效
+                    splitPoint = Math.max(rangeToSplit.start + 1, Math.min(rangeToSplit.end - 1, splitPoint));
+
+                    // 创建两个新的range
+                    Range leftPart = new Range(rangeToSplit.start, splitPoint, rangeToSplit.diskId);
+                    Range rightPart = new Range(splitPoint + 1, rangeToSplit.end, rangeToSplit.diskId);
+
+                    // 计算切分后的读取量分配
+                    double leftPartRatio = (double) (splitPoint - rangeToSplit.start + 1)
+                            / (rangeToSplit.end - rangeToSplit.start + 1);
+                    double rightPartRatio = 1.0 - leftPartRatio;
+
+                    int leftPartReadSize = (int) (rangeReadSize * leftPartRatio);
+                    int rightPartReadSize = rangeReadSize - leftPartReadSize;
+
+                    // 把切分的范围分配给左右两侧
+                    for (int i = 0; i < ranges.size(); i++) {
+                        if (i < rangeToSplitIndex) {
+                            leftRanges.add(ranges.get(i));
+                        } else if (i > rangeToSplitIndex) {
+                            rightRanges.add(ranges.get(i));
+                        } else {
+                            // 这是被切分的range
+                            if (splitPrevious) {
+                                leftRanges.add(leftPart);
+                                rightRanges.add(rightPart);
+                            } else {
+                                leftRanges.add(leftPart);
+                                rightRanges.add(rightPart);
+                            }
+                        }
+                    }
+
+                    // 记录切分后的分配结果
+                    int newLeftSum = leftSum;
+                    int newRightSum = rightSum;
+
+                    if (splitPrevious) {
+                        newLeftSum -= rightPartReadSize;
+                        newRightSum += rightPartReadSize;
+                    } else {
+                        newLeftSum += leftPartReadSize;
+                        newRightSum -= leftPartReadSize;
+                    }
+
+                    log.debug("允许切分Tag的读取量均衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
+                            ", 切分前: 左侧读取量:" + leftSum + ", 右侧读取量:" + rightSum +
+                            ", 切分后: 左侧读取量:" + newLeftSum + ", 右侧读取量:" + newRightSum +
+                            ", 切分点:" + splitPoint + ", 切分的Tag:" +
+                            (tagIds.get(rangeToSplitIndex) == -1 ? "未知" : tagIds.get(rangeToSplitIndex)));
+
+                    // 已完成分配，直接返回
+                    return;
+                }
+            }
+        }
+
+        // 如果不需要切分或不适合切分，就使用完整range分割
+        for (int i = 0; i < ranges.size(); i++) {
+            if (i < bestSplitIndex) {
+                leftRanges.add(ranges.get(i));
+            } else {
+                rightRanges.add(ranges.get(i));
+            }
+        }
+
+        log.debug("完整range分割的读取量均衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
+                ", 左侧读取量:" + leftSum + ", 右侧读取量:" + rightSum);
     }
 
     // 基于位置的分配策略
@@ -291,20 +515,29 @@ public class RangeReader implements MultiReaderStrategy {
                 ", 分割点:" + (ranges.isEmpty() ? "无" : ranges.get(bestSplitIndex).start));
     }
 
-    // 允许切分Tag的读取量平衡策略
-    private void distributeRangesBySplitTagReadSize(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
-            ArrayList<Range> rightRanges, LocalDisk disk, int period) {
+    // 基于有任务unit数量平衡的策略
+    private void distributeRangesByActiveUnits(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
+            ArrayList<Range> rightRanges, LocalDisk disk, int period,
+            double readRatioThreshold) {
         if (ranges.isEmpty()) {
             return;
         }
 
-        // 计算每个range的readSize和总readSize
-        ArrayList<Integer> rangeReadSizes = new ArrayList<>();
-        int totalReadSize = 0;
+        // 计算每个range的物理单元数、读取量和估算的有任务unit数量
+        ArrayList<Integer> rangeUnits = new ArrayList<>(); // 每个range的单元数
+        ArrayList<Integer> rangeReadSizes = new ArrayList<>(); // 每个range的读取量
+        ArrayList<Integer> rangeActiveUnits = new ArrayList<>(); // 每个range的估算有任务unit数量
+        ArrayList<Integer> tagIds = new ArrayList<>(); // 每个range对应的tagId
 
-        ArrayList<Integer> tagIds = new ArrayList<>(); // 保存每个range对应的tagId
+        int totalUnits = 0;
+        int totalReadSize = 0;
+        int totalActiveUnits = 0;
 
         for (Range range : ranges) {
+            int rangeSize = range.end - range.start + 1; // 范围内的单元数
+            rangeUnits.add(rangeSize);
+            totalUnits += rangeSize;
+
             int tagId = -1;
             // 查找range对应的tagId
             for (TagMeta tagMeta : disk.tagMetas) {
@@ -326,134 +559,47 @@ public class RangeReader implements MultiReaderStrategy {
 
             rangeReadSizes.add(readSize);
             totalReadSize += readSize;
+
+            // 估算有任务unit数量
+            int activeUnits;
+            if (readSize >= rangeSize * readRatioThreshold) {
+                // 如果总读取量超过区域大小的readRatioThreshold倍，认为所有unit都有任务
+                activeUnits = rangeSize;
+            } else {
+                // 否则估算有任务unit数量为总读取量/readRatioThreshold（取整）
+                activeUnits = (int) Math.ceil(readSize / readRatioThreshold);
+            }
+
+            rangeActiveUnits.add(activeUnits);
+            totalActiveUnits += activeUnits;
         }
 
-        // 理想情况下每边应该有的读取量
-        int targetReadSize = totalReadSize / 2;
+        // 目标每侧有任务unit数量
+        int targetActiveUnits = totalActiveUnits / 2;
 
-        // 先尝试找到最接近目标读取量的完整range分割方案
+        // 尝试所有可能的划分点，找到使左右两边有任务unit数量最接近的那个点
         int bestSplitIndex = 0;
-        int currentSum = 0;
         int minDiff = Integer.MAX_VALUE;
 
-        for (int i = 0; i < ranges.size(); i++) {
-            currentSum += rangeReadSizes.get(i);
-            int diff = Math.abs(currentSum - targetReadSize);
+        for (int splitIndex = 1; splitIndex <= ranges.size(); splitIndex++) {
+            // 计算左侧有任务unit数量
+            int leftActiveUnits = 0;
+            for (int i = 0; i < splitIndex; i++) {
+                leftActiveUnits += rangeActiveUnits.get(i);
+            }
 
+            // 计算右侧有任务unit数量
+            int rightActiveUnits = totalActiveUnits - leftActiveUnits;
+
+            // 计算差异并更新最佳分割点
+            int diff = Math.abs(leftActiveUnits - rightActiveUnits);
             if (diff < minDiff) {
                 minDiff = diff;
-                bestSplitIndex = i + 1; // 在i之后分割
+                bestSplitIndex = splitIndex;
             }
         }
 
-        // 计算使用完整range分割的左右读取量
-        int leftSum = 0;
-        for (int i = 0; i < bestSplitIndex; i++) {
-            leftSum += rangeReadSizes.get(i);
-        }
-
-        int rightSum = totalReadSize - leftSum;
-        int imbalance = Math.abs(leftSum - rightSum);
-
-        // 如果不平衡度太大，考虑切分一个range来改善平衡性
-        if (bestSplitIndex > 0 && bestSplitIndex < ranges.size() && imbalance > 0) {
-            // 确定是切分bestSplitIndex前的range还是后的range
-            boolean splitPrevious = false;
-            int rangeToSplitIndex;
-
-            if (leftSum > rightSum) {
-                // 左侧读取量过大，考虑切分最后一个左侧range
-                rangeToSplitIndex = bestSplitIndex - 1;
-                splitPrevious = true;
-            } else {
-                // 右侧读取量过大，考虑切分第一个右侧range
-                rangeToSplitIndex = bestSplitIndex;
-                splitPrevious = false;
-            }
-
-            // 获取要切分的range信息
-            Range rangeToSplit = ranges.get(rangeToSplitIndex);
-            int rangeReadSize = rangeReadSizes.get(rangeToSplitIndex);
-
-            // 只有在range足够大时才考虑切分
-            if (rangeReadSize > 10 && rangeToSplit.end - rangeToSplit.start > 5) {
-                // 计算需要转移的读取量
-                int transferAmount = imbalance / 2;
-
-                // 如果transferAmount太小，不值得切分
-                if (transferAmount > 5) {
-                    // 计算切分比例
-                    double splitRatio = (double) transferAmount / rangeReadSize;
-
-                    // 根据比例计算切分点
-                    int splitPoint;
-                    if (splitPrevious) {
-                        // 从左侧range末尾切出一部分到右侧
-                        splitPoint = rangeToSplit.start
-                                + (int) ((rangeToSplit.end - rangeToSplit.start) * (1 - splitRatio));
-                    } else {
-                        // 从右侧range开头切出一部分到左侧
-                        splitPoint = rangeToSplit.start + (int) ((rangeToSplit.end - rangeToSplit.start) * splitRatio);
-                    }
-
-                    // 确保切分点有效
-                    splitPoint = Math.max(rangeToSplit.start + 1, Math.min(rangeToSplit.end - 1, splitPoint));
-
-                    // 创建两个新的range
-                    Range leftPart = new Range(rangeToSplit.start, splitPoint, rangeToSplit.diskId);
-                    Range rightPart = new Range(splitPoint + 1, rangeToSplit.end, rangeToSplit.diskId);
-
-                    // 计算切分后的读取量分配
-                    double leftPartRatio = (double) (splitPoint - rangeToSplit.start + 1)
-                            / (rangeToSplit.end - rangeToSplit.start + 1);
-                    double rightPartRatio = 1.0 - leftPartRatio;
-
-                    int leftPartReadSize = (int) (rangeReadSize * leftPartRatio);
-                    int rightPartReadSize = rangeReadSize - leftPartReadSize;
-
-                    // 把切分的范围分配给左右两侧
-                    for (int i = 0; i < ranges.size(); i++) {
-                        if (i < rangeToSplitIndex) {
-                            leftRanges.add(ranges.get(i));
-                        } else if (i > rangeToSplitIndex) {
-                            rightRanges.add(ranges.get(i));
-                        } else {
-                            // 这是被切分的range
-                            if (splitPrevious) {
-                                leftRanges.add(leftPart);
-                                rightRanges.add(rightPart);
-                            } else {
-                                leftRanges.add(leftPart);
-                                rightRanges.add(rightPart);
-                            }
-                        }
-                    }
-
-                    // 记录切分后的分配结果
-                    int newLeftSum = leftSum;
-                    int newRightSum = rightSum;
-
-                    if (splitPrevious) {
-                        newLeftSum -= rightPartReadSize;
-                        newRightSum += rightPartReadSize;
-                    } else {
-                        newLeftSum += leftPartReadSize;
-                        newRightSum -= leftPartReadSize;
-                    }
-
-                    log.debug("允许切分Tag的读取量均衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
-                            ", 切分前: 左侧读取量:" + leftSum + ", 右侧读取量:" + rightSum +
-                            ", 切分后: 左侧读取量:" + newLeftSum + ", 右侧读取量:" + newRightSum +
-                            ", 切分点:" + splitPoint + ", 切分的Tag:" +
-                            (tagIds.get(rangeToSplitIndex) == -1 ? "未知" : tagIds.get(rangeToSplitIndex)));
-
-                    // 已完成分配，直接返回
-                    return;
-                }
-            }
-        }
-
-        // 如果不需要切分或不适合切分，就使用完整range分割
+        // 根据最佳分割点分配ranges
         for (int i = 0; i < ranges.size(); i++) {
             if (i < bestSplitIndex) {
                 leftRanges.add(ranges.get(i));
@@ -462,8 +608,24 @@ public class RangeReader implements MultiReaderStrategy {
             }
         }
 
-        log.debug("完整range分割的读取量均衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
-                ", 左侧读取量:" + leftSum + ", 右侧读取量:" + rightSum);
+        // 计算最终分配结果的指标
+        int leftUnits = 0;
+        int leftReadSize = 0;
+        int leftActiveUnits = 0;
+        for (int i = 0; i < bestSplitIndex; i++) {
+            leftUnits += rangeUnits.get(i);
+            leftReadSize += rangeReadSizes.get(i);
+            leftActiveUnits += rangeActiveUnits.get(i);
+        }
+
+        int rightUnits = totalUnits - leftUnits;
+        int rightReadSize = totalReadSize - leftReadSize;
+        int rightActiveUnits = totalActiveUnits - leftActiveUnits;
+
+        log.debug("有任务unit数量平衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
+                ", 左侧: 单元数=" + leftUnits + ", 读取量=" + leftReadSize + ", 估算有任务unit数=" + leftActiveUnits +
+                ", 右侧: 单元数=" + rightUnits + ", 读取量=" + rightReadSize + ", 估算有任务unit数=" + rightActiveUnits +
+                ", 总有任务unit数=" + totalActiveUnits + ", 阈值=" + readRatioThreshold);
     }
 
     // 计算这一tick的目的地，考虑任务、range、磁头位置
@@ -497,7 +659,8 @@ public class RangeReader implements MultiReaderStrategy {
     }
 
     @Override
-    public void read(int diskId, MultiReadCommandOut readCommandOut, HashSet<CompleteCommandOut> completeCommandOuts) {
+    public void read(int diskId, MultiReadCommandOut readCommandOut,
+            HashSet<CompleteCommandOut> completeCommandOuts) {
         LocalDisk disk = Info.localDiskTbl.get(diskId);
         int tokenleft[] = new int[2];
         tokenleft[0] = Info.tokenPerTick;
@@ -630,7 +793,7 @@ public class RangeReader implements MultiReaderStrategy {
                 // }
                 // }
                 // pro哥同款方案，距离>9pass,距离<9read
-                if (k <= 10 && k > 0) {
+                if (k <= 9 && k > 0) {
                     while (k > 0 && tokenleft[index] >= disk.calculateToken(index, Action.READ)) {
                         readCommandOut.actions.get(index).add(Action.READ);
                         disk.ptrDoAction(index, Action.READ);
