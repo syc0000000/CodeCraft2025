@@ -24,7 +24,7 @@ public class TagMeta {
 
     @Override
     public String toString() {
-        return "TagMeta [tagId=" + tagId + ", left=" + left + ", right=" + right + ", rightNow=" + rightNow + "]";
+        return "TagMeta [tagId=" + tagId + ", left=" + left + ", right=" + right + ", rightNow=" + rightNow + ", sizeNow=" + sizeNow + "]";
     }
 
     public int calculateRightNow(LocalDisk disk) {

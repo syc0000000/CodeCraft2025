@@ -41,7 +41,7 @@ public class GabageCollection {
             int gcUsed = 0;
             LocalDisk disk = Info.localDiskTbl.get(i);
             HashSet<UserObject> objNotMatch = findMismatch(disk);
-            GCResult result = performGC(objNotMatch, disk, gcUsed);
+            GCResult result = performGC1(objNotMatch, disk, gcUsed);
             gcCommandOuts.add(result.commandOut);
             gcUsed = result.gcUsed; // Update gcUsed with the value returned from performGC
 
@@ -73,85 +73,176 @@ public class GabageCollection {
     }
 
     public static GCResult performGC2(LocalDisk disk, TagMeta tagMeta, int gcUsed) {
+        GCCommandOut gcCommandOut = new GCCommandOut();
         // 计算能填入的size和
         int sizeMax = tagMeta.calculateRightNow(disk) - tagMeta.sizeNow;
-
-        // 从后往前扫,找到第一个obj
-        while (true) {
-            UserObject obj = null;
-            for (int i = tagMeta.right; i >= tagMeta.left; i--) {
-                if (disk.unitData.get(i).objId != -1) {
-                    obj = disk.getObjOfUnit(i);
-                    break;
-                }
-            }
-            if (obj == null) {
-                break;
-            }
+        if (sizeMax == 0) {
+            return new GCResult(new GCCommandOut(), gcUsed);
+        }
+        // 1. 找到要往前移动的对象
+        HashSet<UserObject> objAtEnd = findEndObject(tagMeta, disk);
+        // 2. 往前写入对象
+        for (UserObject obj : objAtEnd) {
             if (gcUsed + obj.objSize > gcNum) {
-                break;
+                continue;
             }
-            // 找到空间，进行GC,使用ff
-            ArrayList<DiskSpace> diskSpaces = new ArrayList<>();
-            int sizeLeft = obj.objSize;
-            for (int i = tagMeta.left; i <= obj.replicas.get(0).unitIdList.get(0) - 1;) {
-                if (!disk.unitData.get(i).space.isFree) {
-                    i++;
-                    continue;
-                }
-                diskSpaces.add(disk.unitData.get(i).space);
-                i = disk.unitData.get(i).space.end + 1;
-                sizeLeft -= disk.unitData.get(i).space.size;
-                if (sizeLeft <= 0) {
-                    break;
-                }
+            // 2. 重写
+            ArrayList<DiskSpace> diskSpaces = findFreeSpaceFF(obj, disk, tagMeta);
+            if (diskSpaces == null) {
+                log.debug("GC2-没有找到合适的空间，不GC，objId: " + obj.objId + ", objTag: " + obj.objTag);
+                continue;
             }
-            if (sizeLeft > 0) {
-                break;
-            }
-            int blockId = 0;
-            // 分配空间
-            ArrayList<Integer> unitIdList = new ArrayList<>();
 
-            for (int i = 0; i < diskSpaces.size() - 1; i++) {
-                // 在最后一个space之前,说明都是要完全占用的
-                diskSpaces.get(i).isFree = false;
-                for (int j = diskSpaces.get(i).start; j <= diskSpaces.get(i).end; j++) {
-                    disk.unitData.get(j).objId = obj.objId;
-                    disk.unitData.get(j).blockId = blockId++;
-                    unitIdList.add(j);
+            // 找到空间，进行GC
+            log.debug("GC2-找到合适的空间，进行GC，objId: " + obj.objId + ", objTag: " + obj.objTag);
+
+            Replica replicaBefore = obj.replicas.get(0);
+            // deep copy unitIdList
+            ArrayList<Integer> unitIdListBefore = new ArrayList<>(replicaBefore.unitIdList);
+            log.debug("GC2-unitIdListBefore: " + unitIdListBefore.toString());
+
+            // 分配空间
+            ArrayList<Integer> unitIdListAfter = new ArrayList<>();
+            int maxUnitId = Integer.MIN_VALUE;
+            for (DiskSpace diskSpace : diskSpaces) {
+                for (int i = diskSpace.start; i <= diskSpace.end; i++) {
+                    unitIdListAfter.add(i);
+                    if (i > maxUnitId) {
+                        maxUnitId = i;
+                    }
                 }
+                // 更新tagMeta的sizeNow
             }
-            // 最后一个space,需要切分
-            int end = diskSpaces.get(diskSpaces.size() - 1).start + sizeLeft - 1;
-            int startNext = end + 1;
-            int tagIdByIndex = disk.getTagMetaByIndex(startNext);
-            DiskSpace space2left = new DiskSpace(true, startNext, diskSpaces.get(diskSpaces.size() - 1).end,
-                    disk.diskId, tagIdByIndex);
-            diskSpaces.get(diskSpaces.size() - 1).setStartAndEnd(diskSpaces.get(diskSpaces.size() - 1).start, end);
-            diskSpaces.get(diskSpaces.size() - 1).isFree = false;
-            for (int j = diskSpaces.get(diskSpaces.size() - 1).start; j <= end; j++) {
-                disk.unitData.get(j).objId = obj.objId;
-                disk.unitData.get(j).blockId = blockId++;
-                unitIdList.add(j);
-            }
-            for (int j = startNext; j <= space2left.end; j++) {
-                disk.unitData.get(j).space = space2left;
-                disk.unitData.get(j).objId = -1;
-                disk.unitData.get(j).blockId = -1;
-            }
+            // unitidList 排序，从小到大
+            Collections.sort(unitIdListAfter);
+            disk.getTagMetaByTagId(obj.objTag).sizeNow += obj.objSize;
+            // 分配空间
+            Replica replicaAfter = new Replica(obj.objId, 0, disk.diskId, unitIdListAfter);
+            addReplicaToObj(obj, replicaAfter);
+            saveReplicaToDisk(disk, replicaAfter);
             disk.rwSizeLeft -= obj.objSize;
             // 维护RWEnd
-            disk.RWEnd = Math.min(disk.logicalRWEnd, Math.max(disk.RWEnd, end));
-            Replica replica = new Replica(obj.objId, 0, disk.diskId, unitIdList);
-            addReplicaToObj(obj, replica);
-            saveReplicaToDisk(disk, replica);
-            // 从disk中移除obj
-            removeFromDisk(obj.replicas.get(0).unitIdList, disk, obj.objId);
+            disk.RWEnd = Math.min(disk.logicalRWEnd, Math.max(disk.RWEnd, maxUnitId));
+            // 维护tagMeta的rightNow
+            if (maxUnitId > tagMeta.rightNow && maxUnitId < tagMeta.right) {
+                tagMeta.rightNow = maxUnitId;
+            }
+
+            ArrayList<Integer> unitIDList = replicaAfter.unitIdList;
+            log.debug("unitIDList: " + unitIDList.toString());
+
+            // 刷新Obj的isInTask情况
+            // 先全部清空
+            for (int j = 0; j < obj.objSize; j++) {
+                // 设置单元中的isInTask为false
+                disk.unitData.get(unitIDList.get(j)).isInTask = false;
+            }
+            LinkedList<ReadTask> readTasks = obj.readTasks;
+            // 然后根据readtask中的blockNotFinished情况，设置isInTask为true
+            for (ReadTask readTask : readTasks) {
+                for (int blockId : readTask.blockNotFinished) {
+                    disk.unitData.get(unitIDList.get(blockId)).isInTask = true;
+                }
+            }
+
+            removeFromDisk(unitIdListBefore, disk, obj.objId);
+
+            // 3. 添加GCCommandOut
+            gcCommandOut.size += obj.objSize;
+            gcCommandOut.s.addAll(unitIdListBefore);
+            gcCommandOut.t.addAll(unitIdListAfter);
+            gcUsed += obj.objSize;
         }
+        return new GCResult(gcCommandOut, gcUsed);
     }
 
-    public static GCResult performGC(HashSet<UserObject> objNotMatch, LocalDisk disk, int gcUsed) {
+    private static ArrayList<DiskSpace> findFreeSpaceFF(UserObject obj, LocalDisk disk,
+            TagMeta tagMeta) {
+        ArrayList<DiskSpace> diskSpaces = new ArrayList<>();
+        int sizeLeft = obj.objSize; // 还要查找空间
+        for (int curUnitId = tagMeta.left; curUnitId < obj.replicas.get(0).unitIdList
+                .get(0); curUnitId++) {
+            DiskSpace diskSpace = disk.getSpaceForUnit(curUnitId);
+            if (!diskSpace.isFree) {
+                continue;
+            }
+            if (diskSpace.size < sizeLeft) {
+                diskSpaces.add(diskSpace);
+                diskSpace.isFree = false;
+                sizeLeft -= diskSpace.size;
+            } else {
+                // 出现这种情况一定是最后一个空间
+                // 切分空间
+                int end = diskSpace.start + sizeLeft - 1;
+                int startNext = end + 1;
+                int tagIdByIndex = disk.getTagMetaByIndex(startNext);
+                DiskSpace space2remain =
+                        new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
+                diskSpace.setStartAndEnd(diskSpace.start, end);
+                diskSpace.isFree = false;
+                for (int j = diskSpace.start; j <= end; j++) {
+                    disk.unitData.get(j).space = diskSpace;
+                    disk.unitData.get(j).objId = -1;
+                    disk.unitData.get(j).blockId = -1;
+                    // log.debug("将disk" + disk.diskId + "的unitData[" + j
+                    // + "]的objId和blockId设置为: " + -1 + ", " + -1);
+                }
+                for (int j = startNext; j <= space2remain.end; j++) {
+                    disk.unitData.get(j).space = space2remain;
+                    disk.unitData.get(j).objId = -1;
+                    disk.unitData.get(j).blockId = -1;
+                    // log.debug("将disk" + disk.diskId + "的unitData[" + j
+                    // + "]的objId和blockId设置为: " + -1 + ", " + -1);
+                }
+                diskSpaces.add(diskSpace);
+                break;
+            }
+        }
+
+        if (sizeLeft > 0) {
+            for (DiskSpace diskSpace : diskSpaces) {
+                releaseSpace(diskSpace);
+            }
+            return null;
+        }
+
+        return new ArrayList<>(diskSpaces);
+    }
+
+
+    public static HashSet<UserObject> findEndObject(TagMeta tagMata, LocalDisk disk) {
+        HashSet<UserObject> objAtEnd = new HashSet<>();
+        int sizeMax = tagMata.calculateRightNow(disk) - tagMata.left - tagMata.sizeNow + 1;
+        log.debug("Period " + (Info.timestamp /  1800 + 1) + "，tagMeta: " + tagMata.toString()
+                + ", sizeMax: " + sizeMax);
+        int curUnitId = tagMata.right;
+
+        for (int availableSize = sizeMax; availableSize > 0;) {
+            if (curUnitId < tagMata.left) {
+                break;
+            }
+            if (disk.unitData.get(curUnitId).objId == -1) {
+                curUnitId--;
+                continue;
+            }
+
+            UserObject obj = disk.getObjOfUnit(curUnitId);
+            if (objAtEnd.contains(obj)) {
+                curUnitId--;
+                continue;
+            } else if (availableSize >= obj.objSize) {
+                objAtEnd.add(obj);
+                curUnitId--;
+                availableSize -= obj.objSize;
+            } else {
+                break; // 如果availableSize小于obj的size，跳出循环
+            }
+        }
+        return objAtEnd;
+    }
+
+
+    public static GCResult performGC1(HashSet<UserObject> objNotMatch, LocalDisk disk, int gcUsed) {
         GCCommandOut gcCommandOut = new GCCommandOut();
         // Process each TagMeta's unmatched objects
         ArrayList<UserObject> unmatched = new ArrayList<>(objNotMatch);
@@ -494,7 +585,8 @@ public class GabageCollection {
         space.isFree = true;
         // 合并前后空间
         DiskSpace prevSpace = space.start > 0 ? disk.unitData.get(space.start - 1).space : null;
-        DiskSpace nextSpace = space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
+        DiskSpace nextSpace =
+                space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
         if (prevSpace != null && prevSpace.isFree && prevSpace.tagId == space.tagId) {
             // log.debug("合并前空间: " + prevSpace);
             space.setStartAndEnd(prevSpace.start, space.end);
