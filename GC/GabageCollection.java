@@ -26,20 +26,20 @@ public class GabageCollection {
         ArrayList<GCCommandOut> gcCommandOuts = new ArrayList<>();
         for (int i = 0; i < Info.diskNum; i++) {
             LocalDisk disk = Info.localDiskTbl.get(i);
-            ArrayList<UserObject> objNotMatch = findMismatch(disk);
+            HashSet<UserObject> objNotMatch = findMismatch(disk);
             GCCommandOut out = performGC(objNotMatch, disk);
             gcCommandOuts.add(out);
         }
         return gcCommandOuts;
     }
 
-    public static GCCommandOut performGC(ArrayList<UserObject> objNotMatch, LocalDisk disk) {
+    public static GCCommandOut performGC(HashSet<UserObject> objNotMatch, LocalDisk disk) {
         // Track how many swap operations we've used
         int gcUsed = 0;
 
         GCCommandOut gcCommandOut = new GCCommandOut();
         // Process each TagMeta's unmatched objects
-        ArrayList<UserObject> unmatched = objNotMatch;
+        ArrayList<UserObject> unmatched = new ArrayList<>(objNotMatch);
 
         if (unmatched == null || unmatched.isEmpty()) {
             return gcCommandOut;
@@ -54,6 +54,10 @@ public class GabageCollection {
                 continue;
             }
 
+            // 1. 删除
+            removeFromDisk(obj.objId);
+
+            // 2. 重写
             TagMeta tagMetaOfObj = disk.getTagMetaByTagId(obj.objTag);
             ArrayList<DiskSpace> diskSpaces = findFreeSpaceByTag(obj.objTag, disk, obj.objSize);
             if (diskSpaces == null) {
@@ -64,8 +68,11 @@ public class GabageCollection {
             log.debug("找到合适的空间，进行GC，objId: " + obj.objId + ", objTag: " + obj.objTag);
 
             Replica replicaBefore = obj.replicas.get(0);
+            // deep copy unitIdList
+            ArrayList<Integer> unitIdListBefore = new ArrayList<>(replicaBefore.unitIdList);
+            log.debug("unitIdListBefore: " + unitIdListBefore.toString());
 
-            // 1. 分配空间
+            // 分配空间
             ArrayList<Integer> unitIdList = new ArrayList<>();
             int maxUnitId = Integer.MIN_VALUE;
             for (DiskSpace diskSpace : diskSpaces) {
@@ -90,10 +97,9 @@ public class GabageCollection {
             if (tagMeta != null && maxUnitId > tagMeta.rightNow && maxUnitId < tagMeta.right) {
                 tagMeta.rightNow = maxUnitId;
             }
-            // 2. 删除
-            removeFromDisk(obj.objId);
 
             ArrayList<Integer> unitIDList = replicaAfter.unitIdList;
+            log.debug("unitIDList: " + unitIDList.toString());
             // 刷新Obj的isInTask情况
             // 先全部清空
             for (int j = 0; j < obj.objSize; j++) {
@@ -109,9 +115,9 @@ public class GabageCollection {
             }
 
             // 3. 添加GCCommandOut
-            gcCommandOut.size++;
-            gcCommandOut.s.addAll(replicaBefore.unitIdList);
-            gcCommandOut.t.addAll(replicaAfter.unitIdList);
+            gcCommandOut.size += obj.objSize;
+            gcCommandOut.s.addAll(unitIdListBefore);
+            gcCommandOut.t.addAll(unitIdList);
             gcUsed += obj.objSize;
         }
         return gcCommandOut;
@@ -269,9 +275,9 @@ public class GabageCollection {
      * @param disk
      * @return
      */
-    public static ArrayList<UserObject> findMismatch(LocalDisk disk) {
+    public static HashSet<UserObject> findMismatch(LocalDisk disk) {
         // 1级索引对应tagMeta的顺序，二级存放不匹配的obj
-        ArrayList<UserObject> objNotMatch = new ArrayList<>();
+        HashSet<UserObject> objNotMatch = new HashSet<>();
 
         for (int i = 0; i < disk.tagMetas.size(); i++) {
             // 2. 找到不匹配的Tag，遍历tagMetas

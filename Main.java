@@ -29,16 +29,17 @@ public class Main {
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
         // logger.setLevel(Logger.Level.DEBUG);
-        logger.enableModule("Main");
-        logger.enableModule("Preprocess");
+        // logger.enableModule("Main");
+        // logger.enableModule("Preprocess");
         logger.enableModule("Writer");
-        logger.enableModule("Deleter");
-        logger.enableModule("Info");
-        logger.enableModule("DiskGA");
+        // logger.enableModule("Deleter");
+        // logger.enableModule("Info");
+        // logger.enableModule("DiskGA");
         logger.enableModule("IO");
-        logger.enableModule("TagDistribution");
-        logger.enableModule("Reader");
-        logger.enableModule("GAForRank");
+        // logger.enableModule("TagDistribution");
+        // logger.enableModule("Reader");
+        // logger.enableModule("GAForRank");
+        logger.enableModule("GC");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志

@@ -48,4 +48,14 @@ public class UserObject {
         readTasks.remove(task);
         timeoutTasks.add(task.taskId);
     }
+
+    @Override
+    public String toString() {
+        return "UserObject{" +
+                "objId=" + objId +
+                ", objSize=" + objSize +
+                ", objTag=" + objTag +
+                ", replicas=" + replicas +
+                '}';
+    }
 }
