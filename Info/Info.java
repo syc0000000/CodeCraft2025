@@ -5,15 +5,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-
 import IO.model.GCCommandOut;
 import IO.model.PreprocessOut;
 import Info.model.LocalDisk;
 import Info.model.ReadTask;
-import Info.model.Replica;
 import Info.model.Tag;
-import Info.model.TagMeta;
-import Info.model.UnitData;
 import Info.model.UserObject;
 import Logger.LoggerFactory;
 import Logger.LoggerFactory.ModuleLogger;
@@ -61,8 +57,8 @@ public class Info {
     // 私有变量
     /** 每个period读取的tag的size 一级是period，二级是tag */
     public static ArrayList<ArrayList<Integer>> readSizeByPeriod = new ArrayList<>();
-    /** 每个period读取的tag的密度 一级是period，二级是tag */
-    private static ArrayList<ArrayList<Double>> tagDensities = new ArrayList<>();
+    /** 每个period读取的tag的密度 一级是period，二级是tag id */
+    public static ArrayList<ArrayList<Double>> tagDensities = new ArrayList<>();
     /** 每个period读取的tag的size占比 一级是period，二级是tag */
     private static ArrayList<ArrayList<Double>> tagSizeRatio = new ArrayList<>();
 
@@ -152,8 +148,9 @@ public class Info {
                 // 该period下tag的size占比
                 // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... +
                 // readSizeOfTagN
-                double ratio = (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
-                        .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
+                double ratio =
+                        (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
+                                .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
                 tagSizeRatio.get(periodIdx).add(ratio);
             }
         }
@@ -216,8 +213,8 @@ public class Info {
      * 根据当前period，不同tag的read方差，方差越小、选择的tag越多 然后根据tag密度选择前n个标签
      * 
      * @param varianceThreshold 方差阈值
-     * @param minCount          每个周期至少选择的标签数量
-     * @param maxCount          每个周期最多选择的标签数量
+     * @param minCount 每个周期至少选择的标签数量
+     * @param maxCount 每个周期最多选择的标签数量
      */
     private static void selectTagsByDynamicVariance1(double varianceThreshold, int minCount,
             int maxCount) {
@@ -328,7 +325,8 @@ public class Info {
 
         // 2. 从文件中读取最优参数
         try {
-            java.nio.file.Path optimalParamsPath = java.nio.file.Paths.get("optimal_period_tags.txt");
+            java.nio.file.Path optimalParamsPath =
+                    java.nio.file.Paths.get("optimal_period_tags.txt");
             if (java.nio.file.Files.exists(optimalParamsPath)) {
                 java.util.List<String> lines = java.nio.file.Files.readAllLines(optimalParamsPath);
                 for (String line : lines) {

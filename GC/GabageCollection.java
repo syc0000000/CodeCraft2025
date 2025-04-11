@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
-
 import IO.model.GCCommandOut;
 import Info.Info;
 import Info.model.DiskSpace;
@@ -20,30 +19,56 @@ public class GabageCollection {
     private final static int gcNum = Info.gcNum;
     private final static ModuleLogger log = LoggerFactory.getLogger("GC");
 
+    // Class to hold the results of a GC operation
+    private static class GCResult {
+        public GCCommandOut commandOut;
+        public int gcUsed;
+
+        public GCResult(GCCommandOut commandOut, int gcUsed) {
+            this.commandOut = commandOut;
+            this.gcUsed = gcUsed;
+        }
+    }
+
     /**
      * 垃圾回收入口,每个period调用一次
      */
     public static ArrayList<GCCommandOut> entry() {
+        int periodIndex = Info.timestamp / 1800;
+
         ArrayList<GCCommandOut> gcCommandOuts = new ArrayList<>();
         for (int i = 0; i < Info.diskNum; i++) {
+            int gcUsed = 0;
             LocalDisk disk = Info.localDiskTbl.get(i);
             HashSet<UserObject> objNotMatch = findMismatch(disk);
-            GCCommandOut out = performGC(objNotMatch, disk);
-            gcCommandOuts.add(out);
+            GCResult result = performGC(objNotMatch, disk, gcUsed);
+            gcCommandOuts.add(result.commandOut);
+            gcUsed = result.gcUsed; // Update gcUsed with the value returned from performGC
+
+            // 后面移到前面
+            HashSet<Integer> tagIdSet = Info.periodToTagSet.get(periodIndex + 1);
+
+
+            for (Integer tagId : tagIdSet) {
+                TagMeta tagMeta = disk.getTagMetaByTagId(tagId);
+
+            }
+
         }
         return gcCommandOuts;
     }
 
-    public static GCCommandOut performGC(HashSet<UserObject> objNotMatch, LocalDisk disk) {
-        // Track how many swap operations we've used
-        int gcUsed = 0;
+    public static GCResult performGC2(LocalDisk disk, TagMeta tagMeta, int gcUsed) {
 
+    }
+
+    public static GCResult performGC(HashSet<UserObject> objNotMatch, LocalDisk disk, int gcUsed) {
         GCCommandOut gcCommandOut = new GCCommandOut();
         // Process each TagMeta's unmatched objects
         ArrayList<UserObject> unmatched = new ArrayList<>(objNotMatch);
 
         if (unmatched == null || unmatched.isEmpty()) {
-            return gcCommandOut;
+            return new GCResult(gcCommandOut, gcUsed);
         }
 
         // Sort objects by size to handle larger objects first (reduces fragmentation)
@@ -54,9 +79,6 @@ public class GabageCollection {
             if (gcUsed + obj.objSize > gcNum) {
                 continue;
             }
-
-            // 1. 删除
-
             // 2. 重写
             TagMeta tagMetaOfObj = disk.getTagMetaByTagId(obj.objTag);
             ArrayList<DiskSpace> diskSpaces = findFreeSpaceByTag(obj.objTag, disk, obj.objSize);
@@ -124,7 +146,7 @@ public class GabageCollection {
             gcCommandOut.t.addAll(unitIdListAfter);
             gcUsed += obj.objSize;
         }
-        return gcCommandOut;
+        return new GCResult(gcCommandOut, gcUsed);
     }
 
     private static ArrayList<DiskSpace> findFreeSpaceByTag(int tagId, LocalDisk disk, int size) {
@@ -156,10 +178,12 @@ public class GabageCollection {
                     int end = diskSpace.start + size - 1;
                     int startNext = end + 1;
                     int tagIdByIndex = disk.getTagMetaByIndex(startNext);
-                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
+                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end,
+                            disk.diskId, tagIdByIndex);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
-                    log.debug("切分空间完成: " + diskSpace.toString() + " 剩余空间: " + space2remain.toString());
+                    log.debug("切分空间完成: " + diskSpace.toString() + " 剩余空间: "
+                            + space2remain.toString());
                     for (int j = diskSpace.start; j <= end; j++) {
                         disk.unitData.get(j).space = diskSpace;
                         disk.unitData.get(j).objId = -1;
@@ -248,7 +272,8 @@ public class GabageCollection {
                     int end = diskSpace.start + sizeLeft - 1;
                     int startNext = end + 1;
                     int tagIdByIndex = disk.getTagMetaByIndex(startNext);
-                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end, disk.diskId, tagIdByIndex);
+                    DiskSpace space2remain = new DiskSpace(true, startNext, diskSpace.end,
+                            disk.diskId, tagIdByIndex);
                     diskSpace.setStartAndEnd(diskSpace.start, end);
                     diskSpace.isFree = false;
                     for (int j = diskSpace.start; j <= end; j++) {
@@ -303,6 +328,21 @@ public class GabageCollection {
                 }
             }
         }
+
+        for (int i = 0; i < disk.tagMetas.size(); i++) {
+            // 2. 找到不匹配的Tag，遍历tagMetas
+            TagMeta legalTagMeta = disk.tagMetas.get(i);
+            for (int unitId = legalTagMeta.right; unitId > legalTagMeta.left; unitId--) {
+                // int idOfThisUnit
+                if (disk.unitData.get(unitId).objId == -1) {
+                    continue;
+                }
+
+                int tagIdOfUnit = disk.getTagIdOfUnit(unitId);
+
+            }
+        }
+
         return objNotMatch;
     }
 
@@ -365,7 +405,8 @@ public class GabageCollection {
         space.isFree = true;
         // 合并前后空间
         DiskSpace prevSpace = space.start > 0 ? disk.unitData.get(space.start - 1).space : null;
-        DiskSpace nextSpace = space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
+        DiskSpace nextSpace =
+                space.end < disk.unitNum - 1 ? disk.unitData.get(space.end + 1).space : null;
         if (prevSpace != null && prevSpace.isFree && prevSpace.tagId == space.tagId) {
             // log.debug("合并前空间: " + prevSpace);
             space.setStartAndEnd(prevSpace.start, space.end);
