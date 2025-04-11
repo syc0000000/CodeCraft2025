@@ -30,9 +30,10 @@ public class RangeReader implements MultiReaderStrategy {
     public static final int SEQUENTIAL_READ_SIZE_BALANCED_STRATEGY = 2;
     public static final int SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY = 3;
     public static final int ACTIVE_UNITS_BALANCED_STRATEGY = 4;
+    public static final int SPLIT_ACTIVE_UNITS_BALANCED_STRATEGY = 5;
 
     private static HashMap<Integer, Integer> periodToStrategy = new HashMap<>();
-    private static int defaultStrategy = ACTIVE_UNITS_BALANCED_STRATEGY;
+    private static int defaultStrategy = SPLIT_ACTIVE_UNITS_BALANCED_STRATEGY;
     static {
         // periodToStrategy.put(6, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
         // periodToStrategy.put(7, SPLIT_TAG_READ_SIZE_BALANCED_STRATEGY);
@@ -142,6 +143,9 @@ public class RangeReader implements MultiReaderStrategy {
                 } else if (strategy == ACTIVE_UNITS_BALANCED_STRATEGY) {
                     // 使用有任务unit数量平衡的策略
                     distributeRangesByActiveUnits(ranges, leftRanges, rightRanges, disk, period, 1.1);
+                } else if (strategy == SPLIT_ACTIVE_UNITS_BALANCED_STRATEGY) {
+                    // 使用允许切分Tag的有任务unit数量平衡策略
+                    distributeRangesBySplitActiveUnits(ranges, leftRanges, rightRanges, disk, period, 1.1);
                 }
                 if (periodToStrategy.containsKey(period)) {
                     strategy = periodToStrategy.get(period);
@@ -626,6 +630,229 @@ public class RangeReader implements MultiReaderStrategy {
                 ", 左侧: 单元数=" + leftUnits + ", 读取量=" + leftReadSize + ", 估算有任务unit数=" + leftActiveUnits +
                 ", 右侧: 单元数=" + rightUnits + ", 读取量=" + rightReadSize + ", 估算有任务unit数=" + rightActiveUnits +
                 ", 总有任务unit数=" + totalActiveUnits + ", 阈值=" + readRatioThreshold);
+    }
+
+    // 允许切分Tag的有任务unit数量平衡策略
+    private void distributeRangesBySplitActiveUnits(ArrayList<Range> ranges, ArrayList<Range> leftRanges,
+            ArrayList<Range> rightRanges, LocalDisk disk, int period,
+            double readRatioThreshold) {
+        if (ranges.isEmpty()) {
+            return;
+        }
+
+        // 计算每个range的信息
+        ArrayList<Integer> rangeUnits = new ArrayList<>(); // 每个range的单元数
+        ArrayList<Integer> rangeReadSizes = new ArrayList<>(); // 每个range的读取量
+        ArrayList<Integer> rangeActiveUnits = new ArrayList<>(); // 每个range的估算有任务unit数量
+        ArrayList<Integer> tagIds = new ArrayList<>(); // 每个range对应的tagId
+
+        int totalUnits = 0;
+        int totalReadSize = 0;
+        int totalActiveUnits = 0;
+
+        for (Range range : ranges) {
+            int rangeSize = range.end - range.start + 1; // 范围内的单元数
+            rangeUnits.add(rangeSize);
+            totalUnits += rangeSize;
+
+            int tagId = -1;
+            // 查找range对应的tagId
+            for (TagMeta tagMeta : disk.tagMetas) {
+                if (tagMeta.left == range.start && tagMeta.right == range.end) {
+                    tagId = tagMeta.tagId;
+                    break;
+                }
+            }
+
+            tagIds.add(tagId);
+
+            // 获取这个tag在当前period的readSize
+            int readSize = 0;
+            if (tagId != -1) {
+                if (period < Info.tags.get(tagId).readSizeByPeriod.size()) {
+                    readSize = Info.tags.get(tagId).readSizeByPeriod.get(period);
+                }
+            }
+
+            rangeReadSizes.add(readSize);
+            totalReadSize += readSize;
+
+            // 估算有任务unit数量
+            int activeUnits;
+            if (readSize >= rangeSize * readRatioThreshold) {
+                // 如果总读取量超过区域大小的readRatioThreshold倍，认为所有unit都有任务
+                activeUnits = rangeSize;
+            } else {
+                // 否则估算有任务unit数量为总读取量/readRatioThreshold（取整）
+                activeUnits = (int) Math.ceil(readSize / readRatioThreshold);
+            }
+
+            rangeActiveUnits.add(activeUnits);
+            totalActiveUnits += activeUnits;
+        }
+
+        // 目标每侧有任务unit数量
+        int targetActiveUnits = totalActiveUnits / 2;
+
+        // 先尝试找到最接近目标的完整range分割方案
+        int bestSplitIndex = 0;
+        int currentActiveUnits = 0;
+        int minDiff = Integer.MAX_VALUE;
+
+        for (int i = 0; i < ranges.size(); i++) {
+            currentActiveUnits += rangeActiveUnits.get(i);
+            int diff = Math.abs(currentActiveUnits - targetActiveUnits);
+
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestSplitIndex = i + 1; // 在i之后分割
+            }
+        }
+
+        // 计算使用完整range分割的左右有任务unit数量
+        int leftActiveUnits = 0;
+        for (int i = 0; i < bestSplitIndex; i++) {
+            leftActiveUnits += rangeActiveUnits.get(i);
+        }
+
+        int rightActiveUnits = totalActiveUnits - leftActiveUnits;
+        int imbalance = Math.abs(leftActiveUnits - rightActiveUnits);
+
+        // 如果不平衡度太大，考虑切分一个range来改善平衡性
+        if (bestSplitIndex > 0 && bestSplitIndex < ranges.size() && imbalance > 0) {
+            // 确定是切分bestSplitIndex前的range还是后的range
+            boolean splitPrevious = false;
+            int rangeToSplitIndex;
+
+            if (leftActiveUnits > rightActiveUnits) {
+                // 左侧有任务unit数量过多，考虑切分最后一个左侧range
+                rangeToSplitIndex = bestSplitIndex - 1;
+                splitPrevious = true;
+            } else {
+                // 右侧有任务unit数量过多，考虑切分第一个右侧range
+                rangeToSplitIndex = bestSplitIndex;
+                splitPrevious = false;
+            }
+
+            // 获取要切分的range信息
+            Range rangeToSplit = ranges.get(rangeToSplitIndex);
+            int rangeSize = rangeUnits.get(rangeToSplitIndex);
+            int rangeReadSize = rangeReadSizes.get(rangeToSplitIndex);
+            int rangeActiveUnit = rangeActiveUnits.get(rangeToSplitIndex);
+
+            // 只有在range足够大并且有足够多的有任务unit时才考虑切分
+            if (rangeSize > 5 && rangeActiveUnit > 2) {
+                // 计算需要转移的有任务unit数量
+                int transferActiveUnits = imbalance / 2;
+
+                // 如果transferActiveUnits太小，不值得切分
+                if (transferActiveUnits > 1) {
+                    // 计算切分比例
+                    double splitRatio = (double) transferActiveUnits / rangeActiveUnit;
+
+                    // 用于计算切分点的实际比例
+                    double actualSplitRatio;
+                    if (splitPrevious) {
+                        // 从左侧range末尾切出一部分到右侧
+                        actualSplitRatio = 1.0 - splitRatio;
+                    } else {
+                        // 从右侧range开头切出一部分到左侧
+                        actualSplitRatio = splitRatio;
+                    }
+
+                    // 根据比例计算切分点
+                    int splitPoint = rangeToSplit.start
+                            + (int) ((rangeToSplit.end - rangeToSplit.start) * actualSplitRatio);
+
+                    // 确保切分点有效
+                    splitPoint = Math.max(rangeToSplit.start + 1, Math.min(rangeToSplit.end - 1, splitPoint));
+
+                    // 创建两个新的range
+                    Range leftPart = new Range(rangeToSplit.start, splitPoint, rangeToSplit.diskId);
+                    Range rightPart = new Range(splitPoint + 1, rangeToSplit.end, rangeToSplit.diskId);
+
+                    // 计算切分后的有任务unit分配比例
+                    double leftPartRatio = (double) (splitPoint - rangeToSplit.start + 1) / rangeSize;
+                    double rightPartRatio = 1.0 - leftPartRatio;
+
+                    // 计算切分后的读取量和有任务unit分配
+                    int leftPartReadSize = (int) (rangeReadSize * leftPartRatio);
+                    int rightPartReadSize = rangeReadSize - leftPartReadSize;
+
+                    int leftPartActiveUnits = (int) (rangeActiveUnit * leftPartRatio);
+                    int rightPartActiveUnits = rangeActiveUnit - leftPartActiveUnits;
+
+                    // 把切分的范围分配给左右两侧
+                    for (int i = 0; i < ranges.size(); i++) {
+                        if (i < rangeToSplitIndex) {
+                            leftRanges.add(ranges.get(i));
+                        } else if (i > rangeToSplitIndex) {
+                            rightRanges.add(ranges.get(i));
+                        } else {
+                            // 这是被切分的range
+                            if (splitPrevious) {
+                                leftRanges.add(leftPart);
+                                rightRanges.add(rightPart);
+                            } else {
+                                leftRanges.add(leftPart);
+                                rightRanges.add(rightPart);
+                            }
+                        }
+                    }
+
+                    // 计算切分后的最终分配结果
+                    int newLeftActiveUnits = leftActiveUnits;
+                    int newRightActiveUnits = rightActiveUnits;
+
+                    if (splitPrevious) {
+                        newLeftActiveUnits -= rightPartActiveUnits;
+                        newRightActiveUnits += rightPartActiveUnits;
+                    } else {
+                        newLeftActiveUnits += leftPartActiveUnits;
+                        newRightActiveUnits -= leftPartActiveUnits;
+                    }
+
+                    // 记录日志
+                    log.debug("允许切分Tag的有任务unit平衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
+                            ", 切分前: 左侧有任务unit数=" + leftActiveUnits + ", 右侧有任务unit数=" + rightActiveUnits +
+                            ", 切分后: 左侧有任务unit数=" + newLeftActiveUnits + ", 右侧有任务unit数=" + newRightActiveUnits +
+                            ", 切分点:" + splitPoint + ", 切分的Tag:" +
+                            (tagIds.get(rangeToSplitIndex) == -1 ? "未知" : tagIds.get(rangeToSplitIndex)) +
+                            ", 阈值=" + readRatioThreshold);
+
+                    // 已完成分配，直接返回
+                    return;
+                }
+            }
+        }
+
+        // 如果不需要切分或不适合切分，就使用完整range分割
+        for (int i = 0; i < ranges.size(); i++) {
+            if (i < bestSplitIndex) {
+                leftRanges.add(ranges.get(i));
+            } else {
+                rightRanges.add(ranges.get(i));
+            }
+        }
+
+        // 计算最终的左右两侧有任务unit数量
+        int leftUnits = 0;
+        int leftReadSize = 0;
+        leftActiveUnits = 0;
+        for (int i = 0; i < bestSplitIndex; i++) {
+            leftUnits += rangeUnits.get(i);
+            leftReadSize += rangeReadSizes.get(i);
+            leftActiveUnits += rangeActiveUnits.get(i);
+        }
+
+        int rightUnits = totalUnits - leftUnits;
+        int rightReadSize = totalReadSize - leftReadSize;
+        rightActiveUnits = totalActiveUnits - leftActiveUnits;
+
+        log.debug("完整range的有任务unit平衡分配 - 磁盘" + disk.diskId + ", 周期" + period +
+                ", 左侧: 单元数=" + leftUnits + ", 读取量=" + leftReadSize + ", 有任务unit数=" + leftActiveUnits +
+                ", 右侧: 单元数=" + rightUnits + ", 读取量=" + rightReadSize + ", 有任务unit数=" + rightActiveUnits +
+                ", 阈值=" + readRatioThreshold);
     }
 
     // 计算这一tick的目的地，考虑任务、range、磁头位置
