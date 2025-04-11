@@ -8,7 +8,7 @@ SOURCES = $(shell find $(SRCDIR) -name "*.java" -not -path "./build/*" -not path
 CLASSES = $(SOURCES:%.java=$(BUILDDIR)/%.class)
 
 # Default target
-all: clean compile zip
+all: clean compile zip zip_all
 
 # Compile Java files
 compile:
@@ -28,6 +28,13 @@ zip:
 	@7z a -tzip CodeCraft.zip @files.txt
 	@rm -f files.txt
 	@echo "Package created: CodeCraft.zip"
+
+# Zip everything (excluding .git directory)
+zip_all:
+	@echo "Creating complete zip archive..."
+	@rm -f CodeCraft_all.zip
+	@7z a -tzip CodeCraft_all.zip . -xr!.git -xr!CodeCraft.zip -xr!CodeCraft_all.zip -xr!test/interactor_mac -xr!test/interactor.exe -xr!*.txt
+	@echo "Full package created: CodeCraft_all.zip"
 
 # Show contents of zip
 list:
