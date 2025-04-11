@@ -24,6 +24,17 @@ public class TagMeta {
 
     @Override
     public String toString() {
-        return "TagMeta [tagId=" + tagId + ", left=" + left + ", right=" + right + ", rightNow=" + rightNow + "]";
+        return "TagMeta [tagId=" + tagId + ", left=" + left + ", right=" + right + ", rightNow=" + rightNow + ", sizeNow=" + sizeNow + "]";
+    }
+
+    public int calculateRightNow(LocalDisk disk) {
+        int rightNow = right;
+        for (int i = right; i >= left; i--) {
+            if (disk.unitData.get(i).objId != -1) {
+                rightNow = i;
+                break;
+            }
+        }
+        return rightNow;
     }
 }

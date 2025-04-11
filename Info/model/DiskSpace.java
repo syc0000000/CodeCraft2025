@@ -1,6 +1,7 @@
 package Info.model;
 
 import java.util.Comparator;
+import Info.Info;
 
 /**
  * 磁盘空间类 - 表示空闲或占用的空间
@@ -43,7 +44,7 @@ public class DiskSpace {
     @Override
     public String toString() {
         return "DiskSpace[disk=" + diskId + ", 区间 [" + start + ", " + end + "], size=" + size
-                + ", isFree=" + isFree + "]";
+                + ", isFree=" + isFree + "], tagId=" + tagId;
     }
 
     public void setStartAndEnd(int start, int end) {

@@ -2,6 +2,7 @@
 
 import java.util.ArrayList;
 import Deleter.Deleter;
+import GC.GabageCollection;
 import IO.IO;
 import IO.Preprocess;
 import IO.model.DeleteCommandIn;
@@ -25,23 +26,27 @@ public class Main {
     private static final ModuleLogger mainLogger = LoggerFactory.getLogger("Main");
 
     public static void main(String[] args) {
+        // 处理命令行参数
+        processCommandLineArgs(args);
+
         // 配置日志记录器
         logger.setLevel(Logger.Level.DEBUG);
         // logger.setLevel(Logger.Level.DEBUG);
-        logger.enableModule("Main");
-        logger.enableModule("Preprocess");
-        logger.enableModule("Writer");
-        logger.enableModule("Deleter");
-        logger.enableModule("Info");
-        logger.enableModule("DiskGA");
+        // logger.enableModule("Main");
+        // logger.enableModule("Preprocess");
+        // logger.enableModule("Writer");
+        // logger.enableModule("Deleter");
+        // logger.enableModule("Info");
+        // logger.enableModule("DiskGA");
         logger.enableModule("IO");
-        logger.enableModule("TagDistribution");
+        // logger.enableModule("TagDistribution");
         logger.enableModule("Reader");
-        logger.enableModule("GAForRank");
+        // logger.enableModule("GAForRank");
+        logger.enableModule("GC2");
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(0, 0);
+        logger.enableTimeRange(3600, 3603);
 
         mainLogger.info("程序启动");
 
@@ -100,7 +105,8 @@ public class Main {
             IO.writeBusyCommand(readRetrun.busyCommandOuts);
             // 每1800个时间片执行一次垃圾回收
             if (i % 1800 == 0) {
-                IO.processGC();
+                IO.writeGCCommand(GabageCollection.entry());
+                // IO.processGC();
             }
 
             mainLogger.debug("完成处理时间片 " + i);
@@ -111,5 +117,21 @@ public class Main {
         // 程序结束前关闭文件日志
         logger.disableFileLogging();
         logger.disableFileLogging();
+    }
+
+    /**
+     * 处理命令行参数
+     * 
+     * @param args 命令行参数数组
+     */
+    private static void processCommandLineArgs(String[] args) {
+        // 检查是否有传递period和tags参数
+        for (int i = 0; i < args.length - 1; i++) {
+            if (args[i].equals("-period") && i < args.length - 1) {
+                System.setProperty("period", args[i + 1]);
+            } else if (args[i].equals("-tags") && i < args.length - 1) {
+                System.setProperty("tags", args[i + 1]);
+            }
+        }
     }
 }

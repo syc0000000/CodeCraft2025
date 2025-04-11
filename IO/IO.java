@@ -14,6 +14,7 @@ import java.util.StringTokenizer;
 import IO.model.CompleteCommandOut;
 import IO.model.DeleteCommandIn;
 import IO.model.DeleteCommandOut;
+import IO.model.GCCommandOut;
 import IO.model.ReadCommandIn;
 import IO.model.ReadCommandOut;
 import IO.model.WriteCommandIn;
@@ -76,6 +77,18 @@ public class IO {
         writer.println("GARBAGE COLLECTION");
         for (int i = 0; i < Info.diskNum; i++) {
             writer.println("0");
+        }
+        writer.flush();
+    }
+
+    public static void writeGCCommand(List<GCCommandOut> out) {
+        nextToken(); // 读取命令 "GARBAGE"
+        nextToken(); // 读取命令 "COLLECTION"
+        int size = out.size();
+        writer.println("GARBAGE COLLECTION");
+        for (int i = 0; i < size; i++) {
+            log.debug("写入垃圾回收命令: " + out.get(i).toString());
+            writer.print(out.get(i).toString());
         }
         writer.flush();
     }

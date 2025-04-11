@@ -1,3 +1,11 @@
 {
-    "makefile.configureOnOpen": false
+    "makefile.configureOnOpen": false,
+    "java.search.scope": "main",
+    "java.project.resourceFilters": [
+        "node_modules",
+        "\\.git",
+        "test",
+        "logs",
+        ".*\\.txt$"
+    ]
 }
