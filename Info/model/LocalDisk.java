@@ -649,6 +649,15 @@ public class LocalDisk {
         return space;
     }
 
+    public int getTagIdOfUnit(int unitId) {
+        int objId = unitData.get(unitId).objId;
+        return Info.objMap.get(objId).objTag;
+    }
+
+    public UserObject getObjOfUnit(int unitId) {
+        return Info.objMap.get(unitData.get(unitId).objId);
+    }
+
     /**
      * 执行删除后，调用该方法维护LocalDisk的freespaceBySize。
      * 同时更新unitToSpace。
