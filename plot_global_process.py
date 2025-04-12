@@ -137,6 +137,53 @@ def generate_plot(data, ylabel, title, filename, cumulative_mode=True):
     plt.savefig(filename, bbox_inches="tight")
     plt.close()
 
+def generate_subplot_reads(data, title, filename):
+    """为每个tag创建子图显示读取量变化趋势"""
+    colors = [
+        "#F38BA8", "#EBA0AC", "#FAB387", "#F9E2AF",
+        "#A6E3A1", "#94E2D5", "#89DCEB", "#74C7EC",
+        "#89B4FA", "#B4BEFE", "#CBA6F7", "#F5C2E7",
+        "#F5E0DC", "#F2CDCD", "#CDD6F4", "#BAC2DE",
+    ]
+    
+    # 创建4x4的子图网格
+    fig, axs = plt.subplots(4, 4, figsize=(20, 20))
+    fig.suptitle(title, fontsize=16)
+    
+    # 找到所有tag中的最大值，用于统一y轴范围
+    max_val = 0
+    for tag_data in data:
+        local_max = max(tag_data)  # 直接使用tag_data，因为它已经是数值列表
+        max_val = max(max_val, local_max)
+    
+    for tag_idx in range(M):
+        row = tag_idx // 4
+        col = tag_idx % 4
+        ax = axs[row, col]
+        
+        # 获取当前tag的数据
+        periods = list(range(len(data[tag_idx])))
+        values = data[tag_idx]
+        
+        # 绘制曲线
+        ax.plot(periods, values, 
+                color=colors[tag_idx % len(colors)],
+                linewidth=1.5,
+                marker='o',
+                markersize=3)
+        
+        # 设置子图标题和标签
+        ax.set_title(f'Tag {tag_idx + 1}')
+        ax.set_xlabel('Period')
+        ax.set_ylabel('Read Count')
+        ax.grid(True, linestyle='--', alpha=0.6)
+        
+        # 统一y轴范围
+        ax.set_ylim(0, max_val * 1.1)
+    
+    plt.tight_layout()
+    plt.savefig(filename, bbox_inches="tight", dpi=300)
+    plt.close()
 
 if __name__ == "__main__":
     # 使用示例（文件路径需要根据实际情况修改）
@@ -164,4 +211,11 @@ if __name__ == "__main__":
         title="Pre-Read Operation Visualization",
         filename="pre_read_visualization.png",
         cumulative_mode=False,  # 不累计
+    )
+
+    # 生成每个tag的读取量趋势子图
+    generate_subplot_reads(
+        data=fre_read,
+        title="Read Operations by Tag and Period",
+        filename="tag_read_trends.png"
     )
