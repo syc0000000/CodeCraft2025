@@ -37,11 +37,13 @@ public class Preprocess {
         // 新建preprocessOut
         PreprocessOut preprocessOut = new PreprocessOut();
         preprocessOut.T = T;
+        Info.tickNums = T;
         preprocessOut.M = M;
         preprocessOut.N = N;
         preprocessOut.V = V;
         preprocessOut.G = G;
         preprocessOut.K = K;
+        IO.readGArray();
         // 初始化Info模块
         Info.initFromPreprocessOut(preprocessOut, fre_read, fre_write, fre_del);
 

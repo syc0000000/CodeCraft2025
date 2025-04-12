@@ -24,7 +24,7 @@ public class Info {
     /** 垃圾回收操作次数 */
     public static int gcNum;
     /** 每slice的token数 */
-    public static ArrayList<Integer> g;
+    public static ArrayList<Integer> g = new ArrayList<>();
     public static int G;
 
     /** 已经存储的对象数量 */

@@ -43,7 +43,9 @@ public class IO {
             while (tokenizer == null || !tokenizer.hasMoreTokens()) {
                 tokenizer = new StringTokenizer(reader.readLine());
             }
-            return tokenizer.nextToken();
+            String token = tokenizer.nextToken();
+            log.info("读入token: " + token);
+            return token;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -51,7 +53,9 @@ public class IO {
 
     // 获取下一个整数
     private static int nextInt() {
-        return Integer.parseInt(nextToken());
+        String token = nextToken();
+        log.info("读入整数: " + token);
+        return Integer.parseInt(token);
     }
 
     /**
@@ -263,10 +267,13 @@ public class IO {
      * 读入g数组
      */
     public static void readGArray() {
-        int size = Info.tickNums / FRE_PER_SLICING + 1;
+        int size = (int) Math.ceil((Info.tickNums + 105) / 1800) + 1;
+        log.info("读入g数组size: " + size);
         for (int i = 0; i < size; i++) {
-            int g = nextInt();
-            Info.g.add(g);
+            int gg = nextInt();
+            log.info("读入g: " + gg);
+            Info.g.add(gg);
         }
+        log.info("读入g数组: " + Info.g.toString());
     }
 }

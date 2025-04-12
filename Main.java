@@ -33,7 +33,7 @@ public class Main {
         logger.setLevel(Logger.Level.DEBUG);
         // logger.setLevel(Logger.Level.DEBUG);
         // logger.enableModule("Main");
-        // logger.enableModule("Preprocess");
+        logger.enableModule("Preprocess");
         // logger.enableModule("Writer");
         // logger.enableModule("Deleter");
         // logger.enableModule("Info");
@@ -46,7 +46,7 @@ public class Main {
         // 启用文件日志
         logger.enableFileLogging("logs/app.log");
         // 设置在特定时间片范围内启用详细日志
-        logger.enableTimeRange(3600, 3603);
+        logger.enableTimeRange(0, 0);
 
         mainLogger.info("程序启动");
 
