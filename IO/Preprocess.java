@@ -33,6 +33,7 @@ public class Preprocess {
         ArrayList<ArrayList<Integer>> fre_del = readFrequencyData();
         ArrayList<ArrayList<Integer>> fre_write = readFrequencyData();
         ArrayList<ArrayList<Integer>> fre_read = readFrequencyData();
+        readGArray();
 
         // 新建preprocessOut
         PreprocessOut preprocessOut = new PreprocessOut();
@@ -43,11 +44,12 @@ public class Preprocess {
         preprocessOut.V = V;
         preprocessOut.G = G;
         preprocessOut.K = K;
-        IO.readGArray();
         // 初始化Info模块
         Info.initFromPreprocessOut(preprocessOut, fre_read, fre_write, fre_del);
 
+        // 输出
         System.out.println("OK");
+
         IO.flushAll();
     }
 
@@ -66,6 +68,19 @@ public class Preprocess {
             frequencyData.add(tagData);
         }
         return frequencyData;
+    }
+
+    /**
+     * 读入g数组
+     */
+    public static void readGArray() {
+        int size = (int) Math.ceil((T + 105) / 1800) + 1;
+        log.info("读入g数组size: " + size);
+        for (int i = 0; i < size; i++) {
+            int gg = scanner.nextInt();
+            Info.g.add(gg);
+        }
+        log.info("读入g数组: " + Info.g.toString());
     }
 
     /**

@@ -41,6 +41,7 @@ public class IO {
     private static String nextToken() {
         try {
             while (tokenizer == null || !tokenizer.hasMoreTokens()) {
+                // log.info("循环in: " + tokenizer);
                 tokenizer = new StringTokenizer(reader.readLine());
             }
             String token = tokenizer.nextToken();
@@ -68,7 +69,7 @@ public class IO {
         // 将当前帧写入Info模块
         Info.timestamp = timeStamp;
         // 更新tickPerToken
-        Info.tokenPerTick = Info.g.get(timeStamp / 1800) + Info.G;
+        Info.tokenPerTick = Info.g.get((timeStamp - 1) / 1800) + Info.G;
 
         writer.println("TIMESTAMP " + timeStamp);
         writer.flush();
@@ -263,17 +264,4 @@ public class IO {
         writer.flush();
     }
 
-    /**
-     * 读入g数组
-     */
-    public static void readGArray() {
-        int size = (int) Math.ceil((Info.tickNums + 105) / 1800) + 1;
-        log.info("读入g数组size: " + size);
-        for (int i = 0; i < size; i++) {
-            int gg = nextInt();
-            log.info("读入g: " + gg);
-            Info.g.add(gg);
-        }
-        log.info("读入g数组: " + Info.g.toString());
-    }
 }

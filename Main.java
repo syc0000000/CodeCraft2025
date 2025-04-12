@@ -63,6 +63,7 @@ public class Main {
 
         // 执行预处理
         Preprocess.preprocess();
+
         // Export readSizeByPeriod data to CSV
         // Info.exportTagInfoToCSV();
         mainLogger.debug(Info.tagInfoString());
