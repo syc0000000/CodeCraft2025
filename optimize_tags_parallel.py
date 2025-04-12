@@ -154,7 +154,7 @@ def run_test_with_params(period, tag_count, end_tick=None, timeout=1800):
     else:
         interactor = "./test/interactor"
     
-    input_file = "./test/sample_practice.in"
+    input_file = "./test/sample_official.in"
     
     # 计算要运行到的tick
     if end_tick is None:
