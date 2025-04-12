@@ -30,16 +30,16 @@ public class Main {
         processCommandLineArgs(args);
 
         // 配置日志记录器
-        logger.setLevel(Logger.Level.DEBUG);
+        logger.setLevel(Logger.Level.ERROR);
         // logger.setLevel(Logger.Level.DEBUG);
         // logger.enableModule("Main");
         logger.enableModule("Preprocess");
-        // logger.enableModule("Writer");
+        logger.enableModule("Writer");
         // logger.enableModule("Deleter");
         // logger.enableModule("Info");
         // logger.enableModule("DiskGA");
         logger.enableModule("IO");
-        // logger.enableModule("TagDistribution");
+        logger.enableModule("TagDistribution");
         logger.enableModule("Reader");
         // logger.enableModule("GAForRank");
         logger.enableModule("GC2");

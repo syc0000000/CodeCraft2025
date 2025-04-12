@@ -17,13 +17,13 @@ public class TagDistribution {
     // 聚类算法参数
     public static class ClusterConfig {
         // 聚类数量
-        public static int K = 5;
+        public static int K = 7;
         // 最大迭代次数
-        public static int MAX_ITERATIONS = 1000;
+        public static int MAX_ITERATIONS = 100000;
         // 收敛阈值
         public static double CONVERGENCE_THRESHOLD = 1e-5;
         // 滑动窗口大小（用于平滑）
-        public static int SMOOTH_WINDOW_SIZE = 5;
+        public static int SMOOTH_WINDOW_SIZE = 1;
         // 是否使用DTW距离
         public static boolean USE_DTW = false;
         // DTW窗口大小
@@ -33,7 +33,7 @@ public class TagDistribution {
         // 是否使用最小-最大标准化
         public static boolean USE_MIN_MAX = false;
         // 早停连续稳定次数
-        public static int EARLY_STOP_PATIENCE = 50;
+        public static int EARLY_STOP_PATIENCE = 500;
     }
 
     private static class TimeSeriesPoint {
@@ -229,48 +229,215 @@ public class TagDistribution {
             // 数据预处理
             preprocessData(points);
 
-            // 初始化聚类中心
-            List<TimeSeriesPoint> centroids = initializeCentroids(points);
-
-            // 用于早停的变量
-            int stabilityCounter = 0;
-            double lastTotalDistance = Double.MAX_VALUE;
-
-            // 迭代聚类
-            for (int iter = 0; iter < ClusterConfig.MAX_ITERATIONS; iter++) {
-                // 分配点到最近的聚类中心
-                double totalDistance = assignPointsToClusters(points, centroids);
-
-                // 更新聚类中心
-                List<TimeSeriesPoint> newCentroids = updateCentroids(points);
-
-                // 检查收敛
-                boolean converged = checkConvergence(centroids, newCentroids);
-
-                // 早停检查
-                double improvement = Math.abs(lastTotalDistance - totalDistance) / lastTotalDistance;
-                if (improvement < ClusterConfig.CONVERGENCE_THRESHOLD) {
-                    stabilityCounter++;
-                    if (stabilityCounter >= ClusterConfig.EARLY_STOP_PATIENCE) {
-                        log.debug("在" + iter + "次迭代后，聚类完成，提前停止");
-                        break;
-                    }
-                } else {
-                    stabilityCounter = 0;
-                }
-                lastTotalDistance = totalDistance;
-
-                if (converged)
-                    break;
-                centroids = newCentroids;
-            }
-
-            // 构建最终结果
-            buildFinalClusters(points);
+            // 使用成对组合方法进行聚类
+            pairwiseClustering(points);
 
         } catch (Exception e) {
             log.error("初始化标签聚类失败: " + e.toString());
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 成对组合聚类算法
+     * 寻找最优的两两组合方式，使总的标准差最小
+     */
+    private void pairwiseClustering(List<TimeSeriesPoint> points) {
+        int n = points.size();
+        log.debug("开始成对组合聚类，共" + n + "个点");
+
+        // 计算所有点对之间的距离
+        double[][] distanceMatrix = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                double distance = calculateDistance(points.get(i).values, points.get(j).values);
+                distanceMatrix[i][j] = distance;
+                distanceMatrix[j][i] = distance;
+            }
+        }
+
+        // 定义要找的最佳组合方案
+        List<Pair> bestPairs = null;
+        double minTotalStd = Double.MAX_VALUE;
+
+        // 使用贪心算法寻找较好的组合方案
+        for (int iter = 0; iter < 100; iter++) { // 尝试多次以获得较好结果
+            boolean[] used = new boolean[n];
+            List<Pair> currentPairs = new ArrayList<>();
+
+            // 随机选择起始点
+            Random rand = new Random();
+            int startIdx = rand.nextInt(n);
+
+            while (true) {
+                // 找到当前未使用的点
+                List<Integer> unusedIndices = new ArrayList<>();
+                for (int i = 0; i < n; i++) {
+                    if (!used[i]) {
+                        unusedIndices.add(i);
+                    }
+                }
+
+                if (unusedIndices.size() <= 1) {
+                    break; // 没有更多可组合的点
+                }
+
+                // 找到最佳匹配
+                int bestI = -1;
+                int bestJ = -1;
+                double minDist = Double.MAX_VALUE;
+
+                for (int i = 0; i < unusedIndices.size(); i++) {
+                    for (int j = i + 1; j < unusedIndices.size(); j++) {
+                        int idxI = unusedIndices.get(i);
+                        int idxJ = unusedIndices.get(j);
+                        if (distanceMatrix[idxI][idxJ] < minDist) {
+                            minDist = distanceMatrix[idxI][idxJ];
+                            bestI = idxI;
+                            bestJ = idxJ;
+                        }
+                    }
+                }
+
+                if (bestI != -1 && bestJ != -1) {
+                    currentPairs.add(new Pair(bestI, bestJ));
+                    used[bestI] = true;
+                    used[bestJ] = true;
+                } else {
+                    break;
+                }
+            }
+
+            // 处理剩余的单个点
+            List<Integer> remainingPoints = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                if (!used[i]) {
+                    remainingPoints.add(i);
+                }
+            }
+
+            // 如果有剩余的点，将它们分配到最近的对中
+            for (int idx : remainingPoints) {
+                if (currentPairs.isEmpty()) {
+                    // 如果没有对，创建一个只包含该点的"对"
+                    currentPairs.add(new Pair(idx, -1));
+                    continue;
+                }
+
+                // 寻找最佳匹配对
+                Pair bestPair = null;
+                double minPairDist = Double.MAX_VALUE;
+
+                for (Pair pair : currentPairs) {
+                    if (pair.second == -1) {
+                        // 如果是单点对，直接匹配
+                        double dist = distanceMatrix[idx][pair.first];
+                        if (dist < minPairDist) {
+                            minPairDist = dist;
+                            bestPair = pair;
+                        }
+                    } else {
+                        // 计算到对中两点的平均距离
+                        double avgDist = (distanceMatrix[idx][pair.first] + distanceMatrix[idx][pair.second]) / 2;
+                        if (avgDist < minPairDist) {
+                            minPairDist = avgDist;
+                            bestPair = pair;
+                        }
+                    }
+                }
+
+                if (bestPair != null) {
+                    if (bestPair.second == -1) {
+                        // 如果是单点对，直接将该点加入
+                        bestPair.second = idx;
+                    } else {
+                        // 否则创建一个新的包含该点的对
+                        currentPairs.add(new Pair(idx, -1));
+                    }
+                }
+            }
+
+            // 计算当前组合的总标准差
+            double currentTotalStd = calculateTotalStandardDeviation(points, currentPairs);
+
+            // 更新最佳组合
+            if (currentTotalStd < minTotalStd) {
+                minTotalStd = currentTotalStd;
+                bestPairs = new ArrayList<>(currentPairs);
+                log.debug("发现更好的组合方案，总标准差: " + minTotalStd);
+            }
+        }
+
+        // 构建最终的聚类结果
+        buildFinalClustersFromPairs(points, bestPairs);
+    }
+
+    /**
+     * 表示一对点的类
+     */
+    private class Pair {
+        int first;
+        int second;
+
+        public Pair(int first, int second) {
+            this.first = first;
+            this.second = second;
+        }
+    }
+
+    /**
+     * 计算给定组合的总标准差
+     */
+    private double calculateTotalStandardDeviation(List<TimeSeriesPoint> points, List<Pair> pairs) {
+        double totalStd = 0;
+
+        for (Pair pair : pairs) {
+            if (pair.second == -1) {
+                // 单点对没有标准差
+                continue;
+            }
+
+            double[] values1 = points.get(pair.first).values;
+            double[] values2 = points.get(pair.second).values;
+
+            // 计算每个时间点的标准差
+            for (int t = 0; t < values1.length; t++) {
+                double mean = (values1[t] + values2[t]) / 2;
+                double variance = Math.pow(values1[t] - mean, 2) + Math.pow(values2[t] - mean, 2);
+                totalStd += Math.sqrt(variance / 2);
+            }
+        }
+
+        return totalStd;
+    }
+
+    /**
+     * 从对组合构建最终聚类
+     */
+    private void buildFinalClustersFromPairs(List<TimeSeriesPoint> points, List<Pair> pairs) {
+        log.debug("从" + pairs.size() + "对组合构建最终聚类");
+        tagClusters = new ArrayList<>();
+
+        // 为每个对创建一个聚类
+        for (Pair pair : pairs) {
+            ArrayList<Integer> cluster = new ArrayList<>();
+
+            int tagId1 = points.get(pair.first).tagId;
+            cluster.add(tagId1);
+            points.get(pair.first).clusterId = tagClusters.size();
+
+            if (pair.second != -1) {
+                int tagId2 = points.get(pair.second).tagId;
+                cluster.add(tagId2);
+                points.get(pair.second).clusterId = tagClusters.size();
+            }
+
+            tagClusters.add(cluster);
+        }
+
+        log.debug("聚类完成，共" + tagClusters.size() + "个聚类");
+        for (int i = 0; i < tagClusters.size(); i++) {
+            log.debug("聚类 " + i + ": " + tagClusters.get(i));
         }
     }
 
@@ -343,99 +510,6 @@ public class TagDistribution {
         }
     }
 
-    private List<TimeSeriesPoint> initializeCentroids(List<TimeSeriesPoint> points) {
-        List<TimeSeriesPoint> centroids = new ArrayList<>();
-        Random rand = new Random();
-
-        // K-means++初始化
-        centroids.add(new TimeSeriesPoint(-1, points.get(rand.nextInt(points.size())).values.clone()));
-
-        while (centroids.size() < ClusterConfig.K) {
-            double[] distances = new double[points.size()];
-            double total = 0;
-
-            for (int i = 0; i < points.size(); i++) {
-                double minDist = Double.MAX_VALUE;
-                for (TimeSeriesPoint c : centroids) {
-                    double d = calculateDistance(points.get(i).values, c.values);
-                    if (d < minDist)
-                        minDist = d;
-                }
-                distances[i] = minDist * minDist; // 平方距离增加分散性
-                total += distances[i];
-            }
-
-            double r = rand.nextDouble() * total;
-            double sum = 0;
-            for (int i = 0; i < points.size(); i++) {
-                sum += distances[i];
-                if (sum >= r) {
-                    centroids.add(new TimeSeriesPoint(-1, points.get(i).values.clone()));
-                    break;
-                }
-            }
-        }
-
-        return centroids;
-    }
-
-    private double assignPointsToClusters(List<TimeSeriesPoint> points, List<TimeSeriesPoint> centroids) {
-        double totalDistance = 0;
-        for (TimeSeriesPoint p : points) {
-            double minDist = Double.MAX_VALUE;
-            int closest = -1;
-
-            for (int i = 0; i < centroids.size(); i++) {
-                double d = calculateDistance(p.values, centroids.get(i).values);
-                if (d < minDist) {
-                    minDist = d;
-                    closest = i;
-                }
-            }
-            p.clusterId = closest;
-            totalDistance += minDist;
-        }
-        return totalDistance;
-    }
-
-    private List<TimeSeriesPoint> updateCentroids(List<TimeSeriesPoint> points) {
-        List<TimeSeriesPoint> newCentroids = new ArrayList<>();
-        for (int i = 0; i < ClusterConfig.K; i++) {
-            double[] centroidValues = new double[48];
-            int count = 0;
-
-            for (TimeSeriesPoint p : points) {
-                if (p.clusterId == i) {
-                    for (int j = 0; j < 48; j++) {
-                        centroidValues[j] += p.values[j];
-                    }
-                    count++;
-                }
-            }
-
-            if (count > 0) {
-                for (int j = 0; j < 48; j++)
-                    centroidValues[j] /= count;
-                newCentroids.add(new TimeSeriesPoint(i, centroidValues));
-            } else {
-                // 如果没有点分配到这个中心，随机选择一个点
-                TimeSeriesPoint randomPoint = points.get(new Random().nextInt(points.size()));
-                newCentroids.add(new TimeSeriesPoint(i, randomPoint.values.clone()));
-            }
-        }
-        return newCentroids;
-    }
-
-    private boolean checkConvergence(List<TimeSeriesPoint> oldCentroids, List<TimeSeriesPoint> newCentroids) {
-        for (int i = 0; i < ClusterConfig.K; i++) {
-            if (calculateDistance(oldCentroids.get(i).values,
-                    newCentroids.get(i).values) > ClusterConfig.CONVERGENCE_THRESHOLD) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private double calculateDistance(double[] a, double[] b) {
         if (ClusterConfig.USE_DTW) {
             return dtwDistance(a, b);
@@ -489,18 +563,6 @@ public class TagDistribution {
         }
 
         return dp[n - 1][n - 1];
-    }
-
-    private void buildFinalClusters(List<TimeSeriesPoint> points) {
-        log.debug("buildFinalClusters");
-        tagClusters = new ArrayList<>();
-        for (int i = 0; i < ClusterConfig.K; i++) {
-            tagClusters.add(new ArrayList<>());
-        }
-        for (TimeSeriesPoint p : points) {
-            tagClusters.get(p.clusterId).add(p.tagId);
-        }
-        log.debug("tagClusters: " + Arrays.toString(tagClusters.toArray()));
     }
 
     private void fallbackClustering() {

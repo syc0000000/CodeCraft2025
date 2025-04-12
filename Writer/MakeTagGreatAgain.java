@@ -66,6 +66,7 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
                 }
 
                 if (otherTags != null && diskSpaces == null) {
+                    log.error("对象" + writeCommandIn.objId + "尝试在其他tag中寻找空间");
                     for (Integer otherTagId : otherTags) {
                         TagMeta otherTagMeta = rwDisk.getTagMetaByTagId(otherTagId);
                         if (otherTagMeta == null)
