@@ -39,7 +39,7 @@ def main():
     
     # 设置命令行参数
     debug_option = "" if args.release else "-d"
-    input_file = "./test/sample_practice.in" if args.big else "./test/sample_practice.in"
+    input_file = "./test/sample_official.in" if args.big else "./test/sample_official.in"
     
     # 根据操作系统选择正确的interactor
     if sys.platform == "win32":
