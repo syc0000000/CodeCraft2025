@@ -96,6 +96,71 @@ public class RangeReader implements MultiReaderStrategy {
         this(periodToTagSet, defaultStrategy);
     }
 
+    public ArrayList<Range> pickRange(TagMeta tagMeta, LocalDisk disk) {
+        ArrayList<Range> pickedRange = new ArrayList<>();
+        int totalCount = 0;
+
+        // 存储每个区域的信息：开始位置、结束位置和密度
+        ArrayList<RangeWithDensity> ranges = new ArrayList<>();
+
+        for (int unitId = tagMeta.left; unitId <= tagMeta.right; unitId += 100) {
+            int densityOf100Units = 0;
+            int rangeEnd = Math.min(unitId + 99, tagMeta.right);
+
+            for (int i = unitId; i <= rangeEnd; i++) {
+                if (disk.unitData.get(i).objId == -1) {
+                    continue;
+                }
+
+                if (disk.getTagIdOfUnit(i) == tagMeta.tagId) {
+                    densityOf100Units++;
+                    totalCount++;
+                }
+            }
+
+            // 只添加密度不为0的区域
+            if (densityOf100Units > 0) {
+                ranges.add(new RangeWithDensity(unitId, rangeEnd, densityOf100Units));
+            }
+        }
+
+        // 按密度从高到低排序
+        ranges.sort((a, b) -> Integer.compare(b.density, a.density));
+
+        // 选择范围直到覆盖95%的tag
+        int targetCount = (int) Math.ceil(totalCount * 0.95);
+        int coveredCount = 0;
+
+        for (RangeWithDensity r : ranges) {
+            pickedRange.add(new Range(r.start, r.end, disk.diskId));
+            coveredCount += r.density;
+
+            if (coveredCount >= targetCount) {
+                break;
+            }
+        }
+
+        // 按起始位置排序最终结果
+        pickedRange.sort((a, b) -> Integer.compare(a.start, b.start));
+        for (Range r : pickedRange) {
+            log.debug("pickRange-选择范围: " + r.start + " - " + r.end + ", 磁盘ID: " + r.diskId);
+        }
+        return pickedRange;
+    }
+
+    // 内部类用于存储区域信息和密度
+    private static class RangeWithDensity {
+        int start;
+        int end;
+        int density;
+
+        public RangeWithDensity(int start, int end, int density) {
+            this.start = start;
+            this.end = end;
+            this.density = density;
+        }
+    }
+
     public RangeReader(ArrayList<HashSet<Integer>> periodToTagSet, int strategy) {
         // 入参：periodToTagSet，表示每个period可接受的tag集合
         // 1. 根据tag集合，依次找出每个磁盘每个period的总range
@@ -114,8 +179,10 @@ public class RangeReader implements MultiReaderStrategy {
                 for (int tag : tagSet) {
                     TagMeta tagMeta = disk.getTagMetaByTagId(tag);
                     if (tagMeta != null) {
+                        // ranges.addAll(pickRange(tagMeta, disk)); 
                         int start = tagMeta.left;
                         int end = tagMeta.right;
+                        // int end = tagMeta.calculateRightNow(disk);
                         ranges.add(new Range(start, end, diskId));
                     }
                     // rangeList.get(period).get(diskId).get(ptrId).add(new Range(start, end,
