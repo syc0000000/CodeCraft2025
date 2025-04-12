@@ -96,25 +96,28 @@ public class RangeReader implements MultiReaderStrategy {
         this(periodToTagSet, defaultStrategy);
     }
 
-    public ArrayList<Range> pickRange(TagMeta tagMeta, LocalDisk disk) {
+    public ArrayList<Range> pickRange(HashSet<Integer> tagSet, LocalDisk disk) {
         ArrayList<Range> pickedRange = new ArrayList<>();
         int totalCount = 0;
 
         // 存储每个区域的信息：开始位置、结束位置和密度
         ArrayList<RangeWithDensity> ranges = new ArrayList<>();
 
-        for (int unitId = tagMeta.left; unitId <= tagMeta.right; unitId += 100) {
+        for (int unitId = 0; unitId <= disk.RWEnd; unitId += 100) {
             int densityOf100Units = 0;
-            int rangeEnd = Math.min(unitId + 99, tagMeta.right);
+            int rangeEnd = Math.min(unitId + 99, disk.RWEnd);
 
             for (int i = unitId; i <= rangeEnd; i++) {
                 if (disk.unitData.get(i).objId == -1) {
                     continue;
                 }
 
-                if (disk.getTagIdOfUnit(i) == tagMeta.tagId) {
-                    densityOf100Units++;
-                    totalCount++;
+                for (int tag : tagSet) {
+                    TagMeta tagMeta = disk.getTagMetaByTagId(tag);
+                    if (tagMeta != null && disk.getTagIdOfUnit(i) == tagMeta.tagId) {
+                        densityOf100Units++;
+                        totalCount++;
+                    }
                 }
             }
 
@@ -140,8 +143,6 @@ public class RangeReader implements MultiReaderStrategy {
             }
         }
 
-        // 按起始位置排序最终结果
-        pickedRange.sort((a, b) -> Integer.compare(a.start, b.start));
         for (Range r : pickedRange) {
             log.debug("pickRange-选择范围: " + r.start + " - " + r.end + ", 磁盘ID: " + r.diskId);
         }
@@ -176,18 +177,19 @@ public class RangeReader implements MultiReaderStrategy {
                 LocalDisk disk = Info.localDiskTbl.get(diskId);
                 // 查TagSet，拿到对应Tag在磁盘中的位置
                 ArrayList<Range> ranges = new ArrayList<>();
-                for (int tag : tagSet) {
-                    TagMeta tagMeta = disk.getTagMetaByTagId(tag);
-                    if (tagMeta != null) {
-                        // ranges.addAll(pickRange(tagMeta, disk)); 
-                        int start = tagMeta.left;
-                        int end = tagMeta.right;
-                        // int end = tagMeta.calculateRightNow(disk);
-                        ranges.add(new Range(start, end, diskId));
-                    }
-                    // rangeList.get(period).get(diskId).get(ptrId).add(new Range(start, end,
-                    // diskId));
-                }
+                ranges = pickRange(tagSet, disk);
+                // for (int tag : tagSet) {
+                //     TagMeta tagMeta = disk.getTagMetaByTagId(tag);
+                //     if (tagMeta != null) {
+                //         // ranges.addAll(pickRange(tagMeta, disk)); 
+                //         int start = tagMeta.left;
+                //         int end = tagMeta.right;
+                //         // int end = tagMeta.calculateRightNow(disk);
+                //         ranges.add(new Range(start, end, diskId));
+                //     }
+                //     // rangeList.get(period).get(diskId).get(ptrId).add(new Range(start, end,
+                //     // diskId));
+                // }
                 // 排序(从小到大)
                 ranges.sort((a, b) -> a.start - b.start);
 
