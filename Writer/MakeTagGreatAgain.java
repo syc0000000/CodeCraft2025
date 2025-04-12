@@ -37,58 +37,72 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
             boolean notFoundSpaceForTag = (diskSpaces == null);
             if (notFoundSpaceForTag) {
                 log.error("无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到tagid = "
-                        + writeCommandIn.tag + "读写空间, 尝试再在相似tag的空中寻找空间");
-                ArrayList<Integer> similarTags = tagDistribution.getSimilarTags(writeCommandIn.tag);
-                ArrayList<Integer> otherTags = new ArrayList<>();
+                        + writeCommandIn.tag + "读写空间, 尝试使用从右向左的搜索方法");
 
-                // 向otherTags中添加所有tagId，但不包含similarTags中的tagId
-                for (TagMeta tagMeta : rwDisk.tagMetas) {
-                    if (tagMeta.tagId != writeCommandIn.tag && !similarTags.contains(tagMeta.tagId)) {
-                        otherTags.add(tagMeta.tagId);
-                    }
-                }
+                // 首先尝试使用从右向左的算法
+                ArrayList<DiskSpace> rightToLeftSpaces = getFreeSpaceByTagRightToLeft(writeCommandIn.tag, rwDisk,
+                        writeCommandIn.size);
+                if (rightToLeftSpaces != null) {
+                    log.debug("使用从右向左搜索找到空间: " + rightToLeftSpaces.toString());
+                    diskSpaces = rightToLeftSpaces;
+                    notFoundSpaceForTag = false;
+                } else {
+                    // 如果从右向左的方法也失败了，尝试相似tag
+                    log.error("从右向左搜索也失败，尝试在相似tag的空间中寻找空间");
+                    ArrayList<Integer> similarTags = tagDistribution.getSimilarTags(writeCommandIn.tag);
+                    ArrayList<Integer> otherTags = new ArrayList<>();
 
-                if (similarTags != null) {
-                    for (Integer similarTagId : similarTags) {
-                        if (similarTagId == writeCommandIn.tag)
-                            continue;
-                        TagMeta similarTagMeta = rwDisk.getTagMetaByTagId(similarTagId);
-                        if (similarTagMeta == null)
-                            continue;
-                        ArrayList<DiskSpace> spaces = getFreeSpaceByTag(similarTagId, rwDisk, writeCommandIn.size);
-                        if (spaces != null) {
-                            log.debug("找到similarTagid = " + similarTagId + "的空间: " + spaces.toString());
-                            diskSpaces = spaces;
-                            notFoundSpaceForTag = false;
-                            break;
+                    // 向otherTags中添加所有tagId，但不包含similarTags中的tagId
+                    for (TagMeta tagMeta : rwDisk.tagMetas) {
+                        if (tagMeta.tagId != writeCommandIn.tag && !similarTags.contains(tagMeta.tagId)) {
+                            otherTags.add(tagMeta.tagId);
                         }
                     }
-                }
 
-                if (otherTags != null && diskSpaces == null) {
-                    log.error("对象" + writeCommandIn.objId + "尝试在其他tag中寻找空间");
-                    for (Integer otherTagId : otherTags) {
-                        TagMeta otherTagMeta = rwDisk.getTagMetaByTagId(otherTagId);
-                        if (otherTagMeta == null)
-                            continue;
-                        ArrayList<DiskSpace> spaces = getFreeSpaceByTag(otherTagId, rwDisk, writeCommandIn.size);
-                        if (spaces != null) {
-                            log.debug("找到otherTagId = " + otherTagId + "的空间: " + spaces.toString());
-                            diskSpaces = spaces;
-                            break;
+                    if (similarTags != null) {
+                        for (Integer similarTagId : similarTags) {
+                            if (similarTagId == writeCommandIn.tag)
+                                continue;
+                            TagMeta similarTagMeta = rwDisk.getTagMetaByTagId(similarTagId);
+                            if (similarTagMeta == null)
+                                continue;
+                            ArrayList<DiskSpace> spaces = getFreeSpaceByTagRightToLeft(similarTagId, rwDisk,
+                                    writeCommandIn.size);
+                            if (spaces != null) {
+                                log.debug("找到similarTagid = " + similarTagId + "的空间: " + spaces.toString());
+                                diskSpaces = spaces;
+                                notFoundSpaceForTag = false;
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (diskSpaces == null) {
-                    // 输出整个磁盘unitData
-                    StringBuilder sb = new StringBuilder();
-                    for (UnitData unit : rwDisk.unitData) {
-                        sb.append(unit.objId).append(" ");
+                    if (otherTags != null && diskSpaces == null) {
+                        log.error("对象" + writeCommandIn.objId + "尝试在其他tag中寻找空间");
+                        for (Integer otherTagId : otherTags) {
+                            TagMeta otherTagMeta = rwDisk.getTagMetaByTagId(otherTagId);
+                            if (otherTagMeta == null)
+                                continue;
+                            ArrayList<DiskSpace> spaces = getFreeSpaceByTagRightToLeft(otherTagId, rwDisk,
+                                    writeCommandIn.size);
+                            if (spaces != null) {
+                                log.debug("找到otherTagId = " + otherTagId + "的空间: " + spaces.toString());
+                                diskSpaces = spaces;
+                                break;
+                            }
+                        }
                     }
-                    log.error("在磁盘" + rwDisk.diskId + "无法找到空间，unitData: " + sb.toString());
-                    throw new RuntimeException(
-                            "无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
+
+                    if (diskSpaces == null) {
+                        // 输出整个磁盘unitData
+                        StringBuilder sb = new StringBuilder();
+                        for (UnitData unit : rwDisk.unitData) {
+                            sb.append(unit.objId).append(" ");
+                        }
+                        log.error("在磁盘" + rwDisk.diskId + "无法找到空间，unitData: " + sb.toString());
+                        throw new RuntimeException(
+                                "无法为对象" + writeCommandIn.objId + "在磁盘" + rwDisk.diskId + "找到读写空间");
+                    }
                 }
             }
             // 从diskSpaces中拿出所有unitId
@@ -397,5 +411,156 @@ public class MakeTagGreatAgain extends DefaultWriteStrategy {
         }
 
         return unitIdList;
+    }
+
+    /**
+     * 从右向左获取指定tag在磁盘上的空闲空间
+     * 
+     * @param tagId 标签ID
+     * @param disk  磁盘对象
+     * @param size  需要的空间大小
+     * @return 找到的空间列表，如果找不到则返回null
+     */
+    public ArrayList<DiskSpace> getFreeSpaceByTagRightToLeft(int tagId, LocalDisk disk, int size) {
+        HashSet<DiskSpace> diskSpaces = new HashSet<>();
+        TagMeta tagMeta = disk.getTagMetaByTagId(tagId);
+        if (tagMeta == null) {
+            return null;
+        }
+        int left = tagMeta.left;
+        int right = tagMeta.right;
+        int rightNow = tagMeta.rightNow;
+
+        log.debug("从右向左搜索空间，tagMeta: " + tagMeta.toString());
+
+        boolean finishFlag = false;
+
+        // 第一层级，从right开始向左扫描空间，找到第一个能装得下的空间
+        for (int i = right; i >= left; i--) {
+            DiskSpace diskSpace = disk.getSpaceForUnit(i);
+            if (diskSpace.size >= size && diskSpace.isFree) {
+                if (diskSpace.size == size) {
+                    log.debug("从右向左找到尺寸刚好的空间: " + diskSpace.toString());
+                    diskSpaces.add(diskSpace);
+                    diskSpace.isFree = false;
+                    finishFlag = true;
+                    break;
+                } else {
+                    // 切分空间，从右侧开始使用
+                    log.debug("从右向左切分空间: " + diskSpace.toString());
+                    int start = diskSpace.end - size + 1;
+                    int endPrev = start - 1;
+                    int tagIdByIndex = disk.getTagMetaByIndex(endPrev);
+                    DiskSpace space2remain = new DiskSpace(true, diskSpace.start, endPrev, disk.diskId, tagIdByIndex);
+                    diskSpace.setStartAndEnd(start, diskSpace.end);
+                    diskSpace.isFree = false;
+                    log.debug("从右向左切分空间完成: " + diskSpace.toString() + " 剩余空间: " + space2remain.toString());
+
+                    for (int j = diskSpace.start; j <= diskSpace.end; j++) {
+                        disk.unitData.get(j).space = diskSpace;
+                        disk.unitData.get(j).objId = -1;
+                        disk.unitData.get(j).blockId = -1;
+                    }
+                    for (int j = space2remain.start; j <= space2remain.end; j++) {
+                        disk.unitData.get(j).space = space2remain;
+                        disk.unitData.get(j).objId = -1;
+                        disk.unitData.get(j).blockId = -1;
+                    }
+
+                    finishFlag = true;
+                    diskSpaces.add(diskSpace);
+                    log.debug("从右向左切割空间完成: " + diskSpace.toString());
+                    break;
+                }
+            }
+        }
+
+        if (finishFlag) {
+            return new ArrayList<>(diskSpaces);
+        }
+
+        // 第二层级，使用从右向左的滑动窗口找到最短距离的空间组合
+        int minSpan = Integer.MAX_VALUE; // 记录最小跨度
+        int bestStart = -1; // 最佳起始位置
+        int bestEnd = -1; // 最佳结束位置
+
+        int windowEnd = right;
+        int windowStart = right;
+        int currentSize = 0;
+
+        // 使用滑动窗口从右向左遍历
+        while (windowStart >= left) {
+            // 如果当前窗口中的空闲空间不够，继续扩大窗口
+            while (windowStart >= left && currentSize < size) {
+                if (disk.unitData.get(windowStart).objId == -1) {
+                    currentSize++;
+                }
+                windowStart--;
+            }
+
+            // 如果找到了足够的空间
+            if (currentSize == size) {
+                int span = windowEnd - windowStart;
+                if (span < minSpan) {
+                    minSpan = span;
+                    bestStart = windowStart + 1; // 因为windowStart多减了1
+                    bestEnd = windowEnd;
+                }
+            }
+
+            // 缩小窗口右边界
+            if (disk.unitData.get(windowEnd).objId == -1) {
+                currentSize--;
+            }
+            windowEnd--;
+            while (windowEnd >= left && disk.unitData.get(windowEnd).objId != -1) {
+                windowEnd--;
+            }
+        }
+
+        // 如果找到了合适的空间
+        if (bestStart != -1) {
+            log.debug("从右向左滑动窗口，找到合适的空间: " + bestStart + " " + bestEnd + "此时，minSpan=" + minSpan
+                    + ", currentSize=" + currentSize);
+            // 遍历从bestStart到bestEnd，找到所有对应空间
+            int sizeLeft = size; // 剩余空间
+            for (int i = bestEnd; i >= bestStart; i--) {
+                DiskSpace diskSpace = disk.getSpaceForUnit(i);
+                if (!diskSpace.isFree) {
+                    continue;
+                }
+                if (diskSpace.size < sizeLeft) {
+                    diskSpaces.add(diskSpace);
+                    diskSpace.isFree = false;
+                    sizeLeft -= diskSpace.size;
+                } else {
+                    // 出现这种情况一定是最后一个空间
+                    // 从右向左切分空间
+                    int start = diskSpace.end - sizeLeft + 1;
+                    int endPrev = start - 1;
+                    int tagIdByIndex = disk.getTagMetaByIndex(endPrev);
+                    DiskSpace space2remain = new DiskSpace(true, diskSpace.start, endPrev, disk.diskId, tagIdByIndex);
+                    diskSpace.setStartAndEnd(start, diskSpace.end);
+                    diskSpace.isFree = false;
+
+                    for (int j = diskSpace.start; j <= diskSpace.end; j++) {
+                        disk.unitData.get(j).space = diskSpace;
+                        disk.unitData.get(j).objId = -1;
+                        disk.unitData.get(j).blockId = -1;
+                    }
+                    for (int j = space2remain.start; j <= space2remain.end; j++) {
+                        disk.unitData.get(j).space = space2remain;
+                        disk.unitData.get(j).objId = -1;
+                        disk.unitData.get(j).blockId = -1;
+                    }
+
+                    diskSpaces.add(diskSpace);
+                    break;
+                }
+            }
+            return new ArrayList<>(diskSpaces);
+        }
+
+        return null;
     }
 }
