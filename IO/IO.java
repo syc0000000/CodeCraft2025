@@ -63,6 +63,8 @@ public class IO {
 
         // 将当前帧写入Info模块
         Info.timestamp = timeStamp;
+        // 更新tickPerToken
+        Info.tokenPerTick = Info.g.get(timeStamp / 1800) + Info.G;
 
         writer.println("TIMESTAMP " + timeStamp);
         writer.flush();
@@ -255,5 +257,16 @@ public class IO {
      */
     public static void flushAll() {
         writer.flush();
+    }
+
+    /**
+     * 读入g数组
+     */
+    public static void readGArray() {
+        int size = Info.tickNums / FRE_PER_SLICING + 1;
+        for (int i = 0; i < size; i++) {
+            int g = nextInt();
+            Info.g.add(g);
+        }
     }
 }

@@ -23,6 +23,9 @@ public class Info {
     public static int unitNum;
     /** 垃圾回收操作次数 */
     public static int gcNum;
+    /** 每slice的token数 */
+    public static ArrayList<Integer> g;
+    public static int G;
 
     /** 已经存储的对象数量 */
     public static int objNums;
@@ -71,6 +74,7 @@ public class Info {
         diskNum = preOut.N; // 硬盘个数
         unitNum = preOut.V; // 每个硬盘存储单元数
         tokenPerTick = preOut.G; // 每tick Token数
+        G = preOut.G;
         gcNum = preOut.K; // 垃圾回收操作次数
         MAX_RW_END = (int) (unitNum / 2.91) - 1; // 最大读写空间
         // 初始化磁盘表
@@ -148,9 +152,8 @@ public class Info {
                 // 该period下tag的size占比
                 // ratio = readSizeOfTag1 / readSizeOfTag1 + readSizeOfTag2 + ... +
                 // readSizeOfTagN
-                double ratio =
-                        (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
-                                .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
+                double ratio = (double) readSizeByPeriod.get(periodIdx).get(tagIdx) / readSizeByPeriod
+                        .get(periodIdx).stream().mapToInt(Integer::intValue).sum();
                 tagSizeRatio.get(periodIdx).add(ratio);
             }
         }
@@ -213,8 +216,8 @@ public class Info {
      * 根据当前period，不同tag的read方差，方差越小、选择的tag越多 然后根据tag密度选择前n个标签
      * 
      * @param varianceThreshold 方差阈值
-     * @param minCount 每个周期至少选择的标签数量
-     * @param maxCount 每个周期最多选择的标签数量
+     * @param minCount          每个周期至少选择的标签数量
+     * @param maxCount          每个周期最多选择的标签数量
      */
     private static void selectTagsByDynamicVariance1(double varianceThreshold, int minCount,
             int maxCount) {
@@ -325,8 +328,7 @@ public class Info {
 
         // 2. 从文件中读取最优参数
         try {
-            java.nio.file.Path optimalParamsPath =
-                    java.nio.file.Paths.get("optimal_period_tags.txt");
+            java.nio.file.Path optimalParamsPath = java.nio.file.Paths.get("optimal_period_tags.txt");
             if (java.nio.file.Files.exists(optimalParamsPath)) {
                 java.util.List<String> lines = java.nio.file.Files.readAllLines(optimalParamsPath);
                 for (String line : lines) {
